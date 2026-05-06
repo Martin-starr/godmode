@@ -7,6 +7,8 @@ GODMODE turns Claude Code into a full AI development team. Multi-agent orchestra
 
 Built by a non-programmer using AI. If I can do it, so can you.
 
+> **New to Claude?** Start with the [Prompt Guide](docs/PROMPT_GUIDE.md) — learn the 5-part formula, copy-paste templates for common situations, and run `/prompt-generator` to have Claude build your prompts for you.
+
 ---
 
 ## What You Get
@@ -166,6 +168,7 @@ After installation, these commands are available inside Claude Code:
 | `/simplify` | 3 parallel agents review and clean code |
 | `/cost-estimate` | Estimates project cost at market rates (shows ROI of AI) |
 | `/self-improve` | Audits skills and CLAUDE.md, suggests improvements |
+| `/prompt-generator [task]` | Interactive prompt builder — answers a few questions and writes a polished Claude prompt for you |
 | `/codex:review` | GPT code review (read-only) |
 | `/codex:adversarial-review` | GPT challenges your implementation decisions |
 | `/codex:rescue` | Delegates a stuck problem to GPT |
@@ -197,7 +200,7 @@ After installation, these commands are available inside Claude Code:
 | **multimodel** | 7 | GPT advisor, Gemini advisor, adversarial review, LLM council |
 | **design** | 5 | UI/UX pro max, components, mobile design, screen-to-code |
 | **data** | 5 | scraping, data analysis, knowledge graphs |
-| **workflow** | 5 | dispute, interview, planning, self-improve |
+| **workflow** | 6 | dispute, interview, planning, self-improve, prompt-generator |
 | **quality** | 4 | code review, batch operations, integration checks |
 | **testing** | 4 | unit tests, E2E, browser testing, app store checks |
 | **business** | 3 | cost estimation, marketing, product management |
@@ -265,6 +268,7 @@ GODMODE/
     ARCHITECTURE.md     --> Detailed architecture description
     INSTALL_GUIDE.md    --> Step-by-step installation
     SKILL_GUIDE.md      --> How to create custom skills
+    PROMPT_GUIDE.md     --> Beginner's guide: how to write great Claude prompts
   examples/
     dispute-example.md  --> Real dispute transcript
     skill-example/      --> Example skill structure
