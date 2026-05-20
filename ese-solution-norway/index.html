@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ESE Solution – Industrielle løsninger i Norge</title>
+  <meta name="description" content="ESE Solution leverer industrielle og produksjonstekniske løsninger til det norske markedet." />
+  <style>
+    :root {
+      --navy:   #0a1f44;
+      --blue:   #1565c0;
+      --accent: #e65100;
+      --light:  #f4f6fa;
+      --white:  #ffffff;
+      --text:   #222831;
+      --muted:  #546e7a;
+      --border: #dce3ed;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: var(--text);
+      background: var(--white);
+      line-height: 1.7;
+    }
+
+    /* ── TOPBAR ── */
+    #topbar {
+      background: var(--navy);
+      color: #cfd8e3;
+      font-size: 0.82rem;
+      padding: 6px 0;
+      text-align: center;
+      letter-spacing: 0.03em;
+    }
+    #topbar a { color: #90caf9; text-decoration: none; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: var(--white);
+      border-bottom: 2px solid var(--border);
+      padding: 0 5%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 68px;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+    .logo-icon {
+      width: 42px; height: 42px;
+      background: var(--navy);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--white);
+      font-weight: 900;
+      font-size: 1.1rem;
+      letter-spacing: -1px;
+    }
+    .logo-text { font-size: 1.25rem; font-weight: 700; color: var(--navy); }
+    .logo-sub  { font-size: 0.72rem; color: var(--muted); display: block; }
+
+    .nav-links {
+      display: flex;
+      gap: 28px;
+      list-style: none;
+    }
+    .nav-links a {
+      text-decoration: none;
+      color: var(--navy);
+      font-weight: 500;
+      font-size: 0.93rem;
+      transition: color .2s;
+    }
+    .nav-links a:hover { color: var(--blue); }
+
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* Language toggle */
+    .lang-toggle {
+      display: flex;
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      font-size: 0.82rem;
+    }
+    .lang-btn {
+      padding: 5px 14px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      font-weight: 600;
+      color: var(--muted);
+      transition: background .2s, color .2s;
+    }
+    .lang-btn.active {
+      background: var(--navy);
+      color: var(--white);
+    }
+
+    .cta-nav {
+      background: var(--accent);
+      color: var(--white) !important;
+      padding: 8px 18px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      text-decoration: none;
+      transition: background .2s;
+    }
+    .cta-nav:hover { background: #bf360c; color: var(--white) !important; }
+
+    /* ── HERO ── */
+    #hero {
+      position: relative;
+      background: linear-gradient(135deg, var(--navy) 0%, #1a3a6e 60%, #1565c0 100%);
+      color: var(--white);
+      padding: 100px 5% 90px;
+      overflow: hidden;
+    }
+    #hero::before {
+      content: '';
+      position: absolute;
+      top: -80px; right: -80px;
+      width: 480px; height: 480px;
+      background: rgba(255,255,255,.04);
+      border-radius: 50%;
+    }
+    #hero::after {
+      content: '';
+      position: absolute;
+      bottom: -100px; left: 30%;
+      width: 300px; height: 300px;
+      background: rgba(255,255,255,.03);
+      border-radius: 50%;
+    }
+
+    .hero-inner {
+      max-width: 700px;
+      position: relative;
+      z-index: 2;
+    }
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 20px;
+      padding: 5px 14px;
+      font-size: 0.82rem;
+      margin-bottom: 22px;
+      letter-spacing: .04em;
+    }
+    .flag { font-size: 1.1rem; }
+
+    #hero h1 {
+      font-size: clamp(2rem, 4.5vw, 3.4rem);
+      font-weight: 800;
+      line-height: 1.15;
+      margin-bottom: 20px;
+    }
+    #hero h1 span { color: #90caf9; }
+
+    #hero p {
+      font-size: 1.1rem;
+      opacity: .88;
+      margin-bottom: 36px;
+      max-width: 580px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--white);
+      padding: 14px 30px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1rem;
+      transition: background .2s, transform .15s;
+      display: inline-block;
+    }
+    .btn-primary:hover { background: #bf360c; transform: translateY(-1px); }
+    .btn-outline {
+      background: transparent;
+      color: var(--white);
+      border: 2px solid rgba(255,255,255,.5);
+      padding: 14px 30px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: border-color .2s, background .2s;
+      display: inline-block;
+    }
+    .btn-outline:hover { border-color: var(--white); background: rgba(255,255,255,.08); }
+
+    /* Stats strip */
+    .stats-strip {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 0;
+    }
+    .stat-item {
+      padding: 28px 40px;
+      text-align: center;
+      border-right: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-num {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--navy);
+      display: block;
+    }
+    .stat-label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+
+    /* ── SECTIONS ── */
+    section { padding: 80px 5%; }
+    .section-inner { max-width: 1100px; margin: 0 auto; }
+
+    .section-tag {
+      display: inline-block;
+      background: #e3f0ff;
+      color: var(--blue);
+      font-size: 0.78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      padding: 4px 12px;
+      border-radius: 4px;
+      margin-bottom: 12px;
+    }
+    h2 {
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      font-weight: 800;
+      color: var(--navy);
+      margin-bottom: 14px;
+    }
+    .section-lead {
+      font-size: 1.05rem;
+      color: var(--muted);
+      max-width: 620px;
+      margin-bottom: 48px;
+    }
+
+    /* ── ABOUT ── */
+    #about { background: var(--light); }
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+      align-items: center;
+    }
+    .about-img {
+      background: linear-gradient(135deg, var(--navy), var(--blue));
+      border-radius: 16px;
+      padding: 48px 36px;
+      color: var(--white);
+      text-align: center;
+    }
+    .about-img .big-icon { font-size: 5rem; margin-bottom: 16px; }
+    .about-img p { opacity: .85; font-size: 0.95rem; }
+    .about-list { list-style: none; margin-top: 24px; }
+    .about-list li {
+      padding: 10px 0;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      font-size: 0.97rem;
+    }
+    .about-list li:last-child { border-bottom: none; }
+    .check { color: #1b8e3b; font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+
+    /* ── SERVICES ── */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+    }
+    .service-card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: 12px;
+      padding: 30px 28px;
+      transition: box-shadow .25s, border-color .25s, transform .2s;
+    }
+    .service-card:hover {
+      box-shadow: 0 8px 32px rgba(10,31,68,.12);
+      border-color: var(--blue);
+      transform: translateY(-3px);
+    }
+    .service-icon {
+      width: 52px; height: 52px;
+      background: #e3f0ff;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+      margin-bottom: 18px;
+    }
+    .service-card h3 { font-size: 1.1rem; color: var(--navy); margin-bottom: 8px; }
+    .service-card p  { font-size: 0.91rem; color: var(--muted); }
+
+    /* ── NORWAY ── */
+    #norway { background: var(--navy); color: var(--white); }
+    #norway .section-tag { background: rgba(255,255,255,.15); color: #90caf9; }
+    #norway h2 { color: var(--white); }
+    #norway .section-lead { color: rgba(255,255,255,.75); }
+    .norway-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 48px;
+      align-items: start;
+    }
+    .norway-card {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 12px;
+      padding: 28px;
+    }
+    .norway-card h3 { font-size: 1.05rem; margin-bottom: 10px; color: #90caf9; }
+    .norway-card p  { font-size: 0.92rem; opacity: .82; }
+    .norway-card .icon { font-size: 2rem; margin-bottom: 12px; }
+
+    .map-placeholder {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 12px;
+      padding: 40px 28px;
+      text-align: center;
+    }
+    .map-placeholder .map-icon { font-size: 4rem; margin-bottom: 16px; }
+    .map-placeholder h3 { font-size: 1.1rem; margin-bottom: 8px; }
+    .map-placeholder p  { font-size: 0.9rem; opacity: .75; }
+    .map-placeholder address {
+      font-style: normal;
+      margin-top: 20px;
+      font-size: 0.93rem;
+      opacity: .9;
+      line-height: 2;
+    }
+
+    /* ── WHY US ── */
+    #why { background: var(--light); }
+    .why-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+    }
+    .why-card {
+      background: var(--white);
+      border-radius: 10px;
+      padding: 28px 22px;
+      text-align: center;
+      border: 1.5px solid var(--border);
+    }
+    .why-card .why-icon { font-size: 2.2rem; margin-bottom: 12px; }
+    .why-card h3 { font-size: 1rem; color: var(--navy); margin-bottom: 6px; }
+    .why-card p  { font-size: 0.87rem; color: var(--muted); }
+
+    /* ── CONTACT ── */
+    #contact {}
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 60px;
+    }
+    .contact-info h3 { font-size: 1.1rem; color: var(--navy); margin-bottom: 20px; }
+    .contact-detail {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+      margin-bottom: 22px;
+    }
+    .contact-detail-icon {
+      width: 40px; height: 40px;
+      background: #e3f0ff;
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+    .contact-detail-text strong { display: block; color: var(--navy); font-size: 0.92rem; }
+    .contact-detail-text span   { font-size: 0.9rem; color: var(--muted); }
+    .contact-detail-text a      { color: var(--blue); text-decoration: none; }
+
+    .contact-form { background: var(--light); padding: 36px; border-radius: 14px; }
+    .contact-form h3 { font-size: 1.1rem; color: var(--navy); margin-bottom: 22px; }
+    .form-group { margin-bottom: 18px; }
+    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      font-size: 0.93rem;
+      color: var(--text);
+      background: var(--white);
+      outline: none;
+      transition: border-color .2s;
+    }
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus { border-color: var(--blue); }
+    .form-group textarea { height: 110px; resize: vertical; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .btn-submit {
+      width: 100%;
+      background: var(--navy);
+      color: var(--white);
+      border: none;
+      padding: 13px;
+      border-radius: 7px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background .2s;
+    }
+    .btn-submit:hover { background: var(--blue); }
+
+    /* ── FOOTER ── */
+    footer {
+      background: var(--navy);
+      color: rgba(255,255,255,.75);
+      padding: 50px 5% 28px;
+    }
+    .footer-grid {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 2fr 1fr 1fr 1fr;
+      gap: 40px;
+      padding-bottom: 36px;
+      border-bottom: 1px solid rgba(255,255,255,.12);
+    }
+    .footer-brand .logo-text { color: var(--white); }
+    .footer-brand .logo-sub  { color: rgba(255,255,255,.55); }
+    .footer-brand p { font-size: 0.88rem; margin-top: 14px; line-height: 1.7; }
+    footer h4 { font-size: 0.9rem; color: var(--white); margin-bottom: 14px; text-transform: uppercase; letter-spacing: .06em; }
+    footer ul { list-style: none; }
+    footer ul li { margin-bottom: 8px; }
+    footer ul li a { color: rgba(255,255,255,.65); text-decoration: none; font-size: 0.88rem; transition: color .2s; }
+    footer ul li a:hover { color: var(--white); }
+    .footer-bottom {
+      max-width: 1100px;
+      margin: 24px auto 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.82rem;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .footer-flags { display: flex; gap: 8px; font-size: 1.4rem; }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .nav-links { display: none; }
+      .about-grid,
+      .norway-grid,
+      .contact-grid { grid-template-columns: 1fr; }
+      .footer-grid   { grid-template-columns: 1fr 1fr; }
+      .stat-item     { padding: 22px 20px; }
+      .form-row      { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 480px) {
+      .footer-grid { grid-template-columns: 1fr; }
+      .stats-strip { flex-direction: column; }
+      .stat-item   { border-right: none; border-bottom: 1px solid var(--border); }
+    }
+
+    /* Hidden elements for language toggle */
+    [data-lang="en"] { display: none; }
+    body.lang-en [data-lang="no"] { display: none; }
+    body.lang-en [data-lang="en"] { display: unset; }
+    /* Block-level elements need block not inline */
+    body.lang-en .block-en { display: block !important; }
+    body.lang-en .block-no { display: none !important; }
+    .block-en { display: none; }
+    .block-no { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div id="topbar">
+  <span data-lang="no">🇳🇴 Betjener det norske markedet &nbsp;|&nbsp; Koreansk ingeniørkompetanse &nbsp;|&nbsp; <a href="mailto:contact@esesolution.co.kr">contact@esesolution.co.kr</a></span>
+  <span data-lang="en">🇳🇴 Serving the Norwegian market &nbsp;|&nbsp; Korean engineering expertise &nbsp;|&nbsp; <a href="mailto:contact@esesolution.co.kr">contact@esesolution.co.kr</a></span>
+</div>
+
+<!-- NAVIGATION -->
+<nav>
+  <a href="#" class="logo">
+    <div class="logo-icon">ESE</div>
+    <div>
+      <span class="logo-text">ESE Solution</span>
+      <span class="logo-sub">
+        <span data-lang="no">Industrielle løsninger</span>
+        <span data-lang="en">Industrial Solutions</span>
+      </span>
+    </div>
+  </a>
+
+  <ul class="nav-links">
+    <li><a href="#about"    data-lang="no">Om oss</a>    <a href="#about"    data-lang="en">About</a></li>
+    <li><a href="#services" data-lang="no">Tjenester</a> <a href="#services" data-lang="en">Services</a></li>
+    <li><a href="#norway"   data-lang="no">Norge</a>     <a href="#norway"   data-lang="en">Norway</a></li>
+    <li><a href="#contact"  data-lang="no">Kontakt</a>   <a href="#contact"  data-lang="en">Contact</a></li>
+  </ul>
+
+  <div class="nav-right">
+    <div class="lang-toggle">
+      <button class="lang-btn active" onclick="setLang('no')">🇳🇴 NO</button>
+      <button class="lang-btn"        onclick="setLang('en')">🇬🇧 EN</button>
+    </div>
+    <a href="#contact" class="cta-nav">
+      <span data-lang="no">Kom i kontakt</span>
+      <span data-lang="en">Get in touch</span>
+    </a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section id="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <span class="flag">🇰🇷 → 🇳🇴</span>
+      <span data-lang="no">Koreansk kvalitet · Norsk tilstedeværelse</span>
+      <span data-lang="en">Korean quality · Norwegian presence</span>
+    </div>
+
+    <h1 data-lang="no">Industrielle løsninger<br /><span>for det norske markedet</span></h1>
+    <h1 data-lang="en">Industrial Solutions<br /><span>for the Norwegian Market</span></h1>
+
+    <p data-lang="no">ESE Solution bringer koreansk presisjonsproduksjon og ingeniørkompetanse direkte til norske bedrifter. Vi leverer pålitelige produkter, teknisk støtte og skreddersydde løsninger.</p>
+    <p data-lang="en">ESE Solution brings Korean precision manufacturing and engineering expertise directly to Norwegian businesses. We deliver reliable products, technical support, and tailored solutions.</p>
+
+    <div class="hero-buttons">
+      <a href="#contact" class="btn-primary">
+        <span data-lang="no">Be om tilbud</span>
+        <span data-lang="en">Request a Quote</span>
+      </a>
+      <a href="#services" class="btn-outline">
+        <span data-lang="no">Se våre tjenester</span>
+        <span data-lang="en">View our services</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-strip">
+  <div class="stat-item">
+    <span class="stat-num">20+</span>
+    <span class="stat-label">
+      <span data-lang="no">År erfaring</span>
+      <span data-lang="en">Years experience</span>
+    </span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">500+</span>
+    <span class="stat-label">
+      <span data-lang="no">Prosjekter levert</span>
+      <span data-lang="en">Projects delivered</span>
+    </span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">ISO</span>
+    <span class="stat-label">
+      <span data-lang="no">Sertifisert kvalitet</span>
+      <span data-lang="en">Certified quality</span>
+    </span>
+  </div>
+  <div class="stat-item">
+    <span class="stat-num">🇳🇴</span>
+    <span class="stat-label">
+      <span data-lang="no">Norsk kontaktpunkt</span>
+      <span data-lang="en">Norwegian contact point</span>
+    </span>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<section id="about">
+  <div class="section-inner">
+    <div class="about-grid">
+      <div>
+        <span class="section-tag">
+          <span data-lang="no">Om ESE Solution</span>
+          <span data-lang="en">About ESE Solution</span>
+        </span>
+        <h2 data-lang="no">Bygget på koreansk presisjon – levert til Norge</h2>
+        <h2 data-lang="en">Built on Korean precision – delivered to Norway</h2>
+        <p class="section-lead" style="margin-bottom:24px;" data-lang="no">ESE Solution er et koreansk industri- og produksjonsselskap med spesialisert fokus på det norske og skandinaviske markedet. Vi kombinerer avansert teknologi med pålitelig service.</p>
+        <p class="section-lead" style="margin-bottom:24px;" data-lang="en">ESE Solution is a Korean industrial and manufacturing company with a specialised focus on the Norwegian and Scandinavian market. We combine advanced technology with reliable service.</p>
+
+        <ul class="about-list">
+          <li>
+            <span class="check">✔</span>
+            <span data-lang="no"><strong>Høy kvalitetsstandard</strong> – alle produkter gjennomgår streng kvalitetskontroll</span>
+            <span data-lang="en"><strong>High quality standards</strong> – all products undergo rigorous quality control</span>
+          </li>
+          <li>
+            <span class="check">✔</span>
+            <span data-lang="no"><strong>Norsk kommunikasjon</strong> – vi snakker ditt språk</span>
+            <span data-lang="en"><strong>Norwegian communication</strong> – we speak your language</span>
+          </li>
+          <li>
+            <span class="check">✔</span>
+            <span data-lang="no"><strong>Rask levering</strong> – optimalisert logistikk fra Korea til Norge</span>
+            <span data-lang="en"><strong>Fast delivery</strong> – optimised logistics from Korea to Norway</span>
+          </li>
+          <li>
+            <span class="check">✔</span>
+            <span data-lang="no"><strong>Teknisk support</strong> – dedikert team for norske kunder</span>
+            <span data-lang="en"><strong>Technical support</strong> – dedicated team for Norwegian customers</span>
+          </li>
+          <li>
+            <span class="check">✔</span>
+            <span data-lang="no"><strong>Skreddersydde løsninger</strong> – tilpasset dine spesifikke behov</span>
+            <span data-lang="en"><strong>Custom solutions</strong> – tailored to your specific requirements</span>
+          </li>
+        </ul>
+      </div>
+
+      <div class="about-img">
+        <div class="big-icon">⚙️</div>
+        <h3 style="font-size:1.3rem;margin-bottom:10px;">ESE Solution</h3>
+        <p data-lang="no">Industriell ekspertise fra Seoul til Stavanger, Bergen, Oslo og videre.</p>
+        <p data-lang="en">Industrial expertise from Seoul to Stavanger, Bergen, Oslo and beyond.</p>
+        <div style="margin-top:28px;display:flex;justify-content:center;gap:18px;font-size:2rem;">
+          <span title="Korea">🇰🇷</span>
+          <span style="font-size:1.4rem;align-self:center;opacity:.6;">→</span>
+          <span title="Norway">🇳🇴</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SERVICES -->
+<section id="services">
+  <div class="section-inner">
+    <span class="section-tag">
+      <span data-lang="no">Tjenester og produkter</span>
+      <span data-lang="en">Services &amp; Products</span>
+    </span>
+    <h2 data-lang="no">Hva vi leverer</h2>
+    <h2 data-lang="en">What we deliver</h2>
+    <p class="section-lead" data-lang="no">Fra industrikomponenter og presisjonsdeler til komplette systemløsninger – vi dekker norske bedrifters behov innen produksjon og industri.</p>
+    <p class="section-lead" data-lang="en">From industrial components and precision parts to complete system solutions – we cover Norwegian businesses' needs in manufacturing and industry.</p>
+
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon">🏭</div>
+        <h3 data-lang="no">Industriproduksjon</h3>
+        <h3 data-lang="en">Industrial Manufacturing</h3>
+        <p data-lang="no">Presisjonsproduserte industrikomponenter etter norske og europeiske standarder.</p>
+        <p data-lang="en">Precision-manufactured industrial components to Norwegian and European standards.</p>
+      </div>
+
+      <div class="service-card">
+        <div class="service-icon">⚙️</div>
+        <h3 data-lang="no">Maskindeler og komponenter</h3>
+        <h3 data-lang="en">Machine Parts &amp; Components</h3>
+        <p data-lang="no">Høykvalitets maskindeler og reservedeler for industri- og produksjonsutstyr.</p>
+        <p data-lang="en">High-quality machine parts and spare parts for industrial and manufacturing equipment.</p>
+      </div>
+
+      <div class="service-card">
+        <div class="service-icon">🔧</div>
+        <h3 data-lang="no">Teknisk rådgivning</h3>
+        <h3 data-lang="en">Technical Consulting</h3>
+        <p data-lang="no">Ekspertise innen prosessoptimalisering, materialkvalitet og produksjonseffektivitet.</p>
+        <p data-lang="en">Expertise in process optimisation, material quality, and manufacturing efficiency.</p>
+      </div>
+
+      <div class="service-card">
+        <div class="service-icon">📦</div>
+        <h3 data-lang="no">Import og logistikk</h3>
+        <h3 data-lang="en">Import &amp; Logistics</h3>
+        <p data-lang="no">Sømløs import av koreanske industriprodukt med full tollhåndtering til Norge.</p>
+        <p data-lang="en">Seamless import of Korean industrial products with full customs handling to Norway.</p>
+      </div>
+
+      <div class="service-card">
+        <div class="service-icon">🛡️</div>
+        <h3 data-lang="no">Kvalitetskontroll</h3>
+        <h3 data-lang="en">Quality Control</h3>
+        <p data-lang="no">Grundig inspeksjon og sertifisering som oppfyller europeiske krav og standarder.</p>
+        <p data-lang="en">Thorough inspection and certification meeting European requirements and standards.</p>
+      </div>
+
+      <div class="service-card">
+        <div class="service-icon">🤝</div>
+        <h3 data-lang="no">Skreddersydde løsninger</h3>
+        <h3 data-lang="en">Custom Solutions</h3>
+        <p data-lang="no">Spesialtilpassede produkter og systemer utviklet etter kundens spesifikasjoner.</p>
+        <p data-lang="en">Specially tailored products and systems developed to customer specifications.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- NORWAY SECTION -->
+<section id="norway">
+  <div class="section-inner">
+    <span class="section-tag">
+      <span data-lang="no">🇳🇴 Norgesavdelingen</span>
+      <span data-lang="en">🇳🇴 Norway Division</span>
+    </span>
+    <h2 data-lang="no">Vi er her i Norge</h2>
+    <h2 data-lang="en">We are here in Norway</h2>
+    <p class="section-lead" data-lang="no">ESE Solution er tilgjengelig for norske kunder med lokalt kontaktpunkt, norsk kommunikasjon og tilpassede løsninger for det norske markedet.</p>
+    <p class="section-lead" data-lang="en">ESE Solution is available to Norwegian customers with a local contact point, Norwegian communication, and tailored solutions for the Norwegian market.</p>
+
+    <div class="norway-grid">
+      <div>
+        <div class="norway-card" style="margin-bottom:20px;">
+          <div class="icon">📍</div>
+          <h3 data-lang="no">Norsk kontaktpunkt</h3>
+          <h3 data-lang="en">Norwegian contact point</h3>
+          <p data-lang="no">Vi har representanter i Norge som snakker norsk og kjenner det norske markedet. Ta kontakt direkte – ingen språkbarrierer.</p>
+          <p data-lang="en">We have representatives in Norway who speak Norwegian and know the Norwegian market. Contact us directly – no language barriers.</p>
+        </div>
+        <div class="norway-card" style="margin-bottom:20px;">
+          <div class="icon">🚢</div>
+          <h3 data-lang="no">Direkte frakt til Norge</h3>
+          <h3 data-lang="en">Direct shipping to Norway</h3>
+          <p data-lang="no">Vi håndterer all frakt, toll og dokumentasjon fra Korea til din adresse i Norge. Enkelt og pålitelig.</p>
+          <p data-lang="en">We handle all shipping, customs, and documentation from Korea to your address in Norway. Simple and reliable.</p>
+        </div>
+        <div class="norway-card">
+          <div class="icon">⏰</div>
+          <h3 data-lang="no">Norsk åpningstid</h3>
+          <h3 data-lang="en">Norwegian business hours</h3>
+          <p data-lang="no">Kundeservice tilgjengelig på norsk i norsk arbeidstid (08:00–17:00 CET).</p>
+          <p data-lang="en">Customer service available in Norwegian during Norwegian business hours (08:00–17:00 CET).</p>
+        </div>
+      </div>
+
+      <div class="map-placeholder">
+        <div class="map-icon">🗺️</div>
+        <h3 data-lang="no">Kontorsted i Norge</h3>
+        <h3 data-lang="en">Office location in Norway</h3>
+        <p data-lang="no">Vi er tilstede i Norge for å betjene dere lokalt.</p>
+        <p data-lang="en">We are present in Norway to serve you locally.</p>
+        <address>
+          <strong>ESE Solution – Norge</strong><br />
+          <span data-lang="no">📍 Adresse: Ta kontakt for detaljer</span>
+          <span data-lang="en">📍 Address: Contact us for details</span><br />
+          📞 <a href="tel:+4700000000" style="color:#90caf9;">+47 XX XX XX XX</a><br />
+          ✉️ <a href="mailto:norge@esesolution.co.kr" style="color:#90caf9;">norge@esesolution.co.kr</a>
+        </address>
+        <div style="margin-top:24px;font-size:3rem;">🇳🇴</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHY US -->
+<section id="why">
+  <div class="section-inner">
+    <span class="section-tag">
+      <span data-lang="no">Hvorfor velge oss</span>
+      <span data-lang="en">Why choose us</span>
+    </span>
+    <h2 data-lang="no">Fordeler med ESE Solution</h2>
+    <h2 data-lang="en">The ESE Solution advantage</h2>
+    <p class="section-lead" data-lang="no">Vi forstår norske behov og leverer koreansk kvalitet – det beste fra begge verdener.</p>
+    <p class="section-lead" data-lang="en">We understand Norwegian needs and deliver Korean quality – the best of both worlds.</p>
+
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="why-icon">🏆</div>
+        <h3 data-lang="no">Overlegen kvalitet</h3>
+        <h3 data-lang="en">Superior quality</h3>
+        <p data-lang="no">Koreansk presisjonsproduksjon er verdensklasse.</p>
+        <p data-lang="en">Korean precision manufacturing is world-class.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">💰</div>
+        <h3 data-lang="no">Konkurransedyktig pris</h3>
+        <h3 data-lang="en">Competitive pricing</h3>
+        <p data-lang="no">Lavere kostnader uten å gå på kompromiss med kvaliteten.</p>
+        <p data-lang="en">Lower costs without compromising on quality.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🗣️</div>
+        <h3 data-lang="no">Norsk kommunikasjon</h3>
+        <h3 data-lang="en">Norwegian communication</h3>
+        <p data-lang="no">Full støtte på norsk fra start til slutt.</p>
+        <p data-lang="en">Full support in Norwegian from start to finish.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">⚡</div>
+        <h3 data-lang="no">Rask respons</h3>
+        <h3 data-lang="en">Fast response</h3>
+        <p data-lang="no">Svar på henvendelser innen 24 timer på virkedager.</p>
+        <p data-lang="en">Response to enquiries within 24 hours on business days.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-icon">🔒</div>
+        <h3 data-lang="no">Pålitelig partner</h3>
+        <h3 data-lang="en">Reliable partner</h3>
+        <p data-lang="no">Over 20 år med erfaring og fornøyde kunder.</p>
+        <p data-lang="en">Over 20 years of experience and satisfied customers.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact">
+  <div class="section-inner">
+    <span class="section-tag">
+      <span data-lang="no">Kontakt oss</span>
+      <span data-lang="en">Contact us</span>
+    </span>
+    <h2 data-lang="no">La oss snakke om dine behov</h2>
+    <h2 data-lang="en">Let's talk about your needs</h2>
+    <p class="section-lead" data-lang="no">Send oss en melding – vi svarer på norsk innen neste virkedag.</p>
+    <p class="section-lead" data-lang="en">Send us a message – we reply in Norwegian within the next business day.</p>
+
+    <div class="contact-grid">
+      <div class="contact-info">
+        <h3 data-lang="no">Kontaktinformasjon</h3>
+        <h3 data-lang="en">Contact information</h3>
+
+        <div class="contact-detail">
+          <div class="contact-detail-icon">🇰🇷</div>
+          <div class="contact-detail-text">
+            <strong data-lang="no">Hovedkontor – Korea</strong>
+            <strong data-lang="en">Head office – Korea</strong>
+            <span><a href="https://www.esesolution.co.kr">www.esesolution.co.kr</a></span>
+          </div>
+        </div>
+
+        <div class="contact-detail">
+          <div class="contact-detail-icon">🇳🇴</div>
+          <div class="contact-detail-text">
+            <strong data-lang="no">Norsk kontakt</strong>
+            <strong data-lang="en">Norwegian contact</strong>
+            <span><a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a></span>
+          </div>
+        </div>
+
+        <div class="contact-detail">
+          <div class="contact-detail-icon">📞</div>
+          <div class="contact-detail-text">
+            <strong data-lang="no">Telefon (Norge)</strong>
+            <strong data-lang="en">Phone (Norway)</strong>
+            <span><a href="tel:+4700000000">+47 XX XX XX XX</a></span>
+          </div>
+        </div>
+
+        <div class="contact-detail">
+          <div class="contact-detail-icon">⏰</div>
+          <div class="contact-detail-text">
+            <strong data-lang="no">Åpningstider</strong>
+            <strong data-lang="en">Business hours</strong>
+            <span data-lang="no">Man–fre 08:00–17:00 (norsk tid)</span>
+            <span data-lang="en">Mon–Fri 08:00–17:00 (Norwegian time)</span>
+          </div>
+        </div>
+
+        <div style="margin-top:32px;padding:20px;background:var(--light);border-radius:10px;border-left:4px solid var(--blue);">
+          <strong style="color:var(--navy);font-size:0.92rem;" data-lang="no">💡 Snakker du koreansk?</strong>
+          <strong style="color:var(--navy);font-size:0.92rem;" data-lang="en">💡 Do you speak Korean?</strong>
+          <p style="font-size:0.87rem;color:var(--muted);margin-top:6px;" data-lang="no">Du kan også nå oss direkte på koreansk via vår hovedside.</p>
+          <p style="font-size:0.87rem;color:var(--muted);margin-top:6px;" data-lang="en">You can also reach us directly in Korean via our main site.</p>
+          <a href="https://www.esesolution.co.kr" style="font-size:0.88rem;color:var(--blue);">esesolution.co.kr →</a>
+        </div>
+      </div>
+
+      <div class="contact-form">
+        <h3 data-lang="no">Send oss en melding</h3>
+        <h3 data-lang="en">Send us a message</h3>
+        <form onsubmit="handleSubmit(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label data-lang="no">Fornavn</label>
+              <label data-lang="en">First name</label>
+              <input type="text" required />
+            </div>
+            <div class="form-group">
+              <label data-lang="no">Etternavn</label>
+              <label data-lang="en">Last name</label>
+              <input type="text" required />
+            </div>
+          </div>
+          <div class="form-group">
+            <label data-lang="no">E-postadresse</label>
+            <label data-lang="en">Email address</label>
+            <input type="email" required />
+          </div>
+          <div class="form-group">
+            <label data-lang="no">Bedrift (valgfritt)</label>
+            <label data-lang="en">Company (optional)</label>
+            <input type="text" />
+          </div>
+          <div class="form-group">
+            <label data-lang="no">Hva gjelder henvendelsen?</label>
+            <label data-lang="en">Subject of enquiry</label>
+            <select>
+              <option data-lang="no">Velg kategori...</option>
+              <option data-lang="en">Select category...</option>
+              <option data-lang="no">Forespørsel om produkt / tjeneste</option>
+              <option data-lang="en">Product / service enquiry</option>
+              <option data-lang="no">Tilbud / priser</option>
+              <option data-lang="en">Quote / pricing</option>
+              <option data-lang="no">Teknisk støtte</option>
+              <option data-lang="en">Technical support</option>
+              <option data-lang="no">Annet</option>
+              <option data-lang="en">Other</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label data-lang="no">Melding</label>
+            <label data-lang="en">Message</label>
+            <textarea data-lang="no" placeholder="Beskriv ditt behov eller spørsmål..."></textarea>
+            <textarea data-lang="en" placeholder="Describe your need or question..."></textarea>
+          </div>
+          <button type="submit" class="btn-submit">
+            <span data-lang="no">Send melding →</span>
+            <span data-lang="en">Send message →</span>
+          </button>
+        </form>
+        <div id="form-success" style="display:none;margin-top:16px;padding:14px;background:#e8f5e9;border-radius:8px;color:#1b5e20;font-size:0.92rem;">
+          <span data-lang="no">✅ Takk! Vi svarer deg så snart som mulig.</span>
+          <span data-lang="en">✅ Thank you! We will get back to you as soon as possible.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <div class="logo">
+        <div class="logo-icon">ESE</div>
+        <div>
+          <span class="logo-text">ESE Solution</span>
+          <span class="logo-sub">
+            <span data-lang="no">Industrielle løsninger</span>
+            <span data-lang="en">Industrial Solutions</span>
+          </span>
+        </div>
+      </div>
+      <p data-lang="no">Koreansk ingeniørkompetanse levert til det norske markedet. Kvalitet, pålitelighet og lokal service.</p>
+      <p data-lang="en">Korean engineering expertise delivered to the Norwegian market. Quality, reliability, and local service.</p>
+      <div class="footer-flags" style="margin-top:16px;">🇰🇷 🇳🇴</div>
+    </div>
+
+    <div>
+      <h4 data-lang="no">Navigasjon</h4>
+      <h4 data-lang="en">Navigation</h4>
+      <ul>
+        <li><a href="#about"    data-lang="no">Om oss</a>    <a href="#about"    data-lang="en">About</a></li>
+        <li><a href="#services" data-lang="no">Tjenester</a> <a href="#services" data-lang="en">Services</a></li>
+        <li><a href="#norway"   data-lang="no">Norge</a>     <a href="#norway"   data-lang="en">Norway</a></li>
+        <li><a href="#contact"  data-lang="no">Kontakt</a>   <a href="#contact"  data-lang="en">Contact</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h4 data-lang="no">Tjenester</h4>
+      <h4 data-lang="en">Services</h4>
+      <ul>
+        <li><a href="#services" data-lang="no">Industriproduksjon</a>     <a href="#services" data-lang="en">Industrial manufacturing</a></li>
+        <li><a href="#services" data-lang="no">Maskindeler</a>            <a href="#services" data-lang="en">Machine parts</a></li>
+        <li><a href="#services" data-lang="no">Teknisk rådgivning</a>     <a href="#services" data-lang="en">Technical consulting</a></li>
+        <li><a href="#services" data-lang="no">Import og logistikk</a>    <a href="#services" data-lang="en">Import &amp; logistics</a></li>
+        <li><a href="#services" data-lang="no">Kvalitetskontroll</a>      <a href="#services" data-lang="en">Quality control</a></li>
+      </ul>
+    </div>
+
+    <div>
+      <h4 data-lang="no">Kontakt</h4>
+      <h4 data-lang="en">Contact</h4>
+      <ul>
+        <li><a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a></li>
+        <li><a href="https://www.esesolution.co.kr">esesolution.co.kr</a></li>
+        <li>
+          <span data-lang="no">Man–fre 08–17 CET</span>
+          <span data-lang="en">Mon–Fri 08–17 CET</span>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="footer-bottom">
+    <span data-lang="no">© 2025 ESE Solution. Alle rettigheter forbeholdt.</span>
+    <span data-lang="en">© 2025 ESE Solution. All rights reserved.</span>
+    <span>
+      <a href="https://www.esesolution.co.kr" style="color:rgba(255,255,255,.55);text-decoration:none;" data-lang="no">Koreansk nettside →</a>
+      <a href="https://www.esesolution.co.kr" style="color:rgba(255,255,255,.55);text-decoration:none;" data-lang="en">Korean website →</a>
+    </span>
+  </div>
+</footer>
+
+<script>
+  function setLang(lang) {
+    document.body.classList.toggle('lang-en', lang === 'en');
+    document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.lang-btn')[lang === 'no' ? 0 : 1].classList.add('active');
+    document.documentElement.lang = lang === 'no' ? 'no' : 'en';
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    document.getElementById('form-success').style.display = 'block';
+    e.target.reset();
+    setTimeout(() => {
+      document.getElementById('form-success').style.display = 'none';
+    }, 6000);
+  }
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+</script>
+</body>
+</html>
