@@ -3,665 +3,1319 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ESE Solution – Industrielle løsninger i Norge</title>
+  <title>ESE Solution — Industrielle løsninger til Norge</title>
   <meta name="description" content="ESE Solution leverer industrielle og produksjonstekniske løsninger til det norske markedet." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      --navy:   #0a1f44;
-      --blue:   #1565c0;
-      --accent: #e65100;
-      --light:  #f4f6fa;
-      --white:  #ffffff;
-      --text:   #222831;
-      --muted:  #546e7a;
-      --border: #dce3ed;
+      --ink:        #0b1220;
+      --ink-2:      #131b2e;
+      --ink-3:      #1d2740;
+      --line:       #e5e8f0;
+      --line-dark:  rgba(255,255,255,.08);
+      --paper:      #fafbfc;
+      --white:      #ffffff;
+      --text:       #1a1f2e;
+      --muted:      #5b6478;
+      --muted-2:    #8a93a6;
+      --accent:     #ff5b1f;
+      --accent-2:   #ff8a5b;
+      --blue:       #2563eb;
+      --blue-soft:  #eff4ff;
+      --success:    #10b981;
+      --radius:     12px;
+      --shadow-sm:  0 1px 2px rgba(11,18,32,.05);
+      --shadow-md:  0 8px 24px rgba(11,18,32,.08);
+      --shadow-lg:  0 24px 64px rgba(11,18,32,.16);
+      --ease:       cubic-bezier(.22,.61,.36,1);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
 
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
       color: var(--text);
       background: var(--white);
-      line-height: 1.7;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
     }
 
-    /* ── TOPBAR ── */
-    #topbar {
-      background: var(--navy);
-      color: #cfd8e3;
-      font-size: 0.82rem;
-      padding: 6px 0;
+    h1, h2, h3, h4 { font-family: 'Space Grotesk', 'Inter', sans-serif; letter-spacing: -0.02em; }
+
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; }
+    ::selection { background: var(--ink); color: var(--white); }
+
+    /* ── Scroll progress ── */
+    .scroll-progress {
+      position: fixed; top: 0; left: 0;
+      height: 2px; width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      z-index: 200;
+      transition: width .1s linear;
+    }
+
+    /* ── Topbar ── */
+    .topbar {
+      background: var(--ink);
+      color: rgba(255,255,255,.7);
+      font-size: 0.81rem;
+      padding: 9px 0;
       text-align: center;
-      letter-spacing: 0.03em;
+      letter-spacing: .01em;
     }
-    #topbar a { color: #90caf9; text-decoration: none; }
+    .topbar .dot { opacity: .35; margin: 0 10px; }
+    .topbar a { color: rgba(255,255,255,.9); border-bottom: 1px solid rgba(255,255,255,.2); }
 
-    /* ── NAV ── */
+    /* ── Nav ── */
     nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
-      background: var(--white);
-      border-bottom: 2px solid var(--border);
-      padding: 0 5%;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      height: 68px;
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(255,255,255,.85);
+      backdrop-filter: saturate(180%) blur(14px);
+      -webkit-backdrop-filter: saturate(180%) blur(14px);
+      border-bottom: 1px solid var(--line);
+      padding: 0 36px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 72px;
+      transition: box-shadow .3s var(--ease);
     }
+    nav.scrolled { box-shadow: var(--shadow-sm); }
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      text-decoration: none;
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand-mark {
+      width: 40px; height: 40px;
+      background: var(--ink);
+      border-radius: 10px;
+      display: grid; place-items: center;
+      position: relative;
+      overflow: hidden;
     }
-    .logo-icon {
-      width: 42px; height: 42px;
-      background: var(--navy);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      color: var(--white);
-      font-weight: 900;
-      font-size: 1.1rem;
-      letter-spacing: -1px;
+    .brand-mark::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 40%, rgba(255,91,31,.5) 100%);
+      opacity: 0; transition: opacity .3s;
     }
-    .logo-text { font-size: 1.25rem; font-weight: 700; color: var(--navy); }
-    .logo-sub  { font-size: 0.72rem; color: var(--muted); display: block; }
+    .brand:hover .brand-mark::after { opacity: 1; }
+    .brand-mark svg { color: white; width: 22px; height: 22px; position: relative; z-index: 2; }
+    .brand-text { font-family: 'Space Grotesk'; font-weight: 700; font-size: 1.15rem; color: var(--ink); line-height: 1.1; }
+    .brand-sub  { font-size: 0.72rem; color: var(--muted); display: block; margin-top: 2px; }
 
-    .nav-links {
-      display: flex;
-      gap: 28px;
-      list-style: none;
-    }
+    .nav-links { display: flex; gap: 4px; list-style: none; }
     .nav-links a {
-      text-decoration: none;
-      color: var(--navy);
+      position: relative;
+      font-size: 0.92rem;
       font-weight: 500;
-      font-size: 0.93rem;
-      transition: color .2s;
+      color: var(--text);
+      padding: 8px 14px;
+      border-radius: 8px;
+      transition: color .2s, background .2s;
     }
-    .nav-links a:hover { color: var(--blue); }
+    .nav-links a::after {
+      content: '';
+      position: absolute;
+      bottom: 2px; left: 14px; right: 14px;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0); transform-origin: left;
+      transition: transform .35s var(--ease);
+      border-radius: 2px;
+    }
+    .nav-links a:hover { color: var(--ink); }
+    .nav-links a:hover::after { transform: scaleX(1); }
 
-    .nav-right {
-      display: flex;
-      align-items: center;
-      gap: 14px;
-    }
+    .nav-right { display: flex; align-items: center; gap: 14px; }
 
     /* Language toggle */
     .lang-toggle {
-      display: flex;
-      border: 1.5px solid var(--border);
-      border-radius: 20px;
-      overflow: hidden;
-      font-size: 0.82rem;
-    }
-    .lang-btn {
-      padding: 5px 14px;
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      font-weight: 600;
-      color: var(--muted);
-      transition: background .2s, color .2s;
-    }
-    .lang-btn.active {
-      background: var(--navy);
-      color: var(--white);
-    }
-
-    .cta-nav {
-      background: var(--accent);
-      color: var(--white) !important;
-      padding: 8px 18px;
-      border-radius: 6px;
-      font-weight: 600;
-      font-size: 0.88rem;
-      text-decoration: none;
-      transition: background .2s;
-    }
-    .cta-nav:hover { background: #bf360c; color: var(--white) !important; }
-
-    /* ── HERO ── */
-    #hero {
       position: relative;
-      background: linear-gradient(135deg, var(--navy) 0%, #1a3a6e 60%, #1565c0 100%);
+      display: inline-flex;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 3px;
+      gap: 0;
+    }
+    .lang-toggle .pill-bg {
+      position: absolute;
+      top: 3px; left: 3px;
+      height: calc(100% - 6px);
+      width: calc(50% - 3px);
+      background: var(--ink);
+      border-radius: 999px;
+      transition: transform .35s var(--ease);
+    }
+    body.lang-en .lang-toggle .pill-bg { transform: translateX(100%); }
+    .lang-btn {
+      position: relative; z-index: 2;
+      padding: 6px 16px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+      color: var(--muted);
+      transition: color .25s;
+    }
+    .lang-btn.active { color: var(--white); }
+
+    .btn-cta {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--ink);
       color: var(--white);
-      padding: 100px 5% 90px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: background .25s, transform .15s;
+    }
+    .btn-cta:hover { background: var(--accent); transform: translateY(-1px); }
+    .btn-cta svg { width: 14px; height: 14px; }
+
+    /* Mobile hamburger */
+    .nav-burger {
+      display: none;
+      width: 40px; height: 40px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+    }
+    .nav-burger svg { width: 18px; height: 18px; color: var(--ink); }
+
+    /* ── Hero ── */
+    .hero {
+      position: relative;
+      background: var(--ink);
+      color: var(--white);
+      padding: 120px 5% 140px;
       overflow: hidden;
+      isolation: isolate;
     }
-    #hero::before {
-      content: '';
-      position: absolute;
-      top: -80px; right: -80px;
-      width: 480px; height: 480px;
-      background: rgba(255,255,255,.04);
-      border-radius: 50%;
+
+    .hero-grid-bg {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(255,255,255,.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,.04) 1px, transparent 1px);
+      background-size: 56px 56px;
+      mask-image: radial-gradient(ellipse at 50% 40%, black 30%, transparent 75%);
+      -webkit-mask-image: radial-gradient(ellipse at 50% 40%, black 30%, transparent 75%);
+      pointer-events: none;
     }
-    #hero::after {
-      content: '';
-      position: absolute;
-      bottom: -100px; left: 30%;
-      width: 300px; height: 300px;
-      background: rgba(255,255,255,.03);
-      border-radius: 50%;
+    .hero-glow {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(600px circle at var(--mx,30%) var(--my,40%), rgba(255,91,31,.18), transparent 50%),
+        radial-gradient(800px circle at 80% 100%, rgba(37,99,235,.15), transparent 50%);
+      pointer-events: none;
+      transition: background .2s linear;
     }
 
     .hero-inner {
-      max-width: 700px;
-      position: relative;
-      z-index: 2;
-    }
-    .hero-badge {
-      display: inline-flex;
+      position: relative; z-index: 2;
+      max-width: 1240px; margin: 0 auto;
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 80px;
       align-items: center;
-      gap: 8px;
-      background: rgba(255,255,255,.12);
-      border: 1px solid rgba(255,255,255,.25);
-      border-radius: 20px;
-      padding: 5px 14px;
-      font-size: 0.82rem;
-      margin-bottom: 22px;
-      letter-spacing: .04em;
-    }
-    .flag { font-size: 1.1rem; }
-
-    #hero h1 {
-      font-size: clamp(2rem, 4.5vw, 3.4rem);
-      font-weight: 800;
-      line-height: 1.15;
-      margin-bottom: 20px;
-    }
-    #hero h1 span { color: #90caf9; }
-
-    #hero p {
-      font-size: 1.1rem;
-      opacity: .88;
-      margin-bottom: 36px;
-      max-width: 580px;
     }
 
-    .hero-buttons {
-      display: flex;
-      gap: 14px;
-      flex-wrap: wrap;
+    .hero-chip {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      padding: 6px 14px 6px 6px;
+      font-size: 0.8rem;
+      margin-bottom: 28px;
+      letter-spacing: .01em;
     }
+    .hero-chip .chip-dot {
+      width: 22px; height: 22px;
+      background: var(--accent);
+      border-radius: 50%;
+      position: relative;
+    }
+    .hero-chip .chip-dot::before {
+      content: '';
+      position: absolute; inset: -4px;
+      border-radius: 50%;
+      border: 1px solid var(--accent);
+      animation: pulse 2s var(--ease) infinite;
+    }
+    @keyframes pulse {
+      0%   { transform: scale(.9); opacity: 1; }
+      80%  { transform: scale(1.6); opacity: 0; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+      font-weight: 700;
+      line-height: 1.05;
+      margin-bottom: 24px;
+    }
+    .hero h1 .accent {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      font-style: italic;
+      font-weight: 600;
+    }
+    .hero p.lead {
+      font-size: 1.13rem;
+      color: rgba(255,255,255,.72);
+      margin-bottom: 40px;
+      max-width: 560px;
+    }
+
+    .hero-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
     .btn-primary {
+      display: inline-flex; align-items: center; gap: 10px;
       background: var(--accent);
       color: var(--white);
-      padding: 14px 30px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 700;
-      font-size: 1rem;
-      transition: background .2s, transform .15s;
-      display: inline-block;
+      padding: 15px 28px;
+      border-radius: 999px;
+      font-weight: 600;
+      font-size: 0.96rem;
+      transition: background .25s, transform .15s, box-shadow .25s;
+      box-shadow: 0 10px 30px rgba(255,91,31,.3);
     }
-    .btn-primary:hover { background: #bf360c; transform: translateY(-1px); }
-    .btn-outline {
+    .btn-primary:hover { background: var(--accent-2); transform: translateY(-2px); box-shadow: 0 14px 36px rgba(255,91,31,.4); }
+    .btn-primary svg { width: 16px; height: 16px; transition: transform .25s; }
+    .btn-primary:hover svg { transform: translateX(4px); }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 10px;
       background: transparent;
       color: var(--white);
-      border: 2px solid rgba(255,255,255,.5);
-      padding: 14px 30px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 1rem;
-      transition: border-color .2s, background .2s;
-      display: inline-block;
+      border: 1px solid rgba(255,255,255,.2);
+      padding: 15px 28px;
+      border-radius: 999px;
+      font-weight: 500;
+      font-size: 0.96rem;
+      transition: background .25s, border-color .25s;
     }
-    .btn-outline:hover { border-color: var(--white); background: rgba(255,255,255,.08); }
+    .btn-ghost:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.4); }
 
-    /* Stats strip */
-    .stats-strip {
-      background: var(--white);
-      border-bottom: 1px solid var(--border);
+    /* Hero visual */
+    .hero-visual {
+      position: relative;
+      aspect-ratio: 1 / 1.05;
+      max-width: 420px;
+      margin: 0 auto;
+    }
+    .hero-card {
+      position: absolute;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px;
+      backdrop-filter: blur(20px);
+      padding: 20px;
+      transition: transform .6s var(--ease);
+    }
+    .hero-card-1 {
+      top: 0; left: 0; right: 25%;
+      animation: float1 6s ease-in-out infinite;
+    }
+    .hero-card-2 {
+      top: 28%; left: 30%; right: 0;
+      animation: float2 7s ease-in-out infinite;
+    }
+    .hero-card-3 {
+      bottom: 0; left: 5%; right: 35%;
+      animation: float1 8s ease-in-out infinite 1s;
+    }
+    @keyframes float1 {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+    @keyframes float2 {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-14px); }
+    }
+
+    .hero-card .icon-box {
+      width: 38px; height: 38px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-radius: 10px;
+      display: grid; place-items: center;
+      color: var(--white);
+      margin-bottom: 12px;
+    }
+    .hero-card-2 .icon-box { background: linear-gradient(135deg, var(--blue), #60a5fa); }
+    .hero-card-3 .icon-box { background: linear-gradient(135deg, var(--success), #34d399); }
+    .hero-card .icon-box svg { width: 18px; height: 18px; }
+    .hero-card h4 { font-size: 0.92rem; margin-bottom: 4px; color: var(--white); }
+    .hero-card p  { font-size: 0.78rem; color: rgba(255,255,255,.6); }
+
+    .hero-card-orbit {
+      position: absolute;
+      bottom: -30px; right: -10px;
+      width: 90px; height: 90px;
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      animation: spin 30s linear infinite;
+    }
+    .hero-card-orbit::before {
+      content: '';
+      width: 12px; height: 12px;
+      background: var(--accent);
+      border-radius: 50%;
+      position: absolute;
+      top: -6px; left: 50%; transform: translateX(-50%);
+      box-shadow: 0 0 14px var(--accent);
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Marquee strip ── */
+    .marquee {
+      background: var(--paper);
+      border-bottom: 1px solid var(--line);
+      padding: 22px 0;
+      overflow: hidden;
+      position: relative;
+    }
+    .marquee::before, .marquee::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 100px;
+      z-index: 2;
+      pointer-events: none;
+    }
+    .marquee::before { left: 0;  background: linear-gradient(90deg, var(--paper), transparent); }
+    .marquee::after  { right: 0; background: linear-gradient(-90deg, var(--paper), transparent); }
+    .marquee-track {
       display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
+      gap: 60px;
+      animation: marquee 30s linear infinite;
+      white-space: nowrap;
+    }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
+    }
+    .marquee-item {
+      font-family: 'Space Grotesk';
+      font-weight: 600;
+      font-size: 1.05rem;
+      color: var(--muted);
+      display: inline-flex; align-items: center; gap: 14px;
+    }
+    .marquee-item svg { width: 18px; height: 18px; color: var(--accent); }
+
+    /* ── Stats ── */
+    .stats {
+      max-width: 1240px;
+      margin: -60px auto 0;
+      padding: 0 5%;
+      position: relative; z-index: 5;
+    }
+    .stats-card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 36px;
+      box-shadow: var(--shadow-lg);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
       gap: 0;
     }
     .stat-item {
-      padding: 28px 40px;
-      text-align: center;
-      border-right: 1px solid var(--border);
+      padding: 0 24px;
+      border-right: 1px solid var(--line);
     }
     .stat-item:last-child { border-right: none; }
     .stat-num {
-      font-size: 2rem;
-      font-weight: 800;
-      color: var(--navy);
-      display: block;
-    }
-    .stat-label {
-      font-size: 0.82rem;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .06em;
-    }
-
-    /* ── SECTIONS ── */
-    section { padding: 80px 5%; }
-    .section-inner { max-width: 1100px; margin: 0 auto; }
-
-    .section-tag {
-      display: inline-block;
-      background: #e3f0ff;
-      color: var(--blue);
-      font-size: 0.78rem;
+      font-family: 'Space Grotesk';
+      font-size: 2.6rem;
       font-weight: 700;
+      color: var(--ink);
+      line-height: 1;
+      display: flex; align-items: baseline; gap: 4px;
+    }
+    .stat-suffix { font-size: 1.4rem; color: var(--accent); }
+    .stat-label {
+      margin-top: 8px;
+      font-size: 0.84rem;
+      color: var(--muted);
+    }
+
+    /* ── Sections ── */
+    section.block { padding: 120px 5%; }
+    .inner { max-width: 1240px; margin: 0 auto; }
+
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: 'Space Grotesk';
+      font-size: 0.78rem;
+      font-weight: 600;
       text-transform: uppercase;
-      letter-spacing: .1em;
-      padding: 4px 12px;
-      border-radius: 4px;
-      margin-bottom: 12px;
+      letter-spacing: .12em;
+      color: var(--accent);
+      margin-bottom: 16px;
+    }
+    .eyebrow::before {
+      content: '';
+      width: 24px; height: 1px;
+      background: var(--accent);
     }
     h2 {
-      font-size: clamp(1.6rem, 3vw, 2.2rem);
-      font-weight: 800;
-      color: var(--navy);
-      margin-bottom: 14px;
+      font-size: clamp(1.9rem, 3.5vw, 2.9rem);
+      font-weight: 700;
+      color: var(--ink);
+      margin-bottom: 16px;
+      line-height: 1.1;
     }
+    h2 .italic { font-style: italic; font-weight: 500; color: var(--accent); }
     .section-lead {
-      font-size: 1.05rem;
+      font-size: 1.08rem;
       color: var(--muted);
-      max-width: 620px;
-      margin-bottom: 48px;
+      max-width: 640px;
+      margin-bottom: 56px;
     }
 
-    /* ── ABOUT ── */
-    #about { background: var(--light); }
+    /* ── About ── */
     .about-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 60px;
+      grid-template-columns: 1.1fr 1fr;
+      gap: 80px;
       align-items: center;
     }
-    .about-img {
-      background: linear-gradient(135deg, var(--navy), var(--blue));
-      border-radius: 16px;
-      padding: 48px 36px;
-      color: var(--white);
-      text-align: center;
-    }
-    .about-img .big-icon { font-size: 5rem; margin-bottom: 16px; }
-    .about-img p { opacity: .85; font-size: 0.95rem; }
-    .about-list { list-style: none; margin-top: 24px; }
+    .about-list { list-style: none; margin-top: 8px; }
     .about-list li {
-      padding: 10px 0;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      gap: 10px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--line);
+      display: flex; gap: 16px;
       align-items: flex-start;
-      font-size: 0.97rem;
+      transition: padding-left .3s var(--ease);
+      cursor: default;
     }
+    .about-list li:hover { padding-left: 8px; }
     .about-list li:last-child { border-bottom: none; }
-    .check { color: #1b8e3b; font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+    .check-icon {
+      flex-shrink: 0;
+      width: 28px; height: 28px;
+      background: var(--ink);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      color: var(--white);
+      margin-top: 2px;
+      transition: background .25s, transform .25s;
+    }
+    .about-list li:hover .check-icon { background: var(--accent); transform: rotate(360deg); }
+    .check-icon svg { width: 14px; height: 14px; }
+    .about-list li strong { display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px; }
+    .about-list li span   { font-size: 0.92rem; color: var(--muted); }
 
-    /* ── SERVICES ── */
+    .about-visual {
+      position: relative;
+      aspect-ratio: 1;
+      background: linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%);
+      border-radius: 24px;
+      overflow: hidden;
+      padding: 40px;
+      color: var(--white);
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+    }
+    .about-visual::before {
+      content: '';
+      position: absolute;
+      width: 300px; height: 300px;
+      background: linear-gradient(135deg, var(--accent), transparent);
+      border-radius: 50%;
+      filter: blur(80px);
+      top: -100px; right: -100px;
+      opacity: .5;
+    }
+    .about-visual-top {
+      position: relative; z-index: 2;
+      display: flex; justify-content: space-between;
+    }
+    .country-card {
+      background: rgba(255,255,255,.06);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px;
+      padding: 14px 18px;
+      backdrop-filter: blur(10px);
+    }
+    .country-code {
+      font-family: 'Space Grotesk';
+      font-size: 0.7rem;
+      letter-spacing: .12em;
+      color: rgba(255,255,255,.5);
+    }
+    .country-name {
+      font-family: 'Space Grotesk';
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-top: 2px;
+    }
+    .about-visual-arrow {
+      position: relative; z-index: 2;
+      align-self: center;
+      width: 70px; height: 70px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: grid; place-items: center;
+      box-shadow: 0 12px 32px rgba(255,91,31,.4);
+    }
+    .about-visual-arrow svg { width: 24px; height: 24px; color: var(--white); }
+    .about-visual-bottom {
+      position: relative; z-index: 2;
+      font-family: 'Space Grotesk';
+      font-weight: 600;
+    }
+    .about-visual-bottom .small {
+      font-size: 0.78rem;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      opacity: .5;
+      margin-bottom: 6px;
+    }
+
+    /* ── Services ── */
+    .services { background: var(--paper); }
     .services-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 24px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
     }
     .service-card {
       background: var(--white);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      padding: 30px 28px;
-      transition: box-shadow .25s, border-color .25s, transform .2s;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 32px 28px 28px;
+      transition: transform .4s var(--ease), border-color .3s, box-shadow .3s;
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
     }
-    .service-card:hover {
-      box-shadow: 0 8px 32px rgba(10,31,68,.12);
-      border-color: var(--blue);
-      transform: translateY(-3px);
+    .service-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      opacity: 0;
+      transition: opacity .4s var(--ease);
+      z-index: 0;
     }
-    .service-icon {
-      width: 52px; height: 52px;
-      background: #e3f0ff;
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.6rem;
-      margin-bottom: 18px;
-    }
-    .service-card h3 { font-size: 1.1rem; color: var(--navy); margin-bottom: 8px; }
-    .service-card p  { font-size: 0.91rem; color: var(--muted); }
+    .service-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
+    .service-card:hover::before { opacity: .04; }
+    .service-card > * { position: relative; z-index: 1; }
 
-    /* ── NORWAY ── */
-    #norway { background: var(--navy); color: var(--white); }
-    #norway .section-tag { background: rgba(255,255,255,.15); color: #90caf9; }
-    #norway h2 { color: var(--white); }
-    #norway .section-lead { color: rgba(255,255,255,.75); }
+    .service-icon {
+      width: 56px; height: 56px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      display: grid; place-items: center;
+      margin-bottom: 22px;
+      color: var(--ink);
+      transition: background .3s, color .3s, transform .4s var(--ease);
+    }
+    .service-card:hover .service-icon {
+      background: var(--ink); color: var(--white); transform: rotate(-6deg) scale(1.08);
+    }
+    .service-icon svg { width: 24px; height: 24px; }
+
+    .service-card h3 {
+      font-size: 1.18rem;
+      color: var(--ink);
+      margin-bottom: 8px;
+    }
+    .service-card p { font-size: 0.93rem; color: var(--muted); }
+    .service-card .arrow {
+      margin-top: 22px;
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.84rem; font-weight: 600;
+      color: var(--accent);
+      transition: gap .3s var(--ease);
+    }
+    .service-card:hover .arrow { gap: 12px; }
+    .service-card .arrow svg { width: 14px; height: 14px; }
+
+    /* ── Norway section ── */
+    .norway {
+      background: var(--ink);
+      color: var(--white);
+      position: relative;
+      overflow: hidden;
+    }
+    .norway::before {
+      content: '';
+      position: absolute;
+      top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px;
+      background: radial-gradient(circle, rgba(255,91,31,.18), transparent 60%);
+      pointer-events: none;
+    }
+    .norway .eyebrow { color: var(--accent-2); }
+    .norway .eyebrow::before { background: var(--accent-2); }
+    .norway h2 { color: var(--white); }
+    .norway .section-lead { color: rgba(255,255,255,.7); }
+
     .norway-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1.2fr;
       gap: 48px;
-      align-items: start;
+      align-items: stretch;
     }
+    .norway-cards { display: grid; gap: 16px; }
     .norway-card {
-      background: rgba(255,255,255,.07);
-      border: 1px solid rgba(255,255,255,.15);
-      border-radius: 12px;
-      padding: 28px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 16px;
+      padding: 26px;
+      display: flex; gap: 20px;
+      align-items: flex-start;
+      transition: background .3s, border-color .3s, transform .3s;
     }
-    .norway-card h3 { font-size: 1.05rem; margin-bottom: 10px; color: #90caf9; }
-    .norway-card p  { font-size: 0.92rem; opacity: .82; }
-    .norway-card .icon { font-size: 2rem; margin-bottom: 12px; }
+    .norway-card:hover { background: rgba(255,255,255,.07); border-color: rgba(255,91,31,.4); transform: translateX(6px); }
+    .norway-card-icon {
+      flex-shrink: 0;
+      width: 48px; height: 48px;
+      background: rgba(255,91,31,.15);
+      border: 1px solid rgba(255,91,31,.3);
+      border-radius: 12px;
+      display: grid; place-items: center;
+      color: var(--accent-2);
+    }
+    .norway-card-icon svg { width: 22px; height: 22px; }
+    .norway-card h3 {
+      font-size: 1.04rem;
+      color: var(--white);
+      margin-bottom: 4px;
+    }
+    .norway-card p { font-size: 0.9rem; color: rgba(255,255,255,.65); }
 
-    .map-placeholder {
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.15);
-      border-radius: 12px;
-      padding: 40px 28px;
-      text-align: center;
+    .map-card {
+      background: linear-gradient(135deg, var(--ink-2), var(--ink-3));
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 20px;
+      padding: 36px;
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      overflow: hidden;
+      min-height: 480px;
     }
-    .map-placeholder .map-icon { font-size: 4rem; margin-bottom: 16px; }
-    .map-placeholder h3 { font-size: 1.1rem; margin-bottom: 8px; }
-    .map-placeholder p  { font-size: 0.9rem; opacity: .75; }
-    .map-placeholder address {
+
+    .map-svg {
+      flex: 1;
+      display: grid; place-items: center;
+      margin: 16px 0;
+      position: relative;
+    }
+    .map-svg svg { width: 100%; max-width: 240px; height: auto; }
+    .map-svg .pin {
+      position: absolute;
+      width: 14px; height: 14px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 0 4px rgba(255,91,31,.25), 0 0 0 12px rgba(255,91,31,.1);
+      animation: pinPulse 2.4s var(--ease) infinite;
+    }
+    @keyframes pinPulse {
+      0%, 100% { box-shadow: 0 0 0 4px rgba(255,91,31,.25), 0 0 0 12px rgba(255,91,31,.1); }
+      50%      { box-shadow: 0 0 0 7px rgba(255,91,31,.35), 0 0 0 18px rgba(255,91,31,.15); }
+    }
+    .pin-oslo      { top: 62%; left: 56%; }
+    .pin-bergen    { top: 50%; left: 38%; }
+    .pin-stavanger { top: 64%; left: 36%; }
+    .pin-tromso    { top: 18%; left: 56%; }
+
+    .map-card .map-label {
+      font-family: 'Space Grotesk';
+      font-size: 0.78rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: rgba(255,255,255,.5);
+    }
+    .map-card .map-address {
       font-style: normal;
-      margin-top: 20px;
-      font-size: 0.93rem;
-      opacity: .9;
-      line-height: 2;
+      font-size: 0.96rem;
+      line-height: 1.9;
+      margin-top: 14px;
     }
+    .map-card .map-address strong { font-family: 'Space Grotesk'; font-weight: 600; color: var(--white); }
+    .map-card .map-address a { color: var(--accent-2); border-bottom: 1px dashed rgba(255,138,91,.4); }
 
-    /* ── WHY US ── */
-    #why { background: var(--light); }
+    /* ── Why us ── */
+    .why { background: var(--paper); }
     .why-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 14px;
     }
     .why-card {
       background: var(--white);
-      border-radius: 10px;
-      padding: 28px 22px;
-      text-align: center;
-      border: 1.5px solid var(--border);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 28px 24px;
+      text-align: left;
+      transition: transform .4s var(--ease), box-shadow .3s, border-color .3s;
     }
-    .why-card .why-icon { font-size: 2.2rem; margin-bottom: 12px; }
-    .why-card h3 { font-size: 1rem; color: var(--navy); margin-bottom: 6px; }
-    .why-card p  { font-size: 0.87rem; color: var(--muted); }
+    .why-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--ink); }
+    .why-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: var(--blue-soft);
+      color: var(--blue);
+      display: grid; place-items: center;
+      margin-bottom: 18px;
+    }
+    .why-icon svg { width: 22px; height: 22px; }
+    .why-card h3 { font-size: 1rem; margin-bottom: 6px; color: var(--ink); }
+    .why-card p  { font-size: 0.86rem; color: var(--muted); line-height: 1.55; }
 
-    /* ── CONTACT ── */
-    #contact {}
+    /* ── Contact ── */
     .contact-grid {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 1.1fr;
       gap: 60px;
     }
-    .contact-info h3 { font-size: 1.1rem; color: var(--navy); margin-bottom: 20px; }
+    .contact-info h3 { font-size: 1.15rem; color: var(--ink); margin-bottom: 24px; }
     .contact-detail {
-      display: flex;
-      gap: 14px;
-      align-items: flex-start;
-      margin-bottom: 22px;
+      display: flex; gap: 16px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--line);
     }
+    .contact-detail:last-of-type { border-bottom: none; }
     .contact-detail-icon {
-      width: 40px; height: 40px;
-      background: #e3f0ff;
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.2rem;
+      width: 42px; height: 42px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      display: grid; place-items: center;
       flex-shrink: 0;
+      color: var(--ink);
     }
-    .contact-detail-text strong { display: block; color: var(--navy); font-size: 0.92rem; }
-    .contact-detail-text span   { font-size: 0.9rem; color: var(--muted); }
-    .contact-detail-text a      { color: var(--blue); text-decoration: none; }
+    .contact-detail-icon svg { width: 18px; height: 18px; }
+    .contact-detail-text strong { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 2px; }
+    .contact-detail-text .value { font-size: 0.98rem; color: var(--ink); font-weight: 500; }
+    .contact-detail-text .value a { border-bottom: 1px solid transparent; transition: border-color .25s; }
+    .contact-detail-text .value a:hover { border-bottom-color: var(--accent); }
 
-    .contact-form { background: var(--light); padding: 36px; border-radius: 14px; }
-    .contact-form h3 { font-size: 1.1rem; color: var(--navy); margin-bottom: 22px; }
+    .contact-form {
+      background: var(--ink);
+      color: var(--white);
+      padding: 40px;
+      border-radius: 24px;
+      position: relative;
+      overflow: hidden;
+    }
+    .contact-form::before {
+      content: '';
+      position: absolute;
+      top: -100px; right: -100px;
+      width: 250px; height: 250px;
+      background: radial-gradient(circle, rgba(255,91,31,.3), transparent 60%);
+      filter: blur(40px);
+    }
+    .contact-form > * { position: relative; z-index: 2; }
+    .contact-form h3 { font-size: 1.3rem; color: var(--white); margin-bottom: 6px; }
+    .contact-form .form-sub { font-size: 0.92rem; color: rgba(255,255,255,.6); margin-bottom: 28px; }
+
     .form-group { margin-bottom: 18px; }
-    .form-group label { display: block; font-size: 0.85rem; font-weight: 600; color: var(--navy); margin-bottom: 6px; }
+    .form-group label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      color: rgba(255,255,255,.7);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
     .form-group input,
     .form-group select,
     .form-group textarea {
       width: 100%;
-      padding: 11px 14px;
-      border: 1.5px solid var(--border);
-      border-radius: 7px;
-      font-size: 0.93rem;
-      color: var(--text);
-      background: var(--white);
+      padding: 13px 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 10px;
+      font-size: 0.95rem;
+      color: var(--white);
+      background: rgba(255,255,255,.04);
       outline: none;
-      transition: border-color .2s;
+      font-family: inherit;
+      transition: border-color .25s, background .25s;
     }
+    .form-group input::placeholder,
+    .form-group textarea::placeholder { color: rgba(255,255,255,.35); }
     .form-group input:focus,
     .form-group select:focus,
-    .form-group textarea:focus { border-color: var(--blue); }
-    .form-group textarea { height: 110px; resize: vertical; }
+    .form-group textarea:focus { border-color: var(--accent); background: rgba(255,255,255,.06); }
+    .form-group select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='white' viewBox='0 0 24 24'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; background-size: 16px; padding-right: 42px; }
+    .form-group select option { background: var(--ink); color: var(--white); }
+    .form-group textarea { min-height: 110px; resize: vertical; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
     .btn-submit {
       width: 100%;
-      background: var(--navy);
+      background: var(--accent);
       color: var(--white);
       border: none;
-      padding: 13px;
-      border-radius: 7px;
-      font-size: 1rem;
-      font-weight: 700;
+      padding: 16px;
+      border-radius: 10px;
+      font-size: 0.98rem;
+      font-weight: 600;
       cursor: pointer;
-      transition: background .2s;
+      transition: background .25s, transform .15s;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      margin-top: 8px;
     }
-    .btn-submit:hover { background: var(--blue); }
+    .btn-submit:hover { background: var(--accent-2); transform: translateY(-1px); }
+    .btn-submit svg { width: 16px; height: 16px; transition: transform .25s; }
+    .btn-submit:hover svg { transform: translateX(4px); }
 
-    /* ── FOOTER ── */
+    .form-success {
+      display: none;
+      margin-top: 16px;
+      padding: 14px 16px;
+      background: rgba(16,185,129,.15);
+      border: 1px solid rgba(16,185,129,.3);
+      border-radius: 10px;
+      color: #6ee7b7;
+      font-size: 0.9rem;
+      align-items: center; gap: 10px;
+    }
+    .form-success.show { display: flex; }
+    .form-success svg { width: 18px; height: 18px; flex-shrink: 0; }
+
+    /* ── Footer ── */
     footer {
-      background: var(--navy);
-      color: rgba(255,255,255,.75);
-      padding: 50px 5% 28px;
+      background: var(--ink);
+      color: rgba(255,255,255,.6);
+      padding: 80px 5% 30px;
+      position: relative;
+      overflow: hidden;
+    }
+    footer::before {
+      content: 'ESE';
+      position: absolute;
+      bottom: -120px; right: -40px;
+      font-family: 'Space Grotesk';
+      font-size: 22rem;
+      font-weight: 700;
+      color: rgba(255,255,255,.025);
+      letter-spacing: -0.04em;
+      pointer-events: none;
+      line-height: 1;
     }
     .footer-grid {
-      max-width: 1100px;
+      max-width: 1240px;
       margin: 0 auto;
       display: grid;
       grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: 40px;
-      padding-bottom: 36px;
-      border-bottom: 1px solid rgba(255,255,255,.12);
+      gap: 48px;
+      padding-bottom: 50px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      position: relative; z-index: 2;
     }
-    .footer-brand .logo-text { color: var(--white); }
-    .footer-brand .logo-sub  { color: rgba(255,255,255,.55); }
-    .footer-brand p { font-size: 0.88rem; margin-top: 14px; line-height: 1.7; }
-    footer h4 { font-size: 0.9rem; color: var(--white); margin-bottom: 14px; text-transform: uppercase; letter-spacing: .06em; }
+    .footer-brand p { font-size: 0.92rem; margin-top: 18px; max-width: 320px; line-height: 1.7; }
+    .footer-brand .brand-text { color: var(--white); }
+    .footer-brand .brand-sub  { color: rgba(255,255,255,.4); }
+
+    footer h4 {
+      font-family: 'Space Grotesk';
+      font-size: 0.78rem;
+      color: rgba(255,255,255,.5);
+      margin-bottom: 18px;
+      text-transform: uppercase;
+      letter-spacing: .12em;
+    }
     footer ul { list-style: none; }
-    footer ul li { margin-bottom: 8px; }
-    footer ul li a { color: rgba(255,255,255,.65); text-decoration: none; font-size: 0.88rem; transition: color .2s; }
-    footer ul li a:hover { color: var(--white); }
+    footer ul li { margin-bottom: 10px; }
+    footer ul li a {
+      color: rgba(255,255,255,.7);
+      font-size: 0.92rem;
+      transition: color .25s, padding-left .25s var(--ease);
+      display: inline-block;
+    }
+    footer ul li a:hover { color: var(--white); padding-left: 4px; }
+
     .footer-bottom {
-      max-width: 1100px;
+      max-width: 1240px;
       margin: 24px auto 0;
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      font-size: 0.82rem;
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 10px;
+      font-size: 0.82rem;
+      position: relative; z-index: 2;
     }
-    .footer-flags { display: flex; gap: 8px; font-size: 1.4rem; }
+    .footer-bottom a { color: rgba(255,255,255,.6); transition: color .25s; }
+    .footer-bottom a:hover { color: var(--white); }
 
-    /* ── RESPONSIVE ── */
-    @media (max-width: 768px) {
+    /* ── Reveal animations ── */
+    .reveal { opacity: 0; transform: translateY(28px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
+    .reveal.in { opacity: 1; transform: translateY(0); }
+    .reveal[data-delay="1"] { transition-delay: .08s; }
+    .reveal[data-delay="2"] { transition-delay: .16s; }
+    .reveal[data-delay="3"] { transition-delay: .24s; }
+    .reveal[data-delay="4"] { transition-delay: .32s; }
+    .reveal[data-delay="5"] { transition-delay: .40s; }
+
+    /* ── Language ── */
+    body:not(.lang-en) [data-en] { display: none; }
+    body.lang-en      [data-no] { display: none; }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      nav { padding: 0 20px; }
       .nav-links { display: none; }
-      .about-grid,
-      .norway-grid,
-      .contact-grid { grid-template-columns: 1fr; }
-      .footer-grid   { grid-template-columns: 1fr 1fr; }
-      .stat-item     { padding: 22px 20px; }
-      .form-row      { grid-template-columns: 1fr; }
+      .nav-burger { display: flex; }
+      .hero-inner, .about-grid, .norway-grid, .contact-grid { grid-template-columns: 1fr; gap: 60px; }
+      .services-grid { grid-template-columns: repeat(2, 1fr); }
+      .why-grid { grid-template-columns: repeat(3, 1fr); }
+      .footer-grid { grid-template-columns: 1.5fr 1fr 1fr; }
+      .stats-card { grid-template-columns: repeat(2, 1fr); gap: 28px 0; padding: 28px; }
+      .stat-item { padding: 16px 14px; border-right: none; border-bottom: 1px solid var(--line); }
+      .stat-item:nth-child(odd) { border-right: 1px solid var(--line); }
+      .stat-item:nth-last-child(-n+2) { border-bottom: none; }
+      section.block { padding: 80px 5%; }
+      .hero { padding: 80px 5% 100px; }
     }
-    @media (max-width: 480px) {
-      .footer-grid { grid-template-columns: 1fr; }
-      .stats-strip { flex-direction: column; }
-      .stat-item   { border-right: none; border-bottom: 1px solid var(--border); }
+    @media (max-width: 640px) {
+      .hero-visual { display: none; }
+      .services-grid, .why-grid, .footer-grid { grid-template-columns: 1fr; }
+      .form-row { grid-template-columns: 1fr; }
+      .marquee-item { font-size: 0.95rem; }
+      h2 { font-size: 1.7rem; }
+      .topbar { font-size: 0.74rem; padding: 8px 12px; }
+      .topbar .dot { display: none; }
     }
 
-    /* Hidden elements for language toggle */
-    [data-lang="en"] { display: none; }
-    body.lang-en [data-lang="no"] { display: none; }
-    body.lang-en [data-lang="en"] { display: unset; }
-    /* Block-level elements need block not inline */
-    body.lang-en .block-en { display: block !important; }
-    body.lang-en .block-no { display: none !important; }
-    .block-en { display: none; }
-    .block-no { display: block; }
+    /* Mobile menu drawer */
+    .mobile-menu {
+      position: fixed;
+      top: 72px; left: 0; right: 0;
+      background: var(--white);
+      border-bottom: 1px solid var(--line);
+      box-shadow: var(--shadow-md);
+      padding: 16px;
+      z-index: 99;
+      transform: translateY(-110%);
+      transition: transform .35s var(--ease);
+    }
+    .mobile-menu.open { transform: translateY(0); }
+    .mobile-menu a {
+      display: block;
+      padding: 14px 16px;
+      font-size: 1rem;
+      color: var(--ink);
+      border-radius: 10px;
+      transition: background .2s;
+    }
+    .mobile-menu a:hover { background: var(--paper); }
   </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
-<div id="topbar">
-  <span data-lang="no">🇳🇴 Betjener det norske markedet &nbsp;|&nbsp; Koreansk ingeniørkompetanse &nbsp;|&nbsp; <a href="mailto:contact@esesolution.co.kr">contact@esesolution.co.kr</a></span>
-  <span data-lang="en">🇳🇴 Serving the Norwegian market &nbsp;|&nbsp; Korean engineering expertise &nbsp;|&nbsp; <a href="mailto:contact@esesolution.co.kr">contact@esesolution.co.kr</a></span>
+<!-- Scroll progress -->
+<div class="scroll-progress" id="scrollProgress"></div>
+
+<!-- Top bar -->
+<div class="topbar">
+  <span data-no>Betjener det norske markedet</span>
+  <span data-en>Serving the Norwegian market</span>
+  <span class="dot">·</span>
+  <span data-no>Koreansk ingeniørkompetanse</span>
+  <span data-en>Korean engineering expertise</span>
+  <span class="dot">·</span>
+  <a href="mailto:contact@esesolution.co.kr">contact@esesolution.co.kr</a>
 </div>
 
-<!-- NAVIGATION -->
-<nav>
-  <a href="#" class="logo">
-    <div class="logo-icon">ESE</div>
+<!-- Navigation -->
+<nav id="nav">
+  <a href="#" class="brand">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h6M9 13h6M9 17h6"/>
+      </svg>
+    </div>
     <div>
-      <span class="logo-text">ESE Solution</span>
-      <span class="logo-sub">
-        <span data-lang="no">Industrielle løsninger</span>
-        <span data-lang="en">Industrial Solutions</span>
-      </span>
+      <span class="brand-text">ESE Solution</span>
+      <span class="brand-sub" data-no>Industrielle løsninger</span>
+      <span class="brand-sub" data-en>Industrial solutions</span>
     </div>
   </a>
 
   <ul class="nav-links">
-    <li><a href="#about"    data-lang="no">Om oss</a>    <a href="#about"    data-lang="en">About</a></li>
-    <li><a href="#services" data-lang="no">Tjenester</a> <a href="#services" data-lang="en">Services</a></li>
-    <li><a href="#norway"   data-lang="no">Norge</a>     <a href="#norway"   data-lang="en">Norway</a></li>
-    <li><a href="#contact"  data-lang="no">Kontakt</a>   <a href="#contact"  data-lang="en">Contact</a></li>
+    <li><a href="#about"    data-no>Om oss</a>    <a href="#about"    data-en>About</a></li>
+    <li><a href="#services" data-no>Tjenester</a> <a href="#services" data-en>Services</a></li>
+    <li><a href="#norway"   data-no>Norge</a>     <a href="#norway"   data-en>Norway</a></li>
+    <li><a href="#why"      data-no>Hvorfor oss</a><a href="#why"     data-en>Why us</a></li>
+    <li><a href="#contact"  data-no>Kontakt</a>   <a href="#contact"  data-en>Contact</a></li>
   </ul>
 
   <div class="nav-right">
-    <div class="lang-toggle">
-      <button class="lang-btn active" onclick="setLang('no')">🇳🇴 NO</button>
-      <button class="lang-btn"        onclick="setLang('en')">🇬🇧 EN</button>
+    <div class="lang-toggle" role="tablist">
+      <div class="pill-bg"></div>
+      <button class="lang-btn active" onclick="setLang('no')">NO</button>
+      <button class="lang-btn"        onclick="setLang('en')">EN</button>
     </div>
-    <a href="#contact" class="cta-nav">
-      <span data-lang="no">Kom i kontakt</span>
-      <span data-lang="en">Get in touch</span>
+    <a href="#contact" class="btn-cta">
+      <span data-no>Kom i kontakt</span>
+      <span data-en>Get in touch</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+      </svg>
     </a>
+    <button class="nav-burger" onclick="toggleMenu()" aria-label="Menu">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
+        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
+    </button>
   </div>
 </nav>
 
+<!-- Mobile menu -->
+<div class="mobile-menu" id="mobileMenu">
+  <a href="#about"    onclick="toggleMenu()"><span data-no>Om oss</span><span data-en>About</span></a>
+  <a href="#services" onclick="toggleMenu()"><span data-no>Tjenester</span><span data-en>Services</span></a>
+  <a href="#norway"   onclick="toggleMenu()"><span data-no>Norge</span><span data-en>Norway</span></a>
+  <a href="#why"      onclick="toggleMenu()"><span data-no>Hvorfor oss</span><span data-en>Why us</span></a>
+  <a href="#contact"  onclick="toggleMenu()"><span data-no>Kontakt</span><span data-en>Contact</span></a>
+</div>
+
 <!-- HERO -->
-<section id="hero">
+<section class="hero">
+  <div class="hero-grid-bg"></div>
+  <div class="hero-glow" id="heroGlow"></div>
+
   <div class="hero-inner">
-    <div class="hero-badge">
-      <span class="flag">🇰🇷 → 🇳🇴</span>
-      <span data-lang="no">Koreansk kvalitet · Norsk tilstedeværelse</span>
-      <span data-lang="en">Korean quality · Norwegian presence</span>
+    <div>
+      <div class="hero-chip reveal">
+        <span class="chip-dot"></span>
+        <span data-no>Koreansk kvalitet — norsk tilstedeværelse</span>
+        <span data-en>Korean quality — Norwegian presence</span>
+      </div>
+
+      <h1 class="reveal" data-delay="1">
+        <span data-no>Industrielle løsninger<br/><span class="accent">presisjonsbygget</span> for Norge</span>
+        <span data-en>Industrial solutions<br/><span class="accent">precision-built</span> for Norway</span>
+      </h1>
+
+      <p class="lead reveal" data-delay="2">
+        <span data-no>ESE Solution bringer koreansk presisjonsproduksjon og ingeniørkompetanse direkte til norske bedrifter. Pålitelige produkter, teknisk støtte og skreddersydde løsninger.</span>
+        <span data-en>ESE Solution brings Korean precision manufacturing and engineering expertise directly to Norwegian businesses. Reliable products, technical support, and tailored solutions.</span>
+      </p>
+
+      <div class="hero-buttons reveal" data-delay="3">
+        <a href="#contact" class="btn-primary">
+          <span data-no>Be om tilbud</span><span data-en>Request a quote</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </a>
+        <a href="#services" class="btn-ghost">
+          <span data-no>Se tjenestene</span><span data-en>View services</span>
+        </a>
+      </div>
     </div>
 
-    <h1 data-lang="no">Industrielle løsninger<br /><span>for det norske markedet</span></h1>
-    <h1 data-lang="en">Industrial Solutions<br /><span>for the Norwegian Market</span></h1>
-
-    <p data-lang="no">ESE Solution bringer koreansk presisjonsproduksjon og ingeniørkompetanse direkte til norske bedrifter. Vi leverer pålitelige produkter, teknisk støtte og skreddersydde løsninger.</p>
-    <p data-lang="en">ESE Solution brings Korean precision manufacturing and engineering expertise directly to Norwegian businesses. We deliver reliable products, technical support, and tailored solutions.</p>
-
-    <div class="hero-buttons">
-      <a href="#contact" class="btn-primary">
-        <span data-lang="no">Be om tilbud</span>
-        <span data-lang="en">Request a Quote</span>
-      </a>
-      <a href="#services" class="btn-outline">
-        <span data-lang="no">Se våre tjenester</span>
-        <span data-lang="en">View our services</span>
-      </a>
+    <div class="hero-visual reveal" data-delay="2">
+      <div class="hero-card hero-card-1">
+        <div class="icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+        <h4 data-no>Presisjonsdeler</h4>
+        <h4 data-en>Precision parts</h4>
+        <p data-no>±0.01 mm toleranse</p>
+        <p data-en>±0.01 mm tolerance</p>
+      </div>
+      <div class="hero-card hero-card-2">
+        <div class="icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <h4 data-no>Skreddersydd</h4>
+        <h4 data-en>Custom-built</h4>
+        <p data-no>Til dine spesifikasjoner</p>
+        <p data-en>To your specifications</p>
+      </div>
+      <div class="hero-card hero-card-3">
+        <div class="icon-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+        </div>
+        <h4 data-no>ISO-sertifisert</h4>
+        <h4 data-en>ISO-certified</h4>
+        <p data-no>Verifisert kvalitet</p>
+        <p data-en>Verified quality</p>
+      </div>
+      <div class="hero-card-orbit"></div>
     </div>
   </div>
 </section>
 
-<!-- STATS -->
-<div class="stats-strip">
-  <div class="stat-item">
-    <span class="stat-num">20+</span>
-    <span class="stat-label">
-      <span data-lang="no">År erfaring</span>
-      <span data-lang="en">Years experience</span>
+<!-- Marquee -->
+<div class="marquee">
+  <div class="marquee-track">
+    <span class="marquee-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span data-no>Presisjonsproduksjon</span><span data-en>Precision Manufacturing</span>
     </span>
-  </div>
-  <div class="stat-item">
-    <span class="stat-num">500+</span>
-    <span class="stat-label">
-      <span data-lang="no">Prosjekter levert</span>
-      <span data-lang="en">Projects delivered</span>
+    <span class="marquee-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span data-no>Norsk kundeservice</span><span data-en>Norwegian Customer Service</span>
     </span>
-  </div>
-  <div class="stat-item">
-    <span class="stat-num">ISO</span>
-    <span class="stat-label">
-      <span data-lang="no">Sertifisert kvalitet</span>
-      <span data-lang="en">Certified quality</span>
+    <span class="marquee-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span data-no>ISO-kvalitet</span><span data-en>ISO Quality</span>
     </span>
-  </div>
-  <div class="stat-item">
-    <span class="stat-num">🇳🇴</span>
-    <span class="stat-label">
-      <span data-lang="no">Norsk kontaktpunkt</span>
-      <span data-lang="en">Norwegian contact point</span>
+    <span class="marquee-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span data-no>Rask levering</span><span data-en>Fast Delivery</span>
+    </span>
+    <!-- duplicates for seamless loop -->
+    <span class="marquee-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span data-no>Presisjonsproduksjon</span><span data-en>Precision Manufacturing</span>
+    </span>
+    <span class="marquee-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span data-no>Norsk kundeservice</span><span data-en>Norwegian Customer Service</span>
+    </span>
+    <span class="marquee-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span data-no>ISO-kvalitet</span><span data-en>ISO Quality</span>
+    </span>
+    <span class="marquee-item">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+      <span data-no>Rask levering</span><span data-en>Fast Delivery</span>
     </span>
   </div>
 </div>
 
+<!-- STATS -->
+<div class="stats">
+  <div class="stats-card reveal">
+    <div class="stat-item">
+      <div class="stat-num"><span class="counter" data-to="20">0</span><span class="stat-suffix">+</span></div>
+      <div class="stat-label">
+        <span data-no>År erfaring</span><span data-en>Years experience</span>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num"><span class="counter" data-to="500">0</span><span class="stat-suffix">+</span></div>
+      <div class="stat-label">
+        <span data-no>Prosjekter levert</span><span data-en>Projects delivered</span>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num"><span class="counter" data-to="99" data-decimals="0">0</span><span class="stat-suffix">%</span></div>
+      <div class="stat-label">
+        <span data-no>Kundetilfredshet</span><span data-en>Customer satisfaction</span>
+      </div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num"><span class="counter" data-to="24">0</span><span class="stat-suffix">h</span></div>
+      <div class="stat-label">
+        <span data-no>Svartid garantert</span><span data-en>Guaranteed response time</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ABOUT -->
-<section id="about">
-  <div class="section-inner">
+<section id="about" class="block">
+  <div class="inner">
     <div class="about-grid">
       <div>
-        <span class="section-tag">
-          <span data-lang="no">Om ESE Solution</span>
-          <span data-lang="en">About ESE Solution</span>
-        </span>
-        <h2 data-lang="no">Bygget på koreansk presisjon – levert til Norge</h2>
-        <h2 data-lang="en">Built on Korean precision – delivered to Norway</h2>
-        <p class="section-lead" style="margin-bottom:24px;" data-lang="no">ESE Solution er et koreansk industri- og produksjonsselskap med spesialisert fokus på det norske og skandinaviske markedet. Vi kombinerer avansert teknologi med pålitelig service.</p>
-        <p class="section-lead" style="margin-bottom:24px;" data-lang="en">ESE Solution is a Korean industrial and manufacturing company with a specialised focus on the Norwegian and Scandinavian market. We combine advanced technology with reliable service.</p>
+        <div class="eyebrow reveal">
+          <span data-no>Om ESE Solution</span><span data-en>About ESE Solution</span>
+        </div>
+        <h2 class="reveal" data-delay="1">
+          <span data-no>Bygget på <span class="italic">koreansk presisjon</span> — levert til Norge</span>
+          <span data-en>Built on <span class="italic">Korean precision</span> — delivered to Norway</span>
+        </h2>
+        <p class="section-lead reveal" data-delay="2">
+          <span data-no>ESE Solution er et koreansk industri- og produksjonsselskap med spesialisert fokus på det norske og skandinaviske markedet. Vi kombinerer avansert teknologi med pålitelig service.</span>
+          <span data-en>ESE Solution is a Korean industrial and manufacturing company with a specialised focus on the Norwegian and Scandinavian market. We combine advanced technology with reliable service.</span>
+        </p>
 
-        <ul class="about-list">
+        <ul class="about-list reveal" data-delay="3">
           <li>
-            <span class="check">✔</span>
-            <span data-lang="no"><strong>Høy kvalitetsstandard</strong> – alle produkter gjennomgår streng kvalitetskontroll</span>
-            <span data-lang="en"><strong>High quality standards</strong> – all products undergo rigorous quality control</span>
+            <div class="check-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong data-no>Høy kvalitetsstandard</strong>
+              <strong data-en>High quality standards</strong>
+              <span data-no>Alle produkter gjennomgår streng kvalitetskontroll.</span>
+              <span data-en>All products undergo rigorous quality control.</span>
+            </div>
           </li>
           <li>
-            <span class="check">✔</span>
-            <span data-lang="no"><strong>Norsk kommunikasjon</strong> – vi snakker ditt språk</span>
-            <span data-lang="en"><strong>Norwegian communication</strong> – we speak your language</span>
+            <div class="check-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong data-no>Norsk kommunikasjon</strong>
+              <strong data-en>Norwegian communication</strong>
+              <span data-no>Vi snakker ditt språk — ingen språkbarrierer.</span>
+              <span data-en>We speak your language — no language barriers.</span>
+            </div>
           </li>
           <li>
-            <span class="check">✔</span>
-            <span data-lang="no"><strong>Rask levering</strong> – optimalisert logistikk fra Korea til Norge</span>
-            <span data-lang="en"><strong>Fast delivery</strong> – optimised logistics from Korea to Norway</span>
+            <div class="check-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong data-no>Rask levering</strong>
+              <strong data-en>Fast delivery</strong>
+              <span data-no>Optimalisert logistikk fra Korea til Norge.</span>
+              <span data-en>Optimised logistics from Korea to Norway.</span>
+            </div>
           </li>
           <li>
-            <span class="check">✔</span>
-            <span data-lang="no"><strong>Teknisk support</strong> – dedikert team for norske kunder</span>
-            <span data-lang="en"><strong>Technical support</strong> – dedicated team for Norwegian customers</span>
-          </li>
-          <li>
-            <span class="check">✔</span>
-            <span data-lang="no"><strong>Skreddersydde løsninger</strong> – tilpasset dine spesifikke behov</span>
-            <span data-lang="en"><strong>Custom solutions</strong> – tailored to your specific requirements</span>
+            <div class="check-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong data-no>Teknisk support</strong>
+              <strong data-en>Technical support</strong>
+              <span data-no>Dedikert team for norske kunder.</span>
+              <span data-en>Dedicated team for Norwegian customers.</span>
+            </div>
           </li>
         </ul>
       </div>
 
-      <div class="about-img">
-        <div class="big-icon">⚙️</div>
-        <h3 style="font-size:1.3rem;margin-bottom:10px;">ESE Solution</h3>
-        <p data-lang="no">Industriell ekspertise fra Seoul til Stavanger, Bergen, Oslo og videre.</p>
-        <p data-lang="en">Industrial expertise from Seoul to Stavanger, Bergen, Oslo and beyond.</p>
-        <div style="margin-top:28px;display:flex;justify-content:center;gap:18px;font-size:2rem;">
-          <span title="Korea">🇰🇷</span>
-          <span style="font-size:1.4rem;align-self:center;opacity:.6;">→</span>
-          <span title="Norway">🇳🇴</span>
+      <div class="about-visual reveal" data-delay="2">
+        <div class="about-visual-top">
+          <div class="country-card">
+            <div class="country-code">KR · KOREA</div>
+            <div class="country-name">Seoul</div>
+          </div>
+          <div class="country-card">
+            <div class="country-code">NO · NORGE</div>
+            <div class="country-name">Oslo</div>
+          </div>
+        </div>
+
+        <div class="about-visual-arrow">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+          </svg>
+        </div>
+
+        <div class="about-visual-bottom">
+          <div class="small" data-no>Direkte forbindelse</div>
+          <div class="small" data-en>Direct connection</div>
+          <div style="font-size:1.6rem;line-height:1.2;" data-no>8 900 km i fly,<br/>én telefonsamtale unna.</div>
+          <div style="font-size:1.6rem;line-height:1.2;" data-en>8,900 km by air,<br/>one phone call away.</div>
         </div>
       </div>
     </div>
@@ -669,296 +1323,369 @@
 </section>
 
 <!-- SERVICES -->
-<section id="services">
-  <div class="section-inner">
-    <span class="section-tag">
-      <span data-lang="no">Tjenester og produkter</span>
-      <span data-lang="en">Services &amp; Products</span>
-    </span>
-    <h2 data-lang="no">Hva vi leverer</h2>
-    <h2 data-lang="en">What we deliver</h2>
-    <p class="section-lead" data-lang="no">Fra industrikomponenter og presisjonsdeler til komplette systemløsninger – vi dekker norske bedrifters behov innen produksjon og industri.</p>
-    <p class="section-lead" data-lang="en">From industrial components and precision parts to complete system solutions – we cover Norwegian businesses' needs in manufacturing and industry.</p>
+<section id="services" class="block services">
+  <div class="inner">
+    <div class="eyebrow reveal">
+      <span data-no>Tjenester</span><span data-en>Services</span>
+    </div>
+    <h2 class="reveal" data-delay="1">
+      <span data-no>Hva vi <span class="italic">leverer</span></span>
+      <span data-en>What we <span class="italic">deliver</span></span>
+    </h2>
+    <p class="section-lead reveal" data-delay="2">
+      <span data-no>Fra industrikomponenter og presisjonsdeler til komplette systemløsninger — vi dekker norske bedrifters behov innen produksjon og industri.</span>
+      <span data-en>From industrial components and precision parts to complete system solutions — we cover Norwegian businesses' needs in manufacturing and industry.</span>
+    </p>
 
     <div class="services-grid">
-      <div class="service-card">
-        <div class="service-icon">🏭</div>
-        <h3 data-lang="no">Industriproduksjon</h3>
-        <h3 data-lang="en">Industrial Manufacturing</h3>
-        <p data-lang="no">Presisjonsproduserte industrikomponenter etter norske og europeiske standarder.</p>
-        <p data-lang="en">Precision-manufactured industrial components to Norwegian and European standards.</p>
+      <div class="service-card reveal" data-delay="1">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M17 18h1M13 18h1M9 18h1M5 18h1"/></svg>
+        </div>
+        <h3 data-no>Industriproduksjon</h3><h3 data-en>Industrial Manufacturing</h3>
+        <p data-no>Presisjonsproduserte industrikomponenter etter norske og europeiske standarder.</p>
+        <p data-en>Precision-manufactured industrial components to Norwegian and European standards.</p>
+        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </span>
       </div>
 
-      <div class="service-card">
-        <div class="service-icon">⚙️</div>
-        <h3 data-lang="no">Maskindeler og komponenter</h3>
-        <h3 data-lang="en">Machine Parts &amp; Components</h3>
-        <p data-lang="no">Høykvalitets maskindeler og reservedeler for industri- og produksjonsutstyr.</p>
-        <p data-lang="en">High-quality machine parts and spare parts for industrial and manufacturing equipment.</p>
+      <div class="service-card reveal" data-delay="2">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </div>
+        <h3 data-no>Maskindeler &amp; komponenter</h3><h3 data-en>Machine Parts &amp; Components</h3>
+        <p data-no>Høykvalitets maskindeler og reservedeler for industri- og produksjonsutstyr.</p>
+        <p data-en>High-quality machine parts and spare parts for industrial and manufacturing equipment.</p>
+        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </span>
       </div>
 
-      <div class="service-card">
-        <div class="service-icon">🔧</div>
-        <h3 data-lang="no">Teknisk rådgivning</h3>
-        <h3 data-lang="en">Technical Consulting</h3>
-        <p data-lang="no">Ekspertise innen prosessoptimalisering, materialkvalitet og produksjonseffektivitet.</p>
-        <p data-lang="en">Expertise in process optimisation, material quality, and manufacturing efficiency.</p>
+      <div class="service-card reveal" data-delay="3">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+        </div>
+        <h3 data-no>Teknisk rådgivning</h3><h3 data-en>Technical Consulting</h3>
+        <p data-no>Ekspertise innen prosessoptimalisering, materialkvalitet og produksjonseffektivitet.</p>
+        <p data-en>Expertise in process optimisation, material quality, and manufacturing efficiency.</p>
+        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </span>
       </div>
 
-      <div class="service-card">
-        <div class="service-icon">📦</div>
-        <h3 data-lang="no">Import og logistikk</h3>
-        <h3 data-lang="en">Import &amp; Logistics</h3>
-        <p data-lang="no">Sømløs import av koreanske industriprodukt med full tollhåndtering til Norge.</p>
-        <p data-lang="en">Seamless import of Korean industrial products with full customs handling to Norway.</p>
+      <div class="service-card reveal" data-delay="1">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+        </div>
+        <h3 data-no>Import &amp; logistikk</h3><h3 data-en>Import &amp; Logistics</h3>
+        <p data-no>Sømløs import av koreanske industriprodukter med full tollhåndtering til Norge.</p>
+        <p data-en>Seamless import of Korean industrial products with full customs handling to Norway.</p>
+        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </span>
       </div>
 
-      <div class="service-card">
-        <div class="service-icon">🛡️</div>
-        <h3 data-lang="no">Kvalitetskontroll</h3>
-        <h3 data-lang="en">Quality Control</h3>
-        <p data-lang="no">Grundig inspeksjon og sertifisering som oppfyller europeiske krav og standarder.</p>
-        <p data-lang="en">Thorough inspection and certification meeting European requirements and standards.</p>
+      <div class="service-card reveal" data-delay="2">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <h3 data-no>Kvalitetskontroll</h3><h3 data-en>Quality Control</h3>
+        <p data-no>Grundig inspeksjon og sertifisering som oppfyller europeiske krav og standarder.</p>
+        <p data-en>Thorough inspection and certification meeting European requirements and standards.</p>
+        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </span>
       </div>
 
-      <div class="service-card">
-        <div class="service-icon">🤝</div>
-        <h3 data-lang="no">Skreddersydde løsninger</h3>
-        <h3 data-lang="en">Custom Solutions</h3>
-        <p data-lang="no">Spesialtilpassede produkter og systemer utviklet etter kundens spesifikasjoner.</p>
-        <p data-lang="en">Specially tailored products and systems developed to customer specifications.</p>
+      <div class="service-card reveal" data-delay="3">
+        <div class="service-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        </div>
+        <h3 data-no>Skreddersydde løsninger</h3><h3 data-en>Custom Solutions</h3>
+        <p data-no>Spesialtilpassede produkter og systemer utviklet etter kundens spesifikasjoner.</p>
+        <p data-en>Specially tailored products and systems developed to customer specifications.</p>
+        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </span>
       </div>
     </div>
   </div>
 </section>
 
-<!-- NORWAY SECTION -->
-<section id="norway">
-  <div class="section-inner">
-    <span class="section-tag">
-      <span data-lang="no">🇳🇴 Norgesavdelingen</span>
-      <span data-lang="en">🇳🇴 Norway Division</span>
-    </span>
-    <h2 data-lang="no">Vi er her i Norge</h2>
-    <h2 data-lang="en">We are here in Norway</h2>
-    <p class="section-lead" data-lang="no">ESE Solution er tilgjengelig for norske kunder med lokalt kontaktpunkt, norsk kommunikasjon og tilpassede løsninger for det norske markedet.</p>
-    <p class="section-lead" data-lang="en">ESE Solution is available to Norwegian customers with a local contact point, Norwegian communication, and tailored solutions for the Norwegian market.</p>
+<!-- NORWAY -->
+<section id="norway" class="block norway">
+  <div class="inner">
+    <div class="eyebrow reveal">
+      <span data-no>Norgesavdelingen</span><span data-en>Norway Division</span>
+    </div>
+    <h2 class="reveal" data-delay="1">
+      <span data-no>Vi er <span class="italic">her</span> i Norge</span>
+      <span data-en>We are <span class="italic">here</span> in Norway</span>
+    </h2>
+    <p class="section-lead reveal" data-delay="2">
+      <span data-no>ESE Solution er tilgjengelig for norske kunder med lokalt kontaktpunkt, norsk kommunikasjon og tilpassede løsninger for det norske markedet.</span>
+      <span data-en>ESE Solution is available to Norwegian customers with a local contact point, Norwegian communication, and tailored solutions for the Norwegian market.</span>
+    </p>
 
     <div class="norway-grid">
-      <div>
-        <div class="norway-card" style="margin-bottom:20px;">
-          <div class="icon">📍</div>
-          <h3 data-lang="no">Norsk kontaktpunkt</h3>
-          <h3 data-lang="en">Norwegian contact point</h3>
-          <p data-lang="no">Vi har representanter i Norge som snakker norsk og kjenner det norske markedet. Ta kontakt direkte – ingen språkbarrierer.</p>
-          <p data-lang="en">We have representatives in Norway who speak Norwegian and know the Norwegian market. Contact us directly – no language barriers.</p>
+      <div class="norway-cards">
+        <div class="norway-card reveal" data-delay="1">
+          <div class="norway-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div>
+            <h3 data-no>Lokalt kontaktpunkt</h3><h3 data-en>Local contact point</h3>
+            <p data-no>Norske representanter som snakker språket og kjenner markedet.</p>
+            <p data-en>Norwegian representatives who speak the language and know the market.</p>
+          </div>
         </div>
-        <div class="norway-card" style="margin-bottom:20px;">
-          <div class="icon">🚢</div>
-          <h3 data-lang="no">Direkte frakt til Norge</h3>
-          <h3 data-lang="en">Direct shipping to Norway</h3>
-          <p data-lang="no">Vi håndterer all frakt, toll og dokumentasjon fra Korea til din adresse i Norge. Enkelt og pålitelig.</p>
-          <p data-lang="en">We handle all shipping, customs, and documentation from Korea to your address in Norway. Simple and reliable.</p>
+
+        <div class="norway-card reveal" data-delay="2">
+          <div class="norway-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+          </div>
+          <div>
+            <h3 data-no>Direkte frakt til Norge</h3><h3 data-en>Direct shipping to Norway</h3>
+            <p data-no>Vi håndterer frakt, toll og dokumentasjon fra Korea rett til din dør.</p>
+            <p data-en>We handle shipping, customs, and documentation from Korea straight to your door.</p>
+          </div>
         </div>
-        <div class="norway-card">
-          <div class="icon">⏰</div>
-          <h3 data-lang="no">Norsk åpningstid</h3>
-          <h3 data-lang="en">Norwegian business hours</h3>
-          <p data-lang="no">Kundeservice tilgjengelig på norsk i norsk arbeidstid (08:00–17:00 CET).</p>
-          <p data-lang="en">Customer service available in Norwegian during Norwegian business hours (08:00–17:00 CET).</p>
+
+        <div class="norway-card reveal" data-delay="3">
+          <div class="norway-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div>
+            <h3 data-no>Norsk arbeidstid</h3><h3 data-en>Norwegian business hours</h3>
+            <p data-no>Kundeservice på norsk man–fre 08:00–17:00 CET.</p>
+            <p data-en>Customer service in Norwegian Mon–Fri 08:00–17:00 CET.</p>
+          </div>
+        </div>
+
+        <div class="norway-card reveal" data-delay="4">
+          <div class="norway-card-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
+          <div>
+            <h3 data-no>Norsk telefon &amp; e-post</h3><h3 data-en>Norwegian phone &amp; email</h3>
+            <p data-no>Ta kontakt direkte — alltid på norsk, alltid raskt.</p>
+            <p data-en>Reach us directly — always in Norwegian, always fast.</p>
+          </div>
         </div>
       </div>
 
-      <div class="map-placeholder">
-        <div class="map-icon">🗺️</div>
-        <h3 data-lang="no">Kontorsted i Norge</h3>
-        <h3 data-lang="en">Office location in Norway</h3>
-        <p data-lang="no">Vi er tilstede i Norge for å betjene dere lokalt.</p>
-        <p data-lang="en">We are present in Norway to serve you locally.</p>
-        <address>
-          <strong>ESE Solution – Norge</strong><br />
-          <span data-lang="no">📍 Adresse: Ta kontakt for detaljer</span>
-          <span data-lang="en">📍 Address: Contact us for details</span><br />
-          📞 <a href="tel:+4700000000" style="color:#90caf9;">+47 XX XX XX XX</a><br />
-          ✉️ <a href="mailto:norge@esesolution.co.kr" style="color:#90caf9;">norge@esesolution.co.kr</a>
+      <div class="map-card reveal" data-delay="2">
+        <div>
+          <div class="map-label" data-no>Vår tilstedeværelse</div>
+          <div class="map-label" data-en>Our presence</div>
+          <h3 style="font-family:'Space Grotesk';font-size:1.4rem;margin-top:6px;color:var(--white);" data-no>Norge</h3>
+          <h3 style="font-family:'Space Grotesk';font-size:1.4rem;margin-top:6px;color:var(--white);" data-en>Norway</h3>
+        </div>
+
+        <div class="map-svg">
+          <!-- Simple stylized Norway silhouette -->
+          <svg viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg" fill="none">
+            <path d="M120 8 C135 22 140 38 142 56 L156 70 L150 94 L172 110 L168 130 L184 144 L176 168 L184 188 L172 210 L180 234 L160 252 L140 268 L120 280 L108 296 L92 310 L78 304 L68 286 L72 268 L60 254 L62 234 L48 218 L52 194 L40 172 L46 148 L38 124 L52 102 L46 82 L58 64 L48 48 L62 32 L80 26 L96 14 Z"
+              stroke="rgba(255,255,255,.18)" stroke-width="1.5" fill="rgba(255,255,255,.04)"/>
+          </svg>
+          <span class="pin pin-tromso" title="Tromsø"></span>
+          <span class="pin pin-bergen" title="Bergen"></span>
+          <span class="pin pin-stavanger" title="Stavanger"></span>
+          <span class="pin pin-oslo" title="Oslo"></span>
+        </div>
+
+        <address class="map-address">
+          <strong>ESE Solution — Norge</strong><br/>
+          <span data-no>Adresse: ta kontakt for detaljer</span>
+          <span data-en>Address: contact us for details</span><br/>
+          <a href="tel:+4700000000">+47 XX XX XX XX</a><br/>
+          <a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a>
         </address>
-        <div style="margin-top:24px;font-size:3rem;">🇳🇴</div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- WHY US -->
-<section id="why">
-  <div class="section-inner">
-    <span class="section-tag">
-      <span data-lang="no">Hvorfor velge oss</span>
-      <span data-lang="en">Why choose us</span>
-    </span>
-    <h2 data-lang="no">Fordeler med ESE Solution</h2>
-    <h2 data-lang="en">The ESE Solution advantage</h2>
-    <p class="section-lead" data-lang="no">Vi forstår norske behov og leverer koreansk kvalitet – det beste fra begge verdener.</p>
-    <p class="section-lead" data-lang="en">We understand Norwegian needs and deliver Korean quality – the best of both worlds.</p>
+<!-- WHY -->
+<section id="why" class="block why">
+  <div class="inner">
+    <div class="eyebrow reveal">
+      <span data-no>Hvorfor velge oss</span><span data-en>Why choose us</span>
+    </div>
+    <h2 class="reveal" data-delay="1">
+      <span data-no>Fem grunner til å <span class="italic">velge</span> ESE Solution</span>
+      <span data-en>Five reasons to <span class="italic">choose</span> ESE Solution</span>
+    </h2>
+    <p class="section-lead reveal" data-delay="2">
+      <span data-no>Vi forstår norske behov og leverer koreansk kvalitet — det beste fra begge verdener.</span>
+      <span data-en>We understand Norwegian needs and deliver Korean quality — the best of both worlds.</span>
+    </p>
 
     <div class="why-grid">
-      <div class="why-card">
-        <div class="why-icon">🏆</div>
-        <h3 data-lang="no">Overlegen kvalitet</h3>
-        <h3 data-lang="en">Superior quality</h3>
-        <p data-lang="no">Koreansk presisjonsproduksjon er verdensklasse.</p>
-        <p data-lang="en">Korean precision manufacturing is world-class.</p>
+      <div class="why-card reveal" data-delay="1">
+        <div class="why-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+        </div>
+        <h3 data-no>Overlegen kvalitet</h3><h3 data-en>Superior quality</h3>
+        <p data-no>Koreansk presisjonsproduksjon i verdensklasse.</p>
+        <p data-en>World-class Korean precision manufacturing.</p>
       </div>
-      <div class="why-card">
-        <div class="why-icon">💰</div>
-        <h3 data-lang="no">Konkurransedyktig pris</h3>
-        <h3 data-lang="en">Competitive pricing</h3>
-        <p data-lang="no">Lavere kostnader uten å gå på kompromiss med kvaliteten.</p>
-        <p data-lang="en">Lower costs without compromising on quality.</p>
+
+      <div class="why-card reveal" data-delay="2">
+        <div class="why-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+        </div>
+        <h3 data-no>Konkurransedyktig pris</h3><h3 data-en>Competitive pricing</h3>
+        <p data-no>Lavere kostnader uten kvalitetskompromiss.</p>
+        <p data-en>Lower costs without quality compromise.</p>
       </div>
-      <div class="why-card">
-        <div class="why-icon">🗣️</div>
-        <h3 data-lang="no">Norsk kommunikasjon</h3>
-        <h3 data-lang="en">Norwegian communication</h3>
-        <p data-lang="no">Full støtte på norsk fra start til slutt.</p>
-        <p data-lang="en">Full support in Norwegian from start to finish.</p>
+
+      <div class="why-card reveal" data-delay="3">
+        <div class="why-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <h3 data-no>Norsk kommunikasjon</h3><h3 data-en>Norwegian communication</h3>
+        <p data-no>Full støtte på norsk fra start til slutt.</p>
+        <p data-en>Full support in Norwegian from start to finish.</p>
       </div>
-      <div class="why-card">
-        <div class="why-icon">⚡</div>
-        <h3 data-lang="no">Rask respons</h3>
-        <h3 data-lang="en">Fast response</h3>
-        <p data-lang="no">Svar på henvendelser innen 24 timer på virkedager.</p>
-        <p data-lang="en">Response to enquiries within 24 hours on business days.</p>
+
+      <div class="why-card reveal" data-delay="4">
+        <div class="why-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <h3 data-no>Rask respons</h3><h3 data-en>Fast response</h3>
+        <p data-no>Svar innen 24 timer på virkedager.</p>
+        <p data-en>Reply within 24 business hours.</p>
       </div>
-      <div class="why-card">
-        <div class="why-icon">🔒</div>
-        <h3 data-lang="no">Pålitelig partner</h3>
-        <h3 data-lang="en">Reliable partner</h3>
-        <p data-lang="no">Over 20 år med erfaring og fornøyde kunder.</p>
-        <p data-lang="en">Over 20 years of experience and satisfied customers.</p>
+
+      <div class="why-card reveal" data-delay="5">
+        <div class="why-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <h3 data-no>Pålitelig partner</h3><h3 data-en>Reliable partner</h3>
+        <p data-no>Over 20 år med fornøyde kunder.</p>
+        <p data-en>Over 20 years of happy customers.</p>
       </div>
     </div>
   </div>
 </section>
 
 <!-- CONTACT -->
-<section id="contact">
-  <div class="section-inner">
-    <span class="section-tag">
-      <span data-lang="no">Kontakt oss</span>
-      <span data-lang="en">Contact us</span>
-    </span>
-    <h2 data-lang="no">La oss snakke om dine behov</h2>
-    <h2 data-lang="en">Let's talk about your needs</h2>
-    <p class="section-lead" data-lang="no">Send oss en melding – vi svarer på norsk innen neste virkedag.</p>
-    <p class="section-lead" data-lang="en">Send us a message – we reply in Norwegian within the next business day.</p>
+<section id="contact" class="block">
+  <div class="inner">
+    <div class="eyebrow reveal">
+      <span data-no>Kontakt</span><span data-en>Contact</span>
+    </div>
+    <h2 class="reveal" data-delay="1">
+      <span data-no>La oss <span class="italic">snakke</span> om dine behov</span>
+      <span data-en>Let's <span class="italic">talk</span> about your needs</span>
+    </h2>
+    <p class="section-lead reveal" data-delay="2">
+      <span data-no>Send oss en melding — vi svarer på norsk innen neste virkedag.</span>
+      <span data-en>Send us a message — we reply in Norwegian within the next business day.</span>
+    </p>
 
     <div class="contact-grid">
-      <div class="contact-info">
-        <h3 data-lang="no">Kontaktinformasjon</h3>
-        <h3 data-lang="en">Contact information</h3>
+      <div class="contact-info reveal" data-delay="1">
+        <h3 data-no>Kontaktinformasjon</h3><h3 data-en>Contact information</h3>
 
         <div class="contact-detail">
-          <div class="contact-detail-icon">🇰🇷</div>
+          <div class="contact-detail-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          </div>
           <div class="contact-detail-text">
-            <strong data-lang="no">Hovedkontor – Korea</strong>
-            <strong data-lang="en">Head office – Korea</strong>
-            <span><a href="https://www.esesolution.co.kr">www.esesolution.co.kr</a></span>
+            <strong data-no>Hovedkontor — Korea</strong>
+            <strong data-en>Head office — Korea</strong>
+            <div class="value"><a href="https://www.esesolution.co.kr">www.esesolution.co.kr</a></div>
           </div>
         </div>
 
         <div class="contact-detail">
-          <div class="contact-detail-icon">🇳🇴</div>
+          <div class="contact-detail-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
           <div class="contact-detail-text">
-            <strong data-lang="no">Norsk kontakt</strong>
-            <strong data-lang="en">Norwegian contact</strong>
-            <span><a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a></span>
+            <strong data-no>Norsk kontakt</strong>
+            <strong data-en>Norwegian contact</strong>
+            <div class="value"><a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a></div>
           </div>
         </div>
 
         <div class="contact-detail">
-          <div class="contact-detail-icon">📞</div>
+          <div class="contact-detail-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
           <div class="contact-detail-text">
-            <strong data-lang="no">Telefon (Norge)</strong>
-            <strong data-lang="en">Phone (Norway)</strong>
-            <span><a href="tel:+4700000000">+47 XX XX XX XX</a></span>
+            <strong data-no>Telefon (Norge)</strong>
+            <strong data-en>Phone (Norway)</strong>
+            <div class="value"><a href="tel:+4700000000">+47 XX XX XX XX</a></div>
           </div>
         </div>
 
         <div class="contact-detail">
-          <div class="contact-detail-icon">⏰</div>
-          <div class="contact-detail-text">
-            <strong data-lang="no">Åpningstider</strong>
-            <strong data-lang="en">Business hours</strong>
-            <span data-lang="no">Man–fre 08:00–17:00 (norsk tid)</span>
-            <span data-lang="en">Mon–Fri 08:00–17:00 (Norwegian time)</span>
+          <div class="contact-detail-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
-        </div>
-
-        <div style="margin-top:32px;padding:20px;background:var(--light);border-radius:10px;border-left:4px solid var(--blue);">
-          <strong style="color:var(--navy);font-size:0.92rem;" data-lang="no">💡 Snakker du koreansk?</strong>
-          <strong style="color:var(--navy);font-size:0.92rem;" data-lang="en">💡 Do you speak Korean?</strong>
-          <p style="font-size:0.87rem;color:var(--muted);margin-top:6px;" data-lang="no">Du kan også nå oss direkte på koreansk via vår hovedside.</p>
-          <p style="font-size:0.87rem;color:var(--muted);margin-top:6px;" data-lang="en">You can also reach us directly in Korean via our main site.</p>
-          <a href="https://www.esesolution.co.kr" style="font-size:0.88rem;color:var(--blue);">esesolution.co.kr →</a>
+          <div class="contact-detail-text">
+            <strong data-no>Åpningstider</strong>
+            <strong data-en>Business hours</strong>
+            <div class="value" data-no>Man–fre 08:00–17:00 CET</div>
+            <div class="value" data-en>Mon–Fri 08:00–17:00 CET</div>
+          </div>
         </div>
       </div>
 
-      <div class="contact-form">
-        <h3 data-lang="no">Send oss en melding</h3>
-        <h3 data-lang="en">Send us a message</h3>
+      <div class="contact-form reveal" data-delay="2">
+        <h3 data-no>Send oss en melding</h3><h3 data-en>Send us a message</h3>
+        <p class="form-sub" data-no>Vi svarer på norsk innen neste virkedag.</p>
+        <p class="form-sub" data-en>We reply in Norwegian within the next business day.</p>
+
         <form onsubmit="handleSubmit(event)">
           <div class="form-row">
             <div class="form-group">
-              <label data-lang="no">Fornavn</label>
-              <label data-lang="en">First name</label>
+              <label data-no>Fornavn</label><label data-en>First name</label>
               <input type="text" required />
             </div>
             <div class="form-group">
-              <label data-lang="no">Etternavn</label>
-              <label data-lang="en">Last name</label>
+              <label data-no>Etternavn</label><label data-en>Last name</label>
               <input type="text" required />
             </div>
           </div>
           <div class="form-group">
-            <label data-lang="no">E-postadresse</label>
-            <label data-lang="en">Email address</label>
+            <label data-no>E-postadresse</label><label data-en>Email address</label>
             <input type="email" required />
           </div>
           <div class="form-group">
-            <label data-lang="no">Bedrift (valgfritt)</label>
-            <label data-lang="en">Company (optional)</label>
+            <label data-no>Bedrift (valgfritt)</label><label data-en>Company (optional)</label>
             <input type="text" />
           </div>
           <div class="form-group">
-            <label data-lang="no">Hva gjelder henvendelsen?</label>
-            <label data-lang="en">Subject of enquiry</label>
+            <label data-no>Type henvendelse</label><label data-en>Type of enquiry</label>
             <select>
-              <option data-lang="no">Velg kategori...</option>
-              <option data-lang="en">Select category...</option>
-              <option data-lang="no">Forespørsel om produkt / tjeneste</option>
-              <option data-lang="en">Product / service enquiry</option>
-              <option data-lang="no">Tilbud / priser</option>
-              <option data-lang="en">Quote / pricing</option>
-              <option data-lang="no">Teknisk støtte</option>
-              <option data-lang="en">Technical support</option>
-              <option data-lang="no">Annet</option>
-              <option data-lang="en">Other</option>
+              <option data-no>Velg kategori…</option><option data-en>Select category…</option>
+              <option data-no>Forespørsel om produkt eller tjeneste</option><option data-en>Product or service enquiry</option>
+              <option data-no>Tilbud / priser</option><option data-en>Quote / pricing</option>
+              <option data-no>Teknisk støtte</option><option data-en>Technical support</option>
+              <option data-no>Annet</option><option data-en>Other</option>
             </select>
           </div>
           <div class="form-group">
-            <label data-lang="no">Melding</label>
-            <label data-lang="en">Message</label>
-            <textarea data-lang="no" placeholder="Beskriv ditt behov eller spørsmål..."></textarea>
-            <textarea data-lang="en" placeholder="Describe your need or question..."></textarea>
+            <label data-no>Melding</label><label data-en>Message</label>
+            <textarea data-no placeholder="Beskriv ditt behov eller spørsmål…"></textarea>
+            <textarea data-en placeholder="Describe your need or question…"></textarea>
           </div>
+
           <button type="submit" class="btn-submit">
-            <span data-lang="no">Send melding →</span>
-            <span data-lang="en">Send message →</span>
+            <span data-no>Send melding</span><span data-en>Send message</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
         </form>
-        <div id="form-success" style="display:none;margin-top:16px;padding:14px;background:#e8f5e9;border-radius:8px;color:#1b5e20;font-size:0.92rem;">
-          <span data-lang="no">✅ Takk! Vi svarer deg så snart som mulig.</span>
-          <span data-lang="en">✅ Thank you! We will get back to you as soon as possible.</span>
+
+        <div class="form-success" id="formSuccess">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          <span data-no>Takk! Vi tar kontakt med deg snart.</span>
+          <span data-en>Thank you! We will be in touch shortly.</span>
         </div>
       </div>
     </div>
@@ -969,94 +1696,146 @@
 <footer>
   <div class="footer-grid">
     <div class="footer-brand">
-      <div class="logo">
-        <div class="logo-icon">ESE</div>
+      <div class="brand">
+        <div class="brand-mark">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h6M9 13h6M9 17h6"/>
+          </svg>
+        </div>
         <div>
-          <span class="logo-text">ESE Solution</span>
-          <span class="logo-sub">
-            <span data-lang="no">Industrielle løsninger</span>
-            <span data-lang="en">Industrial Solutions</span>
-          </span>
+          <span class="brand-text">ESE Solution</span>
+          <span class="brand-sub" data-no>Industrielle løsninger</span>
+          <span class="brand-sub" data-en>Industrial solutions</span>
         </div>
       </div>
-      <p data-lang="no">Koreansk ingeniørkompetanse levert til det norske markedet. Kvalitet, pålitelighet og lokal service.</p>
-      <p data-lang="en">Korean engineering expertise delivered to the Norwegian market. Quality, reliability, and local service.</p>
-      <div class="footer-flags" style="margin-top:16px;">🇰🇷 🇳🇴</div>
+      <p data-no>Koreansk ingeniørkompetanse levert til det norske markedet. Kvalitet, pålitelighet og lokal service.</p>
+      <p data-en>Korean engineering expertise delivered to the Norwegian market. Quality, reliability, and local service.</p>
     </div>
 
     <div>
-      <h4 data-lang="no">Navigasjon</h4>
-      <h4 data-lang="en">Navigation</h4>
+      <h4 data-no>Navigasjon</h4><h4 data-en>Navigation</h4>
       <ul>
-        <li><a href="#about"    data-lang="no">Om oss</a>    <a href="#about"    data-lang="en">About</a></li>
-        <li><a href="#services" data-lang="no">Tjenester</a> <a href="#services" data-lang="en">Services</a></li>
-        <li><a href="#norway"   data-lang="no">Norge</a>     <a href="#norway"   data-lang="en">Norway</a></li>
-        <li><a href="#contact"  data-lang="no">Kontakt</a>   <a href="#contact"  data-lang="en">Contact</a></li>
+        <li><a href="#about"    data-no>Om oss</a>    <a href="#about"    data-en>About</a></li>
+        <li><a href="#services" data-no>Tjenester</a> <a href="#services" data-en>Services</a></li>
+        <li><a href="#norway"   data-no>Norge</a>     <a href="#norway"   data-en>Norway</a></li>
+        <li><a href="#why"      data-no>Hvorfor oss</a><a href="#why"     data-en>Why us</a></li>
+        <li><a href="#contact"  data-no>Kontakt</a>   <a href="#contact"  data-en>Contact</a></li>
       </ul>
     </div>
 
     <div>
-      <h4 data-lang="no">Tjenester</h4>
-      <h4 data-lang="en">Services</h4>
+      <h4 data-no>Tjenester</h4><h4 data-en>Services</h4>
       <ul>
-        <li><a href="#services" data-lang="no">Industriproduksjon</a>     <a href="#services" data-lang="en">Industrial manufacturing</a></li>
-        <li><a href="#services" data-lang="no">Maskindeler</a>            <a href="#services" data-lang="en">Machine parts</a></li>
-        <li><a href="#services" data-lang="no">Teknisk rådgivning</a>     <a href="#services" data-lang="en">Technical consulting</a></li>
-        <li><a href="#services" data-lang="no">Import og logistikk</a>    <a href="#services" data-lang="en">Import &amp; logistics</a></li>
-        <li><a href="#services" data-lang="no">Kvalitetskontroll</a>      <a href="#services" data-lang="en">Quality control</a></li>
+        <li><a data-no>Industriproduksjon</a><a data-en>Industrial manufacturing</a></li>
+        <li><a data-no>Maskindeler</a><a data-en>Machine parts</a></li>
+        <li><a data-no>Teknisk rådgivning</a><a data-en>Technical consulting</a></li>
+        <li><a data-no>Import &amp; logistikk</a><a data-en>Import &amp; logistics</a></li>
+        <li><a data-no>Kvalitetskontroll</a><a data-en>Quality control</a></li>
       </ul>
     </div>
 
     <div>
-      <h4 data-lang="no">Kontakt</h4>
-      <h4 data-lang="en">Contact</h4>
+      <h4 data-no>Kontakt</h4><h4 data-en>Contact</h4>
       <ul>
         <li><a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a></li>
         <li><a href="https://www.esesolution.co.kr">esesolution.co.kr</a></li>
-        <li>
-          <span data-lang="no">Man–fre 08–17 CET</span>
-          <span data-lang="en">Mon–Fri 08–17 CET</span>
-        </li>
+        <li><span data-no>Man–fre 08–17 CET</span><span data-en>Mon–Fri 08–17 CET</span></li>
       </ul>
     </div>
   </div>
 
   <div class="footer-bottom">
-    <span data-lang="no">© 2025 ESE Solution. Alle rettigheter forbeholdt.</span>
-    <span data-lang="en">© 2025 ESE Solution. All rights reserved.</span>
-    <span>
-      <a href="https://www.esesolution.co.kr" style="color:rgba(255,255,255,.55);text-decoration:none;" data-lang="no">Koreansk nettside →</a>
-      <a href="https://www.esesolution.co.kr" style="color:rgba(255,255,255,.55);text-decoration:none;" data-lang="en">Korean website →</a>
-    </span>
+    <span data-no>© 2025 ESE Solution. Alle rettigheter forbeholdt.</span>
+    <span data-en>© 2025 ESE Solution. All rights reserved.</span>
+    <a href="https://www.esesolution.co.kr" data-no>Koreansk nettside →</a>
+    <a href="https://www.esesolution.co.kr" data-en>Korean website →</a>
   </div>
 </footer>
 
 <script>
+  /* ── Language ── */
   function setLang(lang) {
     document.body.classList.toggle('lang-en', lang === 'en');
-    document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.lang-btn')[lang === 'no' ? 0 : 1].classList.add('active');
     document.documentElement.lang = lang === 'no' ? 'no' : 'en';
+    document.querySelectorAll('.lang-btn').forEach((b, i) => {
+      b.classList.toggle('active', (i === 0 && lang === 'no') || (i === 1 && lang === 'en'));
+    });
   }
 
+  /* ── Form submit ── */
   function handleSubmit(e) {
     e.preventDefault();
-    document.getElementById('form-success').style.display = 'block';
+    document.getElementById('formSuccess').classList.add('show');
     e.target.reset();
-    setTimeout(() => {
-      document.getElementById('form-success').style.display = 'none';
-    }, 6000);
+    setTimeout(() => document.getElementById('formSuccess').classList.remove('show'), 6000);
   }
 
-  // Smooth scroll for anchor links
-  document.querySelectorAll('a[href^="#"]').forEach(a => {
-    a.addEventListener('click', e => {
-      const target = document.querySelector(a.getAttribute('href'));
-      if (target) {
-        e.preventDefault();
-        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  /* ── Mobile menu ── */
+  function toggleMenu() {
+    document.getElementById('mobileMenu').classList.toggle('open');
+  }
+
+  /* ── Scroll progress + nav shadow ── */
+  const nav = document.getElementById('nav');
+  const progress = document.getElementById('scrollProgress');
+  window.addEventListener('scroll', () => {
+    const h = document.documentElement;
+    const pct = (h.scrollTop / (h.scrollHeight - h.clientHeight)) * 100;
+    progress.style.width = pct + '%';
+    nav.classList.toggle('scrolled', h.scrollTop > 8);
+  }, { passive: true });
+
+  /* ── Reveal on scroll ── */
+  const io = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.classList.add('in');
+        io.unobserve(e.target);
       }
     });
+  }, { threshold: 0.14, rootMargin: '0px 0px -40px 0px' });
+  document.querySelectorAll('.reveal').forEach(el => io.observe(el));
+
+  /* ── Animated counters ── */
+  const counterIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      counterIO.unobserve(e.target);
+      const to = parseFloat(e.target.dataset.to);
+      const dur = 1600;
+      const start = performance.now();
+      function tick(now) {
+        const t = Math.min((now - start) / dur, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        e.target.textContent = Math.floor(to * eased);
+        if (t < 1) requestAnimationFrame(tick);
+        else      e.target.textContent = to;
+      }
+      requestAnimationFrame(tick);
+    });
+  }, { threshold: 0.4 });
+  document.querySelectorAll('.counter').forEach(c => counterIO.observe(c));
+
+  /* ── Hero glow follows mouse ── */
+  const heroSection = document.querySelector('.hero');
+  const heroGlow = document.getElementById('heroGlow');
+  heroSection.addEventListener('mousemove', (e) => {
+    const r = heroSection.getBoundingClientRect();
+    const x = ((e.clientX - r.left) / r.width)  * 100;
+    const y = ((e.clientY - r.top)  / r.height) * 100;
+    heroGlow.style.setProperty('--mx', x + '%');
+    heroGlow.style.setProperty('--my', y + '%');
+  });
+
+  /* ── Service card subtle tilt ── */
+  document.querySelectorAll('.service-card').forEach(card => {
+    card.addEventListener('mousemove', (e) => {
+      const r = card.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width  - 0.5;
+      const y = (e.clientY - r.top)  / r.height - 0.5;
+      card.style.transform = `translateY(-6px) perspective(900px) rotateX(${-y * 4}deg) rotateY(${x * 4}deg)`;
+    });
+    card.addEventListener('mouseleave', () => { card.style.transform = ''; });
   });
 </script>
 </body>
