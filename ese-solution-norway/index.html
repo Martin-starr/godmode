@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ESE Solution — Industrielle løsninger til Norge</title>
-  <meta name="description" content="ESE Solution leverer industrielle og produksjonstekniske løsninger til det norske markedet." />
+  <title>ESE Solution — Lavstøvs, gjenbrukbar sponge blasting for Norge</title>
+  <meta name="description" content="ESE Solution leverer ren, tørr og lavstøvs sponge blasting med gjenbrukbart media for offshore, marin og industriell overflatebehandling i Norge." />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -25,6 +25,7 @@
       --blue:       #2563eb;
       --blue-soft:  #eff4ff;
       --success:    #10b981;
+      --yellow:     #ffd23f;
       --radius:     12px;
       --shadow-sm:  0 1px 2px rgba(11,18,32,.05);
       --shadow-md:  0 8px 24px rgba(11,18,32,.08);
@@ -50,7 +51,6 @@
     button { font-family: inherit; }
     ::selection { background: var(--ink); color: var(--white); }
 
-    /* ── Scroll progress ── */
     .scroll-progress {
       position: fixed; top: 0; left: 0;
       height: 2px; width: 0%;
@@ -131,7 +131,6 @@
 
     .nav-right { display: flex; align-items: center; gap: 14px; }
 
-    /* Language toggle */
     .lang-toggle {
       position: relative;
       display: inline-flex;
@@ -139,7 +138,6 @@
       border: 1px solid var(--line);
       border-radius: 999px;
       padding: 3px;
-      gap: 0;
     }
     .lang-toggle .pill-bg {
       position: absolute;
@@ -178,7 +176,6 @@
     .btn-cta:hover { background: var(--accent); transform: translateY(-1px); }
     .btn-cta svg { width: 14px; height: 14px; }
 
-    /* Mobile hamburger */
     .nav-burger {
       display: none;
       width: 40px; height: 40px;
@@ -195,11 +192,10 @@
       position: relative;
       background: var(--ink);
       color: var(--white);
-      padding: 120px 5% 140px;
+      padding: 110px 5% 140px;
       overflow: hidden;
       isolation: isolate;
     }
-
     .hero-grid-bg {
       position: absolute; inset: 0;
       background-image:
@@ -218,25 +214,22 @@
       pointer-events: none;
       transition: background .2s linear;
     }
-
     .hero-inner {
       position: relative; z-index: 2;
       max-width: 1240px; margin: 0 auto;
       display: grid;
-      grid-template-columns: 1.2fr 1fr;
+      grid-template-columns: 1.25fr 1fr;
       gap: 80px;
       align-items: center;
     }
-
     .hero-chip {
       display: inline-flex; align-items: center; gap: 10px;
       background: rgba(255,255,255,.06);
       border: 1px solid rgba(255,255,255,.12);
       border-radius: 999px;
-      padding: 6px 14px 6px 6px;
+      padding: 6px 16px 6px 6px;
       font-size: 0.8rem;
       margin-bottom: 28px;
-      letter-spacing: .01em;
     }
     .hero-chip .chip-dot {
       width: 22px; height: 22px;
@@ -256,12 +249,11 @@
       80%  { transform: scale(1.6); opacity: 0; }
       100% { transform: scale(1.6); opacity: 0; }
     }
-
     .hero h1 {
-      font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+      font-size: clamp(2.3rem, 5vw, 3.9rem);
       font-weight: 700;
-      line-height: 1.05;
-      margin-bottom: 24px;
+      line-height: 1.06;
+      margin-bottom: 22px;
     }
     .hero h1 .accent {
       background: linear-gradient(135deg, var(--accent), var(--accent-2));
@@ -272,12 +264,11 @@
       font-weight: 600;
     }
     .hero p.lead {
-      font-size: 1.13rem;
+      font-size: 1.1rem;
       color: rgba(255,255,255,.72);
-      margin-bottom: 40px;
-      max-width: 560px;
+      margin-bottom: 36px;
+      max-width: 580px;
     }
-
     .hero-buttons { display: flex; gap: 12px; flex-wrap: wrap; }
     .btn-primary {
       display: inline-flex; align-items: center; gap: 10px;
@@ -293,7 +284,6 @@
     .btn-primary:hover { background: var(--accent-2); transform: translateY(-2px); box-shadow: 0 14px 36px rgba(255,91,31,.4); }
     .btn-primary svg { width: 16px; height: 16px; transition: transform .25s; }
     .btn-primary:hover svg { transform: translateX(4px); }
-
     .btn-ghost {
       display: inline-flex; align-items: center; gap: 10px;
       background: transparent;
@@ -307,57 +297,50 @@
     }
     .btn-ghost:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.4); }
 
-    /* Hero visual */
+    /* Hero visual — comparison readout */
     .hero-visual {
       position: relative;
       width: 100%;
-      max-width: 460px;
+      max-width: 440px;
       margin: 0 auto;
-      padding: 20px 0 40px;
     }
-    .hero-card {
-      position: relative;
-      width: 80%;
-      min-width: 240px;
-      background: rgba(255,255,255,.05);
+    .readout {
+      background: rgba(255,255,255,.045);
       border: 1px solid rgba(255,255,255,.12);
-      border-radius: 18px;
+      border-radius: 20px;
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      padding: 22px 24px;
-      margin-bottom: 16px;
-      box-shadow: 0 16px 40px rgba(0,0,0,.25);
+      padding: 26px;
+      box-shadow: 0 24px 60px rgba(0,0,0,.35);
     }
-    .hero-card-1 { margin-left: 0;  animation: float1 6s ease-in-out infinite; }
-    .hero-card-2 { margin-left: 20%; animation: float2 7s ease-in-out infinite; }
-    .hero-card-3 { margin-left: 8%; animation: float1 8s ease-in-out infinite 1s; margin-bottom: 0; }
-
-    @keyframes float1 {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-8px); }
+    .readout-head {
+      display: flex; align-items: center; gap: 10px;
+      padding-bottom: 16px; margin-bottom: 18px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
     }
-    @keyframes float2 {
-      0%, 100% { transform: translateY(0); }
-      50%      { transform: translateY(-12px); }
+    .readout-head .live-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--success);
+      box-shadow: 0 0 0 4px rgba(16,185,129,.2);
+      animation: pulse 2s var(--ease) infinite;
     }
-
-    .hero-card .icon-box {
-      width: 40px; height: 40px;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      border-radius: 10px;
-      display: grid; place-items: center;
-      color: var(--white);
-      margin-bottom: 14px;
-    }
-    .hero-card-2 .icon-box { background: linear-gradient(135deg, var(--blue), #60a5fa); }
-    .hero-card-3 .icon-box { background: linear-gradient(135deg, var(--success), #34d399); }
-    .hero-card .icon-box svg { width: 20px; height: 20px; }
-    .hero-card h4 { font-size: 0.98rem; margin-bottom: 4px; color: var(--white); white-space: nowrap; }
-    .hero-card p  { font-size: 0.82rem; color: rgba(255,255,255,.6); }
+    .readout-head span { font-family: 'Space Grotesk'; font-size: 0.82rem; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+    .readout-row { margin-bottom: 18px; }
+    .readout-row:last-child { margin-bottom: 0; }
+    .readout-row .rr-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
+    .readout-row .rr-label { font-size: 0.86rem; color: rgba(255,255,255,.8); }
+    .readout-row .rr-val { font-family: 'Space Grotesk'; font-weight: 700; font-size: 1.25rem; color: var(--white); }
+    .readout-row .rr-val .u { font-size: 0.85rem; color: var(--accent-2); }
+    .bar { height: 7px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
+    .bar span { display: block; height: 100%; width: 0; border-radius: 999px;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 1.4s var(--ease); }
+    .readout-foot { margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.1);
+      font-size: 0.78rem; color: rgba(255,255,255,.45); display:flex; align-items:center; gap:8px; }
+    .readout-foot svg { width: 14px; height: 14px; color: var(--accent-2); }
 
     .hero-orbit {
       position: absolute;
-      top: 50%; right: -28px;
+      top: -22px; right: -22px;
       width: 88px; height: 88px;
       border: 1px solid rgba(255,255,255,.1);
       border-radius: 50%;
@@ -375,7 +358,7 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Marquee strip ── */
+    /* ── Marquee ── */
     .marquee {
       background: var(--paper);
       border-bottom: 1px solid var(--line);
@@ -385,40 +368,17 @@
     }
     .marquee::before, .marquee::after {
       content: '';
-      position: absolute;
-      top: 0; bottom: 0;
-      width: 100px;
-      z-index: 2;
-      pointer-events: none;
+      position: absolute; top: 0; bottom: 0; width: 100px; z-index: 2; pointer-events: none;
     }
     .marquee::before { left: 0;  background: linear-gradient(90deg, var(--paper), transparent); }
     .marquee::after  { right: 0; background: linear-gradient(-90deg, var(--paper), transparent); }
-    .marquee-track {
-      display: flex;
-      gap: 60px;
-      animation: marquee 30s linear infinite;
-      white-space: nowrap;
-    }
-    @keyframes marquee {
-      from { transform: translateX(0); }
-      to   { transform: translateX(-50%); }
-    }
-    .marquee-item {
-      font-family: 'Space Grotesk';
-      font-weight: 600;
-      font-size: 1.05rem;
-      color: var(--muted);
-      display: inline-flex; align-items: center; gap: 14px;
-    }
+    .marquee-track { display: flex; gap: 56px; animation: marquee 32s linear infinite; white-space: nowrap; }
+    @keyframes marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+    .marquee-item { font-family: 'Space Grotesk'; font-weight: 600; font-size: 1.02rem; color: var(--muted); display: inline-flex; align-items: center; gap: 14px; }
     .marquee-item svg { width: 18px; height: 18px; color: var(--accent); }
 
     /* ── Stats ── */
-    .stats {
-      max-width: 1240px;
-      margin: -60px auto 0;
-      padding: 0 5%;
-      position: relative; z-index: 5;
-    }
+    .stats { max-width: 1240px; margin: -60px auto 0; padding: 0 5%; position: relative; z-index: 5; }
     .stats-card {
       background: var(--white);
       border: 1px solid var(--line);
@@ -427,537 +387,246 @@
       box-shadow: var(--shadow-lg);
       display: grid;
       grid-template-columns: repeat(4, 1fr);
-      gap: 0;
     }
-    .stat-item {
-      padding: 0 24px;
-      border-right: 1px solid var(--line);
-    }
+    .stat-item { padding: 0 24px; border-right: 1px solid var(--line); }
     .stat-item:last-child { border-right: none; }
-    .stat-num {
-      font-family: 'Space Grotesk';
-      font-size: 2.6rem;
-      font-weight: 700;
-      color: var(--ink);
-      line-height: 1;
-      display: flex; align-items: baseline; gap: 4px;
-    }
-    .stat-suffix { font-size: 1.4rem; color: var(--accent); }
-    .stat-label {
-      margin-top: 8px;
-      font-size: 0.84rem;
-      color: var(--muted);
-    }
+    .stat-num { font-family: 'Space Grotesk'; font-size: 2.5rem; font-weight: 700; color: var(--ink); line-height: 1; display: flex; align-items: baseline; gap: 3px; }
+    .stat-suffix { font-size: 1.3rem; color: var(--accent); }
+    .stat-label { margin-top: 8px; font-size: 0.84rem; color: var(--muted); }
 
     /* ── Sections ── */
     section.block { padding: 120px 5%; }
     .inner { max-width: 1240px; margin: 0 auto; }
-
     .eyebrow {
       display: inline-flex; align-items: center; gap: 8px;
-      font-family: 'Space Grotesk';
-      font-size: 0.78rem;
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: .12em;
-      color: var(--accent);
-      margin-bottom: 16px;
+      font-family: 'Space Grotesk'; font-size: 0.78rem; font-weight: 600;
+      text-transform: uppercase; letter-spacing: .12em; color: var(--accent); margin-bottom: 16px;
     }
-    .eyebrow::before {
-      content: '';
-      width: 24px; height: 1px;
-      background: var(--accent);
-    }
-    h2 {
-      font-size: clamp(1.9rem, 3.5vw, 2.9rem);
-      font-weight: 700;
-      color: var(--ink);
-      margin-bottom: 16px;
-      line-height: 1.1;
-    }
+    .eyebrow::before { content: ''; width: 24px; height: 1px; background: var(--accent); }
+    h2 { font-size: clamp(1.9rem, 3.5vw, 2.9rem); font-weight: 700; color: var(--ink); margin-bottom: 16px; line-height: 1.1; }
     h2 .italic { font-style: italic; font-weight: 500; color: var(--accent); }
-    .section-lead {
-      font-size: 1.08rem;
-      color: var(--muted);
-      max-width: 640px;
-      margin-bottom: 56px;
-    }
+    .section-lead { font-size: 1.08rem; color: var(--muted); max-width: 660px; margin-bottom: 56px; }
 
-    /* ── About ── */
-    .about-grid {
-      display: grid;
-      grid-template-columns: 1.1fr 1fr;
-      gap: 80px;
-      align-items: center;
-    }
+    /* ── About / What is sponge blasting ── */
+    .about-grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 80px; align-items: center; }
     .about-list { list-style: none; margin-top: 8px; }
     .about-list li {
-      padding: 18px 0;
-      border-bottom: 1px solid var(--line);
-      display: flex; gap: 16px;
-      align-items: flex-start;
-      transition: padding-left .3s var(--ease);
-      cursor: default;
+      padding: 18px 0; border-bottom: 1px solid var(--line);
+      display: flex; gap: 16px; align-items: flex-start;
+      transition: padding-left .3s var(--ease); cursor: default;
     }
     .about-list li:hover { padding-left: 8px; }
     .about-list li:last-child { border-bottom: none; }
     .check-icon {
-      flex-shrink: 0;
-      width: 28px; height: 28px;
-      background: var(--ink);
-      border-radius: 50%;
-      display: grid; place-items: center;
-      color: var(--white);
-      margin-top: 2px;
+      flex-shrink: 0; width: 28px; height: 28px; background: var(--ink); border-radius: 50%;
+      display: grid; place-items: center; color: var(--white); margin-top: 2px;
       transition: background .25s, transform .25s;
     }
     .about-list li:hover .check-icon { background: var(--accent); transform: rotate(360deg); }
     .check-icon svg { width: 14px; height: 14px; }
     .about-list li strong { display: block; font-size: 1rem; color: var(--ink); margin-bottom: 2px; }
-    .about-list li span   { font-size: 0.92rem; color: var(--muted); }
+    .about-list li span { font-size: 0.92rem; color: var(--muted); }
 
     .about-visual {
-      position: relative;
-      aspect-ratio: 1;
+      position: relative; aspect-ratio: 1;
       background: linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%);
-      border-radius: 24px;
-      overflow: hidden;
-      padding: 40px;
-      color: var(--white);
-      display: flex; flex-direction: column;
-      justify-content: space-between;
+      border-radius: 24px; overflow: hidden; padding: 40px; color: var(--white);
+      display: flex; flex-direction: column; justify-content: space-between;
     }
     .about-visual::before {
-      content: '';
-      position: absolute;
-      width: 300px; height: 300px;
+      content: ''; position: absolute; width: 300px; height: 300px;
       background: linear-gradient(135deg, var(--accent), transparent);
-      border-radius: 50%;
-      filter: blur(80px);
-      top: -100px; right: -100px;
-      opacity: .5;
+      border-radius: 50%; filter: blur(80px); top: -100px; right: -100px; opacity: .5;
     }
-    .about-visual-top {
-      position: relative; z-index: 2;
-      display: flex; justify-content: space-between;
-    }
-    .country-card {
-      background: rgba(255,255,255,.06);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 14px;
-      padding: 14px 18px;
-      backdrop-filter: blur(10px);
-    }
-    .country-code {
-      font-family: 'Space Grotesk';
-      font-size: 0.7rem;
-      letter-spacing: .12em;
-      color: rgba(255,255,255,.5);
-    }
-    .country-name {
-      font-family: 'Space Grotesk';
-      font-size: 1.3rem;
-      font-weight: 600;
-      margin-top: 2px;
-    }
+    .about-visual-top { position: relative; z-index: 2; display: flex; justify-content: space-between; gap:14px; }
+    .country-card { background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 14px; padding: 14px 18px; backdrop-filter: blur(10px); flex:1; }
+    .country-code { font-family: 'Space Grotesk'; font-size: 0.7rem; letter-spacing: .12em; color: rgba(255,255,255,.5); }
+    .country-name { font-family: 'Space Grotesk'; font-size: 1.25rem; font-weight: 600; margin-top: 2px; }
     .about-visual-arrow {
-      position: relative; z-index: 2;
-      align-self: center;
-      width: 70px; height: 70px;
-      background: var(--accent);
-      border-radius: 50%;
-      display: grid; place-items: center;
-      box-shadow: 0 12px 32px rgba(255,91,31,.4);
+      position: relative; z-index: 2; align-self: center;
+      width: 70px; height: 70px; background: var(--accent); border-radius: 50%;
+      display: grid; place-items: center; box-shadow: 0 12px 32px rgba(255,91,31,.4);
     }
     .about-visual-arrow svg { width: 24px; height: 24px; color: var(--white); }
-    .about-visual-bottom {
-      position: relative; z-index: 2;
-      font-family: 'Space Grotesk';
-      font-weight: 600;
-    }
-    .about-visual-bottom .small {
-      font-size: 0.78rem;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-      opacity: .5;
-      margin-bottom: 6px;
-    }
+    .about-visual-bottom { position: relative; z-index: 2; font-family: 'Space Grotesk'; font-weight: 600; }
+    .about-visual-bottom .small { font-size: 0.78rem; letter-spacing: .1em; text-transform: uppercase; opacity: .5; margin-bottom: 6px; }
 
-    /* ── Services ── */
-    .services { background: var(--paper); }
-    .services-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
+    /* ── Differentiators (dark) ── */
+    .diff { background: var(--ink); color: var(--white); position: relative; overflow: hidden; }
+    .diff::before {
+      content: ''; position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px; background: radial-gradient(circle, rgba(255,91,31,.16), transparent 60%); pointer-events: none;
     }
-    .service-card {
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: 18px;
-      padding: 32px 28px 28px;
-      transition: transform .4s var(--ease), border-color .3s, box-shadow .3s;
-      position: relative;
-      overflow: hidden;
-      cursor: pointer;
+    .diff .eyebrow { color: var(--accent-2); } .diff .eyebrow::before { background: var(--accent-2); }
+    .diff h2 { color: var(--white); } .diff .section-lead { color: rgba(255,255,255,.7); }
+    .diff-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .diff-card {
+      background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 18px; padding: 30px 26px; display: flex; flex-direction: column;
+      transition: transform .4s var(--ease), border-color .3s, background .3s;
     }
-    .service-card::before {
-      content: '';
-      position: absolute;
-      inset: 0;
-      background: linear-gradient(135deg, var(--accent), var(--accent-2));
-      opacity: 0;
-      transition: opacity .4s var(--ease);
-      z-index: 0;
+    .diff-card:hover { transform: translateY(-6px); border-color: rgba(255,91,31,.4); background: rgba(255,255,255,.06); }
+    .diff-ico {
+      width: 54px; height: 54px; border-radius: 14px; display: grid; place-items: center; margin-bottom: 20px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2)); color: #fff;
+      transition: transform .4s var(--ease);
     }
-    .service-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
-    .service-card:hover::before { opacity: .04; }
-    .service-card > * { position: relative; z-index: 1; }
+    .diff-card:nth-child(2) .diff-ico { background: linear-gradient(135deg, var(--blue), #60a5fa); }
+    .diff-card:nth-child(3) .diff-ico { background: linear-gradient(135deg, var(--success), #34d399); }
+    .diff-card:hover .diff-ico { transform: rotate(-6deg) scale(1.08); }
+    .diff-ico svg { width: 26px; height: 26px; }
+    .diff-card h3 { font-size: 1.2rem; color: var(--white); margin-bottom: 4px; }
+    .diff-card .d-tag { font-size: 0.74rem; text-transform: uppercase; letter-spacing: .1em; color: var(--accent-2); font-weight: 600; margin-bottom: 18px; }
+    .diff-card ul { list-style: none; display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px; }
+    .diff-card li { font-size: 0.92rem; color: rgba(255,255,255,.82); display: flex; gap: 11px; align-items: flex-start; line-height: 1.45; }
+    .diff-card li svg { width: 16px; height: 16px; color: var(--success); flex-shrink: 0; margin-top: 3px; }
+    .diff-impact { margin-top: auto; background: rgba(255,210,63,.07); border: 1px solid rgba(255,210,63,.22); border-radius: 12px; padding: 14px 16px; }
+    .diff-impact .di-lbl { font-size: 0.7rem; text-transform: uppercase; letter-spacing: .12em; color: var(--yellow); font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+    .diff-impact .di-lbl svg { width: 13px; height: 13px; }
+    .diff-impact p { font-size: 0.86rem; color: rgba(255,255,255,.78); line-height: 1.5; }
 
-    .service-icon {
-      width: 56px; height: 56px;
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 14px;
-      display: grid; place-items: center;
-      margin-bottom: 22px;
-      color: var(--ink);
-      transition: background .3s, color .3s, transform .4s var(--ease);
+    /* ── Applications ── */
+    .apps { background: var(--paper); }
+    .apps-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .app-card {
+      background: var(--white); border: 1px solid var(--line); border-radius: 16px;
+      padding: 26px; cursor: default;
+      transition: transform .4s var(--ease), box-shadow .3s, border-color .3s;
     }
-    .service-card:hover .service-icon {
-      background: var(--ink); color: var(--white); transform: rotate(-6deg) scale(1.08);
+    .app-card:hover { transform: translateY(-5px); box-shadow: var(--shadow-md); border-color: var(--accent); }
+    .app-ico {
+      width: 50px; height: 50px; border-radius: 13px; background: var(--blue-soft); color: var(--blue);
+      display: grid; place-items: center; margin-bottom: 18px; transition: background .3s, color .3s;
     }
-    .service-icon svg { width: 24px; height: 24px; }
+    .app-card:hover .app-ico { background: var(--ink); color: var(--white); }
+    .app-ico svg { width: 24px; height: 24px; }
+    .app-card h3 { font-size: 1.08rem; color: var(--ink); margin-bottom: 6px; }
+    .app-card p { font-size: 0.9rem; color: var(--muted); }
 
-    .service-card h3 {
-      font-size: 1.18rem;
-      color: var(--ink);
-      margin-bottom: 8px;
+    /* ── Products ── */
+    .products-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+    .product-card {
+      border: 1px solid var(--line); border-radius: 18px; overflow: hidden;
+      transition: transform .4s var(--ease), box-shadow .3s, border-color .3s;
+      display: flex; flex-direction: column;
     }
-    .service-card p { font-size: 0.93rem; color: var(--muted); }
-    .service-card .arrow {
-      margin-top: 22px;
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 0.84rem; font-weight: 600;
-      color: var(--accent);
-      transition: gap .3s var(--ease);
+    .product-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-lg); border-color: var(--accent); }
+    .product-top {
+      background: linear-gradient(135deg, var(--ink), var(--ink-2));
+      padding: 32px 28px; color: #fff; position: relative; overflow: hidden;
     }
-    .service-card:hover .arrow { gap: 12px; }
-    .service-card .arrow svg { width: 14px; height: 14px; }
+    .product-top::before {
+      content: ''; position: absolute; width: 180px; height: 180px;
+      background: radial-gradient(circle, rgba(255,91,31,.4), transparent 60%);
+      top: -60px; right: -60px; filter: blur(30px);
+    }
+    .product-card:nth-child(2) .product-top::before { background: radial-gradient(circle, rgba(37,99,235,.4), transparent 60%); }
+    .product-card:nth-child(3) .product-top::before { background: radial-gradient(circle, rgba(16,185,129,.4), transparent 60%); }
+    .product-ico { position: relative; z-index: 2; width: 52px; height: 52px; border-radius: 13px; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18); display: grid; place-items: center; margin-bottom: 18px; }
+    .product-ico svg { width: 25px; height: 25px; color: var(--accent-2); }
+    .product-card:nth-child(2) .product-ico svg { color: #60a5fa; }
+    .product-card:nth-child(3) .product-ico svg { color: #34d399; }
+    .product-top .p-code { position: relative; z-index: 2; font-family: 'Space Grotesk'; font-size: 0.72rem; letter-spacing: .14em; color: rgba(255,255,255,.5); text-transform: uppercase; }
+    .product-top h3 { position: relative; z-index: 2; font-size: 1.3rem; color: #fff; margin-top: 4px; }
+    .product-body { background: var(--white); padding: 26px 28px; flex: 1; }
+    .product-body p { font-size: 0.92rem; color: var(--muted); margin-bottom: 16px; }
+    .product-body ul { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+    .product-body li { font-size: 0.88rem; color: var(--text); display: flex; gap: 10px; align-items: flex-start; }
+    .product-body li svg { width: 15px; height: 15px; color: var(--success); flex-shrink: 0; margin-top: 3px; }
 
-    /* ── Norway section ── */
-    .norway {
-      background: var(--ink);
-      color: var(--white);
-      position: relative;
-      overflow: hidden;
-    }
+    /* ── Norway ── */
+    .norway { background: var(--ink); color: var(--white); position: relative; overflow: hidden; }
     .norway::before {
-      content: '';
-      position: absolute;
-      top: -200px; left: 50%; transform: translateX(-50%);
-      width: 800px; height: 800px;
-      background: radial-gradient(circle, rgba(255,91,31,.18), transparent 60%);
-      pointer-events: none;
+      content: ''; position: absolute; top: -200px; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 800px; background: radial-gradient(circle, rgba(37,99,235,.18), transparent 60%); pointer-events: none;
     }
-    .norway .eyebrow { color: var(--accent-2); }
-    .norway .eyebrow::before { background: var(--accent-2); }
-    .norway h2 { color: var(--white); }
-    .norway .section-lead { color: rgba(255,255,255,.7); }
-
-    .norway-grid {
-      display: grid;
-      grid-template-columns: 1fr 1.2fr;
-      gap: 48px;
-      align-items: stretch;
-    }
+    .norway .eyebrow { color: var(--accent-2); } .norway .eyebrow::before { background: var(--accent-2); }
+    .norway h2 { color: var(--white); } .norway .section-lead { color: rgba(255,255,255,.7); }
+    .norway-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 48px; align-items: stretch; }
     .norway-cards { display: grid; gap: 16px; }
     .norway-card {
-      background: rgba(255,255,255,.04);
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 16px;
-      padding: 26px;
-      display: flex; gap: 20px;
-      align-items: flex-start;
+      background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.1); border-radius: 16px;
+      padding: 26px; display: flex; gap: 20px; align-items: flex-start;
       transition: background .3s, border-color .3s, transform .3s;
     }
     .norway-card:hover { background: rgba(255,255,255,.07); border-color: rgba(255,91,31,.4); transform: translateX(6px); }
-    .norway-card-icon {
-      flex-shrink: 0;
-      width: 48px; height: 48px;
-      background: rgba(255,91,31,.15);
-      border: 1px solid rgba(255,91,31,.3);
-      border-radius: 12px;
-      display: grid; place-items: center;
-      color: var(--accent-2);
-    }
+    .norway-card-icon { flex-shrink: 0; width: 48px; height: 48px; background: rgba(255,91,31,.15); border: 1px solid rgba(255,91,31,.3); border-radius: 12px; display: grid; place-items: center; color: var(--accent-2); }
     .norway-card-icon svg { width: 22px; height: 22px; }
-    .norway-card h3 {
-      font-size: 1.04rem;
-      color: var(--white);
-      margin-bottom: 4px;
-    }
+    .norway-card h3 { font-size: 1.04rem; color: var(--white); margin-bottom: 4px; }
     .norway-card p { font-size: 0.9rem; color: rgba(255,255,255,.65); }
-
     .map-card {
-      background: linear-gradient(135deg, var(--ink-2), var(--ink-3));
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 20px;
-      padding: 36px;
-      display: flex; flex-direction: column;
-      justify-content: space-between;
-      position: relative;
-      overflow: hidden;
-      min-height: 480px;
+      background: linear-gradient(135deg, var(--ink-2), var(--ink-3)); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 20px; padding: 36px; display: flex; flex-direction: column; justify-content: space-between;
+      position: relative; overflow: hidden; min-height: 480px;
     }
-
-    .map-svg {
-      flex: 1;
-      display: grid; place-items: center;
-      margin: 16px 0;
-      position: relative;
-    }
+    .map-svg { flex: 1; display: grid; place-items: center; margin: 16px 0; position: relative; }
     .map-svg svg { width: 100%; max-width: 240px; height: auto; }
-    .map-svg .pin {
-      position: absolute;
-      width: 14px; height: 14px;
-      background: var(--accent);
-      border-radius: 50%;
-      box-shadow: 0 0 0 4px rgba(255,91,31,.25), 0 0 0 12px rgba(255,91,31,.1);
-      animation: pinPulse 2.4s var(--ease) infinite;
-    }
+    .map-svg .pin { position: absolute; width: 14px; height: 14px; background: var(--accent); border-radius: 50%;
+      box-shadow: 0 0 0 4px rgba(255,91,31,.25), 0 0 0 12px rgba(255,91,31,.1); animation: pinPulse 2.4s var(--ease) infinite; }
     @keyframes pinPulse {
       0%, 100% { box-shadow: 0 0 0 4px rgba(255,91,31,.25), 0 0 0 12px rgba(255,91,31,.1); }
       50%      { box-shadow: 0 0 0 7px rgba(255,91,31,.35), 0 0 0 18px rgba(255,91,31,.15); }
     }
-    .pin-oslo      { top: 62%; left: 56%; }
-    .pin-bergen    { top: 50%; left: 38%; }
-    .pin-stavanger { top: 64%; left: 36%; }
-    .pin-tromso    { top: 18%; left: 56%; }
-
-    .map-card .map-label {
-      font-family: 'Space Grotesk';
-      font-size: 0.78rem;
-      letter-spacing: .12em;
-      text-transform: uppercase;
-      color: rgba(255,255,255,.5);
-    }
-    .map-card .map-address {
-      font-style: normal;
-      font-size: 0.96rem;
-      line-height: 1.9;
-      margin-top: 14px;
-    }
+    .pin-oslo { top: 62%; left: 56%; } .pin-bergen { top: 50%; left: 38%; }
+    .pin-stavanger { top: 64%; left: 36%; } .pin-tromso { top: 18%; left: 56%; }
+    .map-card .map-label { font-family: 'Space Grotesk'; font-size: 0.78rem; letter-spacing: .12em; text-transform: uppercase; color: rgba(255,255,255,.5); }
+    .map-card .map-address { font-style: normal; font-size: 0.96rem; line-height: 1.9; margin-top: 14px; }
     .map-card .map-address strong { font-family: 'Space Grotesk'; font-weight: 600; color: var(--white); }
     .map-card .map-address a { color: var(--accent-2); border-bottom: 1px dashed rgba(255,138,91,.4); }
 
-    /* ── Why us ── */
-    .why { background: var(--paper); }
-    .why-grid {
-      display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 14px;
-    }
-    .why-card {
-      background: var(--white);
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      padding: 28px 24px;
-      text-align: left;
-      transition: transform .4s var(--ease), box-shadow .3s, border-color .3s;
-    }
-    .why-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--ink); }
-    .why-icon {
-      width: 44px; height: 44px;
-      border-radius: 12px;
-      background: var(--blue-soft);
-      color: var(--blue);
-      display: grid; place-items: center;
-      margin-bottom: 18px;
-    }
-    .why-icon svg { width: 22px; height: 22px; }
-    .why-card h3 { font-size: 1rem; margin-bottom: 6px; color: var(--ink); }
-    .why-card p  { font-size: 0.86rem; color: var(--muted); line-height: 1.55; }
-
     /* ── Contact ── */
-    .contact-grid {
-      display: grid;
-      grid-template-columns: 1fr 1.1fr;
-      gap: 60px;
-    }
+    .contact-grid { display: grid; grid-template-columns: 1fr 1.1fr; gap: 60px; }
     .contact-info h3 { font-size: 1.15rem; color: var(--ink); margin-bottom: 24px; }
-    .contact-detail {
-      display: flex; gap: 16px;
-      padding: 18px 0;
-      border-bottom: 1px solid var(--line);
-    }
+    .contact-detail { display: flex; gap: 16px; padding: 18px 0; border-bottom: 1px solid var(--line); }
     .contact-detail:last-of-type { border-bottom: none; }
-    .contact-detail-icon {
-      width: 42px; height: 42px;
-      background: var(--paper);
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      display: grid; place-items: center;
-      flex-shrink: 0;
-      color: var(--ink);
-    }
+    .contact-detail-icon { width: 42px; height: 42px; background: var(--paper); border: 1px solid var(--line); border-radius: 12px; display: grid; place-items: center; flex-shrink: 0; color: var(--ink); }
     .contact-detail-icon svg { width: 18px; height: 18px; }
     .contact-detail-text strong { display: block; font-size: 0.78rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: 2px; }
     .contact-detail-text .value { font-size: 0.98rem; color: var(--ink); font-weight: 500; }
     .contact-detail-text .value a { border-bottom: 1px solid transparent; transition: border-color .25s; }
     .contact-detail-text .value a:hover { border-bottom-color: var(--accent); }
-
-    .contact-form {
-      background: var(--ink);
-      color: var(--white);
-      padding: 40px;
-      border-radius: 24px;
-      position: relative;
-      overflow: hidden;
-    }
-    .contact-form::before {
-      content: '';
-      position: absolute;
-      top: -100px; right: -100px;
-      width: 250px; height: 250px;
-      background: radial-gradient(circle, rgba(255,91,31,.3), transparent 60%);
-      filter: blur(40px);
-    }
+    .contact-form { background: var(--ink); color: var(--white); padding: 40px; border-radius: 24px; position: relative; overflow: hidden; }
+    .contact-form::before { content: ''; position: absolute; top: -100px; right: -100px; width: 250px; height: 250px; background: radial-gradient(circle, rgba(255,91,31,.3), transparent 60%); filter: blur(40px); }
     .contact-form > * { position: relative; z-index: 2; }
     .contact-form h3 { font-size: 1.3rem; color: var(--white); margin-bottom: 6px; }
     .contact-form .form-sub { font-size: 0.92rem; color: rgba(255,255,255,.6); margin-bottom: 28px; }
-
     .form-group { margin-bottom: 18px; }
-    .form-group label {
-      display: block;
-      font-size: 0.78rem;
-      font-weight: 600;
-      color: rgba(255,255,255,.7);
-      margin-bottom: 8px;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-    }
-    .form-group input,
-    .form-group select,
-    .form-group textarea {
-      width: 100%;
-      padding: 13px 16px;
-      border: 1px solid rgba(255,255,255,.12);
-      border-radius: 10px;
-      font-size: 0.95rem;
-      color: var(--white);
-      background: rgba(255,255,255,.04);
-      outline: none;
-      font-family: inherit;
+    .form-group label { display: block; font-size: 0.78rem; font-weight: 600; color: rgba(255,255,255,.7); margin-bottom: 8px; text-transform: uppercase; letter-spacing: .08em; }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: 13px 16px; border: 1px solid rgba(255,255,255,.12); border-radius: 10px;
+      font-size: 0.95rem; color: var(--white); background: rgba(255,255,255,.04); outline: none; font-family: inherit;
       transition: border-color .25s, background .25s;
     }
-    .form-group input::placeholder,
-    .form-group textarea::placeholder { color: rgba(255,255,255,.35); }
-    .form-group input:focus,
-    .form-group select:focus,
-    .form-group textarea:focus { border-color: var(--accent); background: rgba(255,255,255,.06); }
+    .form-group input::placeholder, .form-group textarea::placeholder { color: rgba(255,255,255,.35); }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--accent); background: rgba(255,255,255,.06); }
     .form-group select { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' stroke='white' viewBox='0 0 24 24'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 16px center; background-size: 16px; padding-right: 42px; }
     .form-group select option { background: var(--ink); color: var(--white); }
     .form-group textarea { min-height: 110px; resize: vertical; }
     .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-
-    .btn-submit {
-      width: 100%;
-      background: var(--accent);
-      color: var(--white);
-      border: none;
-      padding: 16px;
-      border-radius: 10px;
-      font-size: 0.98rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: background .25s, transform .15s;
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      margin-top: 8px;
-    }
+    .btn-submit { width: 100%; background: var(--accent); color: var(--white); border: none; padding: 16px; border-radius: 10px; font-size: 0.98rem; font-weight: 600; cursor: pointer; transition: background .25s, transform .15s; display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 8px; }
     .btn-submit:hover { background: var(--accent-2); transform: translateY(-1px); }
     .btn-submit svg { width: 16px; height: 16px; transition: transform .25s; }
     .btn-submit:hover svg { transform: translateX(4px); }
-
-    .form-success {
-      display: none;
-      margin-top: 16px;
-      padding: 14px 16px;
-      background: rgba(16,185,129,.15);
-      border: 1px solid rgba(16,185,129,.3);
-      border-radius: 10px;
-      color: #6ee7b7;
-      font-size: 0.9rem;
-      align-items: center; gap: 10px;
-    }
+    .form-success { display: none; margin-top: 16px; padding: 14px 16px; background: rgba(16,185,129,.15); border: 1px solid rgba(16,185,129,.3); border-radius: 10px; color: #6ee7b7; font-size: 0.9rem; align-items: center; gap: 10px; }
     .form-success.show { display: flex; }
     .form-success svg { width: 18px; height: 18px; flex-shrink: 0; }
 
     /* ── Footer ── */
-    footer {
-      background: var(--ink);
-      color: rgba(255,255,255,.6);
-      padding: 80px 5% 30px;
-      position: relative;
-      overflow: hidden;
-    }
-    footer::before {
-      content: 'ESE';
-      position: absolute;
-      bottom: -120px; right: -40px;
-      font-family: 'Space Grotesk';
-      font-size: 22rem;
-      font-weight: 700;
-      color: rgba(255,255,255,.025);
-      letter-spacing: -0.04em;
-      pointer-events: none;
-      line-height: 1;
-    }
-    .footer-grid {
-      max-width: 1240px;
-      margin: 0 auto;
-      display: grid;
-      grid-template-columns: 2fr 1fr 1fr 1fr;
-      gap: 48px;
-      padding-bottom: 50px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      position: relative; z-index: 2;
-    }
+    footer { background: var(--ink); color: rgba(255,255,255,.6); padding: 80px 5% 30px; position: relative; overflow: hidden; }
+    footer::before { content: 'ESE'; position: absolute; bottom: -120px; right: -40px; font-family: 'Space Grotesk'; font-size: 22rem; font-weight: 700; color: rgba(255,255,255,.025); letter-spacing: -0.04em; pointer-events: none; line-height: 1; }
+    .footer-grid { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 48px; padding-bottom: 50px; border-bottom: 1px solid rgba(255,255,255,.08); position: relative; z-index: 2; }
     .footer-brand p { font-size: 0.92rem; margin-top: 18px; max-width: 320px; line-height: 1.7; }
-    .footer-brand .brand-text { color: var(--white); }
-    .footer-brand .brand-sub  { color: rgba(255,255,255,.4); }
-
-    footer h4 {
-      font-family: 'Space Grotesk';
-      font-size: 0.78rem;
-      color: rgba(255,255,255,.5);
-      margin-bottom: 18px;
-      text-transform: uppercase;
-      letter-spacing: .12em;
-    }
+    .footer-brand .brand-text { color: var(--white); } .footer-brand .brand-sub { color: rgba(255,255,255,.4); }
+    footer h4 { font-family: 'Space Grotesk'; font-size: 0.78rem; color: rgba(255,255,255,.5); margin-bottom: 18px; text-transform: uppercase; letter-spacing: .12em; }
     footer ul { list-style: none; }
     footer ul li { margin-bottom: 10px; }
-    footer ul li a {
-      color: rgba(255,255,255,.7);
-      font-size: 0.92rem;
-      transition: color .25s, padding-left .25s var(--ease);
-      display: inline-block;
-    }
+    footer ul li a { color: rgba(255,255,255,.7); font-size: 0.92rem; transition: color .25s, padding-left .25s var(--ease); display: inline-block; }
     footer ul li a:hover { color: var(--white); padding-left: 4px; }
-
-    .footer-bottom {
-      max-width: 1240px;
-      margin: 24px auto 0;
-      display: flex;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 10px;
-      font-size: 0.82rem;
-      position: relative; z-index: 2;
-    }
+    .footer-bottom { max-width: 1240px; margin: 24px auto 0; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 10px; font-size: 0.82rem; position: relative; z-index: 2; }
     .footer-bottom a { color: rgba(255,255,255,.6); transition: color .25s; }
     .footer-bottom a:hover { color: var(--white); }
 
-    /* ── Reveal animations ── */
+    /* ── Reveal ── */
     .reveal { opacity: 0; transform: translateY(28px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
     .reveal.in { opacity: 1; transform: translateY(0); }
     .reveal[data-delay="1"] { transition-delay: .08s; }
@@ -977,8 +646,7 @@
       .nav-burger { display: flex; }
       .hero-inner, .about-grid, .norway-grid, .contact-grid { grid-template-columns: 1fr; gap: 60px; }
       .hero-visual { max-width: 420px; }
-      .services-grid { grid-template-columns: repeat(2, 1fr); }
-      .why-grid { grid-template-columns: repeat(3, 1fr); }
+      .diff-grid, .apps-grid, .products-grid { grid-template-columns: repeat(2, 1fr); }
       .footer-grid { grid-template-columns: 1.5fr 1fr 1fr; }
       .stats-card { grid-template-columns: repeat(2, 1fr); gap: 28px 0; padding: 28px; }
       .stat-item { padding: 16px 14px; border-right: none; border-bottom: 1px solid var(--line); }
@@ -989,13 +657,10 @@
     }
     @media (max-width: 760px) {
       nav { padding: 0 16px; height: 64px; gap: 10px; }
-      .brand-mark { width: 36px; height: 36px; }
-      .brand-mark svg { width: 18px; height: 18px; }
-      .brand-text { font-size: 1.02rem; }
-      .brand-sub  { display: none; }
-      .btn-cta    { display: none; }
-      .nav-right  { gap: 10px; }
-      .lang-btn   { padding: 5px 12px; font-size: 0.72rem; }
+      .brand-mark { width: 36px; height: 36px; } .brand-mark svg { width: 18px; height: 18px; }
+      .brand-text { font-size: 1.02rem; } .brand-sub { display: none; }
+      .btn-cta { display: none; } .nav-right { gap: 10px; }
+      .lang-btn { padding: 5px 12px; font-size: 0.72rem; }
       .mobile-menu { top: 64px; }
       .topbar { font-size: 0.72rem; padding: 7px 12px; line-height: 1.35; }
       .topbar .dot { display: none; }
@@ -1004,63 +669,34 @@
     @media (max-width: 640px) {
       .hero-visual { display: none; }
       .hero h1 { font-size: 2.1rem; }
-      .services-grid, .why-grid, .footer-grid { grid-template-columns: 1fr; }
+      .diff-grid, .apps-grid, .products-grid, .footer-grid { grid-template-columns: 1fr; }
       .form-row { grid-template-columns: 1fr; }
       .marquee-item { font-size: 0.95rem; }
       h2 { font-size: 1.7rem; }
-      .about-visual { padding: 28px; }
-      .contact-form { padding: 28px; }
+      .about-visual { padding: 28px; } .contact-form { padding: 28px; }
       .map-card { padding: 28px; min-height: 380px; }
     }
-    @media (max-width: 380px) {
-      .brand-text { display: none; }
-    }
+    @media (max-width: 380px) { .brand-text { display: none; } }
 
-    /* Mobile menu drawer */
-    .mobile-menu {
-      position: fixed;
-      top: 72px; left: 0; right: 0;
-      background: var(--white);
-      border-bottom: 1px solid var(--line);
-      box-shadow: var(--shadow-md);
-      padding: 16px;
-      z-index: 99;
-      transform: translateY(-110%);
-      transition: transform .35s var(--ease);
-    }
+    .mobile-menu { position: fixed; top: 72px; left: 0; right: 0; background: var(--white); border-bottom: 1px solid var(--line); box-shadow: var(--shadow-md); padding: 16px; z-index: 99; transform: translateY(-110%); transition: transform .35s var(--ease); }
     .mobile-menu.open { transform: translateY(0); }
-    .mobile-menu a {
-      display: block;
-      padding: 14px 16px;
-      font-size: 1rem;
-      color: var(--ink);
-      border-radius: 10px;
-      transition: background .2s;
-    }
+    .mobile-menu a { display: block; padding: 14px 16px; font-size: 1rem; color: var(--ink); border-radius: 10px; transition: background .2s; }
     .mobile-menu a:hover { background: var(--paper); }
-    .mobile-menu .mobile-cta {
-      margin-top: 8px;
-      background: var(--ink);
-      color: var(--white);
-      text-align: center;
-      border-radius: 999px;
-      font-weight: 600;
-    }
+    .mobile-menu .mobile-cta { margin-top: 8px; background: var(--ink); color: var(--white); text-align: center; border-radius: 999px; font-weight: 600; }
     .mobile-menu .mobile-cta:hover { background: var(--accent); }
   </style>
 </head>
 <body>
 
-<!-- Scroll progress -->
 <div class="scroll-progress" id="scrollProgress"></div>
 
 <!-- Top bar -->
 <div class="topbar">
-  <span data-no>Betjener det norske markedet</span>
-  <span data-en>Serving the Norwegian market</span>
+  <span data-no>Ren · tørr · lavstøvs · gjenbrukbar sponge blasting</span>
+  <span data-en>Clean · dry · low-dust · reusable sponge blasting</span>
   <span class="dot">·</span>
-  <span data-no>Koreansk ingeniørkompetanse</span>
-  <span data-en>Korean engineering expertise</span>
+  <span data-no>For offshore, marin og industriell overflatebehandling</span>
+  <span data-en>For offshore, marine &amp; industrial surface preparation</span>
   <span class="dot">·</span>
   <a href="mailto:contact@esesolution.co.kr">contact@esesolution.co.kr</a>
 </div>
@@ -1075,17 +711,18 @@
     </div>
     <div>
       <span class="brand-text">ESE Solution</span>
-      <span class="brand-sub" data-no>Industrielle løsninger</span>
-      <span class="brand-sub" data-en>Industrial solutions</span>
+      <span class="brand-sub" data-no>Sponge Blasting-systemer</span>
+      <span class="brand-sub" data-en>Sponge Blasting Systems</span>
     </div>
   </a>
 
   <ul class="nav-links">
-    <li><a href="#about"    data-no>Om oss</a>    <a href="#about"    data-en>About</a></li>
-    <li><a href="#services" data-no>Tjenester</a> <a href="#services" data-en>Services</a></li>
-    <li><a href="#norway"   data-no>Norge</a>     <a href="#norway"   data-en>Norway</a></li>
-    <li><a href="#why"      data-no>Hvorfor oss</a><a href="#why"     data-en>Why us</a></li>
-    <li><a href="#contact"  data-no>Kontakt</a>   <a href="#contact"  data-en>Contact</a></li>
+    <li><a href="#about"    data-no>Teknologi</a>     <a href="#about"    data-en>Technology</a></li>
+    <li><a href="#diff"     data-no>Fordeler</a>      <a href="#diff"     data-en>Advantages</a></li>
+    <li><a href="#apps"     data-no>Bruksområder</a>  <a href="#apps"     data-en>Applications</a></li>
+    <li><a href="#products" data-no>Produkter</a>     <a href="#products" data-en>Products</a></li>
+    <li><a href="#norway"   data-no>Norge</a>         <a href="#norway"   data-en>Norway</a></li>
+    <li><a href="#contact"  data-no>Kontakt</a>       <a href="#contact"  data-en>Contact</a></li>
   </ul>
 
   <div class="nav-right">
@@ -1095,30 +732,25 @@
       <button class="lang-btn"        onclick="setLang('en')">EN</button>
     </div>
     <a href="#contact" class="btn-cta">
-      <span data-no>Kom i kontakt</span>
-      <span data-en>Get in touch</span>
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-        <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-      </svg>
+      <span data-no>Be om tilbud</span>
+      <span data-en>Request a quote</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
     </a>
     <button class="nav-burger" onclick="toggleMenu()" aria-label="Menu">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round">
-        <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
-      </svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
     </button>
   </div>
 </nav>
 
 <!-- Mobile menu -->
 <div class="mobile-menu" id="mobileMenu">
-  <a href="#about"    onclick="toggleMenu()"><span data-no>Om oss</span><span data-en>About</span></a>
-  <a href="#services" onclick="toggleMenu()"><span data-no>Tjenester</span><span data-en>Services</span></a>
+  <a href="#about"    onclick="toggleMenu()"><span data-no>Teknologi</span><span data-en>Technology</span></a>
+  <a href="#diff"     onclick="toggleMenu()"><span data-no>Fordeler</span><span data-en>Advantages</span></a>
+  <a href="#apps"     onclick="toggleMenu()"><span data-no>Bruksområder</span><span data-en>Applications</span></a>
+  <a href="#products" onclick="toggleMenu()"><span data-no>Produkter</span><span data-en>Products</span></a>
   <a href="#norway"   onclick="toggleMenu()"><span data-no>Norge</span><span data-en>Norway</span></a>
-  <a href="#why"      onclick="toggleMenu()"><span data-no>Hvorfor oss</span><span data-en>Why us</span></a>
   <a href="#contact"  onclick="toggleMenu()"><span data-no>Kontakt</span><span data-en>Contact</span></a>
-  <a href="#contact"  onclick="toggleMenu()" class="mobile-cta">
-    <span data-no>Kom i kontakt →</span><span data-en>Get in touch →</span>
-  </a>
+  <a href="#contact"  onclick="toggleMenu()" class="mobile-cta"><span data-no>Be om tilbud →</span><span data-en>Request a quote →</span></a>
 </div>
 
 <!-- HERO -->
@@ -1130,18 +762,18 @@
     <div>
       <div class="hero-chip reveal">
         <span class="chip-dot"></span>
-        <span data-no>Koreansk kvalitet — norsk tilstedeværelse</span>
-        <span data-en>Korean quality — Norwegian presence</span>
+        <span data-no>Koreansk presisjon — norsk tilstedeværelse</span>
+        <span data-en>Korean precision — Norwegian presence</span>
       </div>
 
       <h1 class="reveal" data-delay="1">
-        <span data-no>Industrielle løsninger<br/><span class="accent">presisjonsbygget</span> for Norge</span>
-        <span data-en>Industrial solutions<br/><span class="accent">precision-built</span> for Norway</span>
+        <span data-no>Fjerner variasjon i<br/><span class="accent">sponge blasting</span></span>
+        <span data-en>Eliminating variability in<br/><span class="accent">sponge blasting</span></span>
       </h1>
 
       <p class="lead reveal" data-delay="2">
-        <span data-no>ESE Solution bringer koreansk presisjonsproduksjon og ingeniørkompetanse direkte til norske bedrifter. Pålitelige produkter, teknisk støtte og skreddersydde løsninger.</span>
-        <span data-en>ESE Solution brings Korean precision manufacturing and engineering expertise directly to Norwegian businesses. Reliable products, technical support, and tailored solutions.</span>
+        <span data-no>Stabilt, gjenbrukbart sponge media bygget for forutsigbar overflatebehandling — jevn ytelse, lavere kostnad per m², og pålitelig gjennomføring i de mest krevende offshore- og industrimiljøene.</span>
+        <span data-en>Stable, reusable sponge media engineered for predictable surface preparation — consistent performance, lower cost per m², and reliable execution in the most demanding offshore and industrial environments.</span>
       </p>
 
       <div class="hero-buttons reveal" data-delay="3">
@@ -1149,39 +781,49 @@
           <span data-no>Be om tilbud</span><span data-en>Request a quote</span>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </a>
-        <a href="#services" class="btn-ghost">
-          <span data-no>Se tjenestene</span><span data-en>View services</span>
+        <a href="#diff" class="btn-ghost">
+          <span data-no>Se fordelene</span><span data-en>See the advantages</span>
         </a>
       </div>
     </div>
 
     <div class="hero-visual reveal" data-delay="2">
-      <div class="hero-card hero-card-1">
-        <div class="icon-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      <div class="readout">
+        <div class="readout-head">
+          <span class="live-dot"></span>
+          <span data-no>Ytelse mot konvensjonell blåsing</span>
+          <span data-en>Performance vs conventional blasting</span>
         </div>
-        <h4 data-no>Presisjonsdeler</h4>
-        <h4 data-en>Precision parts</h4>
-        <p data-no>±0.01 mm toleranse</p>
-        <p data-en>±0.01 mm tolerance</p>
-      </div>
-      <div class="hero-card hero-card-2">
-        <div class="icon-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+
+        <div class="readout-row">
+          <div class="rr-top">
+            <span class="rr-label" data-no>Mindre luftbåret støv</span><span class="rr-label" data-en>Less airborne dust</span>
+            <span class="rr-val">98<span class="u">%</span></span>
+          </div>
+          <div class="bar"><span data-w="98%"></span></div>
         </div>
-        <h4 data-no>Skreddersydd</h4>
-        <h4 data-en>Custom-built</h4>
-        <p data-no>Til dine spesifikasjoner</p>
-        <p data-en>To your specifications</p>
-      </div>
-      <div class="hero-card hero-card-3">
-        <div class="icon-box">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+
+        <div class="readout-row">
+          <div class="rr-top">
+            <span class="rr-label" data-no>Mindre avfall</span><span class="rr-label" data-en>Less waste generated</span>
+            <span class="rr-val">94<span class="u">%</span></span>
+          </div>
+          <div class="bar"><span data-w="94%"></span></div>
         </div>
-        <h4 data-no>ISO-sertifisert</h4>
-        <h4 data-en>ISO-certified</h4>
-        <p data-no>Verifisert kvalitet</p>
-        <p data-en>Verified quality</p>
+
+        <div class="readout-row">
+          <div class="rr-top">
+            <span class="rr-label" data-no>Gjenbruk av media</span><span class="rr-label" data-en>Media reuse cycles</span>
+            <span class="rr-val">10<span class="u">×</span></span>
+          </div>
+          <div class="bar"><span data-w="100%"></span></div>
+        </div>
+
+        <div class="readout-foot">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span data-no>Overflaterenhet opp til Sa3 / SP5</span>
+          <span data-en>Surface cleanliness up to Sa3 / SP5</span>
+        </div>
       </div>
       <div class="hero-orbit"></div>
     </div>
@@ -1190,133 +832,77 @@
 
 <!-- Marquee -->
 <div class="marquee">
-  <div class="marquee-track">
-    <span class="marquee-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span data-no>Presisjonsproduksjon</span><span data-en>Precision Manufacturing</span>
-    </span>
-    <span class="marquee-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span data-no>Norsk kundeservice</span><span data-en>Norwegian Customer Service</span>
-    </span>
-    <span class="marquee-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span data-no>ISO-kvalitet</span><span data-en>ISO Quality</span>
-    </span>
-    <span class="marquee-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span data-no>Rask levering</span><span data-en>Fast Delivery</span>
-    </span>
-    <!-- duplicates for seamless loop -->
-    <span class="marquee-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span data-no>Presisjonsproduksjon</span><span data-en>Precision Manufacturing</span>
-    </span>
-    <span class="marquee-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span data-no>Norsk kundeservice</span><span data-en>Norwegian Customer Service</span>
-    </span>
-    <span class="marquee-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span data-no>ISO-kvalitet</span><span data-en>ISO Quality</span>
-    </span>
-    <span class="marquee-item">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
-      <span data-no>Rask levering</span><span data-en>Fast Delivery</span>
-    </span>
-  </div>
+  <div class="marquee-track" id="marqueeTrack"></div>
 </div>
 
 <!-- STATS -->
 <div class="stats">
   <div class="stats-card reveal">
     <div class="stat-item">
-      <div class="stat-num"><span class="counter" data-to="20">0</span><span class="stat-suffix">+</span></div>
-      <div class="stat-label">
-        <span data-no>År erfaring</span><span data-en>Years experience</span>
-      </div>
+      <div class="stat-num"><span class="counter" data-to="98">0</span><span class="stat-suffix">%</span></div>
+      <div class="stat-label"><span data-no>Mindre luftbåret støv</span><span data-en>Less airborne dust</span></div>
     </div>
     <div class="stat-item">
-      <div class="stat-num"><span class="counter" data-to="500">0</span><span class="stat-suffix">+</span></div>
-      <div class="stat-label">
-        <span data-no>Prosjekter levert</span><span data-en>Projects delivered</span>
-      </div>
+      <div class="stat-num"><span class="counter" data-to="94">0</span><span class="stat-suffix">%</span></div>
+      <div class="stat-label"><span data-no>Mindre avfall</span><span data-en>Less waste</span></div>
     </div>
     <div class="stat-item">
-      <div class="stat-num"><span class="counter" data-to="99" data-decimals="0">0</span><span class="stat-suffix">%</span></div>
-      <div class="stat-label">
-        <span data-no>Kundetilfredshet</span><span data-en>Customer satisfaction</span>
-      </div>
+      <div class="stat-num"><span class="counter" data-to="10">0</span><span class="stat-suffix">×</span></div>
+      <div class="stat-label"><span data-no>Gjenbruk av media</span><span data-en>Media reuse cycles</span></div>
     </div>
     <div class="stat-item">
-      <div class="stat-num"><span class="counter" data-to="24">0</span><span class="stat-suffix">h</span></div>
-      <div class="stat-label">
-        <span data-no>Svartid garantert</span><span data-en>Guaranteed response time</span>
-      </div>
+      <div class="stat-num">Sa3<span class="stat-suffix">/SP5</span></div>
+      <div class="stat-label"><span data-no>Overflaterenhet</span><span data-en>Surface cleanliness</span></div>
     </div>
   </div>
 </div>
 
-<!-- ABOUT -->
+<!-- ABOUT / TECHNOLOGY -->
 <section id="about" class="block">
   <div class="inner">
     <div class="about-grid">
       <div>
-        <div class="eyebrow reveal">
-          <span data-no>Om ESE Solution</span><span data-en>About ESE Solution</span>
-        </div>
+        <div class="eyebrow reveal"><span data-no>Teknologien</span><span data-en>The technology</span></div>
         <h2 class="reveal" data-delay="1">
-          <span data-no>Bygget på <span class="italic">koreansk presisjon</span> — levert til Norge</span>
-          <span data-en>Built on <span class="italic">Korean precision</span> — delivered to Norway</span>
+          <span data-no>Hva er <span class="italic">sponge blasting</span>?</span>
+          <span data-en>What is <span class="italic">sponge blasting</span>?</span>
         </h2>
         <p class="section-lead reveal" data-delay="2">
-          <span data-no>ESE Solution er et koreansk industri- og produksjonsselskap med spesialisert fokus på det norske og skandinaviske markedet. Vi kombinerer avansert teknologi med pålitelig service.</span>
-          <span data-en>ESE Solution is a Korean industrial and manufacturing company with a specialised focus on the Norwegian and Scandinavian market. We combine advanced technology with reliable service.</span>
+          <span data-no>Sponge blasting bruker svampbasert media med innebygd slipemiddel. Resultatet er en ren, tørr og lavstøvs prosess som fanger støv ved kontakt — ideelt for arbeid i drift, lukkede rom og sensitive miljøer der støvkontroll og repeterbar ytelse er avgjørende.</span>
+          <span data-en>Sponge blasting uses sponge-based media with embedded abrasive. The result is a clean, dry, low-dust process that captures dust on impact — ideal for live operations, enclosed spaces, and sensitive environments where dust control and repeatable performance are critical.</span>
         </p>
 
         <ul class="about-list reveal" data-delay="3">
           <li>
-            <div class="check-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
+            <div class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
             <div>
-              <strong data-no>Høy kvalitetsstandard</strong>
-              <strong data-en>High quality standards</strong>
-              <span data-no>Alle produkter gjennomgår streng kvalitetskontroll.</span>
-              <span data-en>All products undergo rigorous quality control.</span>
+              <strong data-no>Lavstøvs og tørt</strong><strong data-en>Low-dust and dry</strong>
+              <span data-no>Opptil 98 % mindre luftbåret støv — bedre sikt og sikkerhet.</span>
+              <span data-en>Up to 98% less airborne dust — better visibility and safety.</span>
             </div>
           </li>
           <li>
-            <div class="check-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
+            <div class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
             <div>
-              <strong data-no>Norsk kommunikasjon</strong>
-              <strong data-en>Norwegian communication</strong>
-              <span data-no>Vi snakker ditt språk — ingen språkbarrierer.</span>
-              <span data-en>We speak your language — no language barriers.</span>
+              <strong data-no>Gjenbrukbart media</strong><strong data-en>Reusable media</strong>
+              <span data-no>Gjenbrukes opptil 10 ganger — opptil 94 % mindre avfall.</span>
+              <span data-en>Reused up to 10 times — up to 94% less waste.</span>
             </div>
           </li>
           <li>
-            <div class="check-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
+            <div class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
             <div>
-              <strong data-no>Rask levering</strong>
-              <strong data-en>Fast delivery</strong>
-              <span data-no>Optimalisert logistikk fra Korea til Norge.</span>
-              <span data-en>Optimised logistics from Korea to Norway.</span>
+              <strong data-no>Høy overflaterenhet</strong><strong data-en>High surface cleanliness</strong>
+              <span data-no>Oppnår renhet opp til Sa3 / SP5 med kontrollert profil.</span>
+              <span data-en>Achieves cleanliness up to Sa3 / SP5 with controlled profile.</span>
             </div>
           </li>
           <li>
-            <div class="check-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            </div>
+            <div class="check-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
             <div>
-              <strong data-no>Teknisk support</strong>
-              <strong data-en>Technical support</strong>
-              <span data-no>Dedikert team for norske kunder.</span>
-              <span data-en>Dedicated team for Norwegian customers.</span>
+              <strong data-no>Systembasert løsning</strong><strong data-en>System-based solution</strong>
+              <span data-no>Media, blåseutstyr og resirkuleringsenhet i ett komplett system.</span>
+              <span data-en>Media, blasting equipment, and recycling unit in one complete system.</span>
             </div>
           </li>
         </ul>
@@ -1333,110 +919,211 @@
             <div class="country-name">Oslo</div>
           </div>
         </div>
-
         <div class="about-visual-arrow">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-          </svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </div>
-
         <div class="about-visual-bottom">
-          <div class="small" data-no>Direkte forbindelse</div>
-          <div class="small" data-en>Direct connection</div>
-          <div style="font-size:1.6rem;line-height:1.2;" data-no>8 900 km i fly,<br/>én telefonsamtale unna.</div>
-          <div style="font-size:1.6rem;line-height:1.2;" data-en>8,900 km by air,<br/>one phone call away.</div>
+          <div class="small" data-no>Levert til norsk industri</div>
+          <div class="small" data-en>Delivered to Norwegian industry</div>
+          <div style="font-size:1.5rem;line-height:1.25;" data-no>Koreansk media­teknologi,<br/>norsk leveranse og support.</div>
+          <div style="font-size:1.5rem;line-height:1.25;" data-en>Korean media technology,<br/>Norwegian delivery and support.</div>
         </div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- SERVICES -->
-<section id="services" class="block services">
+<!-- DIFFERENTIATORS -->
+<section id="diff" class="block diff">
   <div class="inner">
-    <div class="eyebrow reveal">
-      <span data-no>Tjenester</span><span data-en>Services</span>
-    </div>
+    <div class="eyebrow reveal"><span data-no>Slik skiller ESE seg ut</span><span data-en>Where ESE differentiates</span></div>
     <h2 class="reveal" data-delay="1">
-      <span data-no>Hva vi <span class="italic">leverer</span></span>
-      <span data-en>What we <span class="italic">deliver</span></span>
+      <span data-no>Tre fordeler <span class="italic">konkurrentene</span> ikke matcher</span>
+      <span data-en>Three advantages <span class="italic">competitors</span> can't match</span>
     </h2>
     <p class="section-lead reveal" data-delay="2">
-      <span data-no>Fra industrikomponenter og presisjonsdeler til komplette systemløsninger — vi dekker norske bedrifters behov innen produksjon og industri.</span>
-      <span data-en>From industrial components and precision parts to complete system solutions — we cover Norwegian businesses' needs in manufacturing and industry.</span>
+      <span data-no>Sammenlignet med konkurrerende sponge blasting-systemer leverer ESE målbar operasjonell stabilitet, materialeffektivitet og repeterbar kvalitet.</span>
+      <span data-en>Compared to competing sponge blasting systems, ESE delivers measurable operational stability, material efficiency, and repeatable quality.</span>
     </p>
 
-    <div class="services-grid">
-      <div class="service-card reveal" data-delay="1">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8l-7 5V8l-7 5V4a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M17 18h1M13 18h1M9 18h1M5 18h1"/></svg>
+    <div class="diff-grid">
+      <!-- 1 -->
+      <div class="diff-card reveal" data-delay="1">
+        <div class="diff-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
         </div>
-        <h3 data-no>Industriproduksjon</h3><h3 data-en>Industrial Manufacturing</h3>
-        <p data-no>Presisjonsproduserte industrikomponenter etter norske og europeiske standarder.</p>
-        <p data-en>Precision-manufactured industrial components to Norwegian and European standards.</p>
-        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </span>
+        <h3 data-no>Mediastabilitet</h3><h3 data-en>Media Stability</h3>
+        <div class="d-tag" data-no>Kritisk driftsfordel</div><div class="d-tag" data-en>Critical operational advantage</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Klumper ikke under lagring og transport</span><span data-en>No clumping during storage and transport</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Fritt-flytende media i reelle feltforhold</span><span data-en>Free-flowing media in real site conditions</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Klar til bruk rett fra sekken</span><span data-en>Ready-to-use directly from the bag</span></li>
+        </ul>
+        <div class="diff-impact">
+          <div class="di-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span data-no>Effekt</span><span data-en>Impact</span></div>
+          <p data-no>Fjerner oppstartsforsinkelser, hindrer matebrudd og gir kontinuerlig drift.</p>
+          <p data-en>Eliminates start-up delays, prevents feed interruptions, enables continuous operations.</p>
+        </div>
       </div>
 
-      <div class="service-card reveal" data-delay="2">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+      <!-- 2 -->
+      <div class="diff-card reveal" data-delay="2">
+        <div class="diff-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
         </div>
-        <h3 data-no>Maskindeler &amp; komponenter</h3><h3 data-en>Machine Parts &amp; Components</h3>
-        <p data-no>Høykvalitets maskindeler og reservedeler for industri- og produksjonsutstyr.</p>
-        <p data-en>High-quality machine parts and spare parts for industrial and manufacturing equipment.</p>
-        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </span>
+        <h3 data-no>Gjenbruk &amp; effektivitet</h3><h3 data-en>Reusability &amp; Efficiency</h3>
+        <div class="d-tag" data-no>Lavere kostnad per m²</div><div class="d-tag" data-en>Lower cost per m²</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Gjenbrukbart opptil 10 ganger</span><span data-en>Reusable up to 10 times</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Lavt materialtap per syklus (~5 %)</span><span data-en>Low material loss per cycle (~5%)</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Stabil mediakvalitet gjennom alle sykluser</span><span data-en>Stable media quality across reuse cycles</span></li>
+        </ul>
+        <div class="diff-impact">
+          <div class="di-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span data-no>Effekt</span><span data-en>Impact</span></div>
+          <p data-no>Lavere totalforbruk, reduserte logistikk- og deponeringskostnader, forutsigbart budsjett.</p>
+          <p data-en>Lower total consumption, reduced logistics &amp; disposal cost, predictable budgeting.</p>
+        </div>
       </div>
 
-      <div class="service-card reveal" data-delay="3">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+      <!-- 3 -->
+      <div class="diff-card reveal" data-delay="3">
+        <div class="diff-ico">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
-        <h3 data-no>Teknisk rådgivning</h3><h3 data-en>Technical Consulting</h3>
-        <p data-no>Ekspertise innen prosessoptimalisering, materialkvalitet og produksjonseffektivitet.</p>
-        <p data-en>Expertise in process optimisation, material quality, and manufacturing efficiency.</p>
-        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </span>
+        <h3 data-no>Jevn ytelse</h3><h3 data-en>Consistent Performance</h3>
+        <div class="d-tag" data-no>Spesifikasjon du kan stole på</div><div class="d-tag" data-en>Specification you can trust</div>
+        <ul>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Opprettholder Sa3 / SP5 gjennom alle sykluser</span><span data-en>Maintains Sa3 / SP5 cleanliness across cycles</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Konsistent overflateprofil ved gjenbruk</span><span data-en>Consistent surface profile through reuse</span></li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Stabile blåseegenskaper over tid</span><span data-en>Stable blasting characteristics over time</span></li>
+        </ul>
+        <div class="diff-impact">
+          <div class="di-lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg><span data-no>Effekt</span><span data-en>Impact</span></div>
+          <p data-no>Pålitelig coatingytelse, redusert omarbeid og inspeksjonsrisiko, trygghet over flere sykluser.</p>
+          <p data-en>Reliable coating performance, reduced rework and inspection risk, multi-cycle confidence.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- APPLICATIONS -->
+<section id="apps" class="block apps">
+  <div class="inner">
+    <div class="eyebrow reveal"><span data-no>Bruksområder</span><span data-en>Applications</span></div>
+    <h2 class="reveal" data-delay="1">
+      <span data-no>Bygget for <span class="italic">krevende</span> miljøer</span>
+      <span data-en>Built for <span class="italic">demanding</span> environments</span>
+    </h2>
+    <p class="section-lead reveal" data-delay="2">
+      <span data-no>Der støvkontroll, avfallsreduksjon og forutsigbar gjennomføring skaper målbar verdi.</span>
+      <span data-en>Where dust control, waste reduction, and predictable execution create measurable value.</span>
+    </p>
+
+    <div class="apps-grid">
+      <div class="app-card reveal" data-delay="1">
+        <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20a6 6 0 0 0 12 0c0-4-6-10-6-10S2 16 2 20z"/><path d="M14 14c0 3 2 6 6 6"/><path d="M18 8a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg></div>
+        <h3 data-no>Offshore &amp; marint</h3><h3 data-en>Offshore &amp; marine</h3>
+        <p data-no>Vedlikehold der støvkontroll og gjennomføringssikkerhet er kritisk.</p>
+        <p data-en>Maintenance where dust control and execution certainty are critical.</p>
+      </div>
+      <div class="app-card reveal" data-delay="2">
+        <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V8l4-2 4 2v13M13 21V11l4-2 2 1v11"/></svg></div>
+        <h3 data-no>Verft &amp; stålfabrikasjon</h3><h3 data-en>Shipyards &amp; steel fabrication</h3>
+        <p data-no>Repeterbar overflatebehandling med mindre behov for opprydding.</p>
+        <p data-en>Repeatable surface preparation with less clean-up required.</p>
+      </div>
+      <div class="app-card reveal" data-delay="3">
+        <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5v14a9 3 0 0 0 18 0V5"/><path d="M3 12a9 3 0 0 0 18 0"/></svg></div>
+        <h3 data-no>Tanker, rør &amp; beholdere</h3><h3 data-en>Tanks, pipes &amp; vessels</h3>
+        <p data-no>Lukkede arbeidsmiljøer der lavstøvs blåsing øker verdien.</p>
+        <p data-en>Enclosed work environments where low-dust blasting adds value.</p>
+      </div>
+      <div class="app-card reveal" data-delay="1">
+        <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20M6 12V8m12 4V8M4 16l2 4m14-4l-2 4M12 12v8"/></svg></div>
+        <h3 data-no>Infrastruktur &amp; broer</h3><h3 data-en>Infrastructure &amp; bridges</h3>
+        <p data-no>Der forurensning av omgivelsene og avfallshåndtering driver kostnad.</p>
+        <p data-en>Where environmental containment and waste handling drive cost.</p>
+      </div>
+      <div class="app-card reveal" data-delay="2">
+        <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/></svg></div>
+        <h3 data-no>Sensitive substrater</h3><h3 data-en>Sensitive substrates</h3>
+        <p data-no>Aluminium, glassfiber, karbonfiber, turbiner og ommaling.</p>
+        <p data-en>Aluminium, fibreglass, carbon fibre, turbines, and recoating.</p>
+      </div>
+      <div class="app-card reveal" data-delay="3">
+        <div class="app-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 4 5v6c0 5 3.5 9 8 11 4.5-2 8-6 8-11V5l-8-3z"/></svg></div>
+        <h3 data-no>Anlegg i drift</h3><h3 data-en>Live plant operations</h3>
+        <p data-no>Trange miljøer der pålitelighet og lav forurensning betyr mest.</p>
+        <p data-en>Confined environments where reliability and low contamination matter most.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section id="products" class="block">
+  <div class="inner">
+    <div class="eyebrow reveal"><span data-no>Systemet</span><span data-en>The system</span></div>
+    <h2 class="reveal" data-delay="1">
+      <span data-no>Et komplett <span class="italic">blåsesystem</span></span>
+      <span data-en>A complete <span class="italic">blasting system</span></span>
+    </h2>
+    <p class="section-lead reveal" data-delay="2">
+      <span data-no>Ikke bare forbruksmateriell — media, utstyr og resirkulering som arbeider sammen.</span>
+      <span data-en>Not just consumables — media, equipment, and recycling working together.</span>
+    </p>
+
+    <div class="products-grid">
+      <div class="product-card reveal" data-delay="1">
+        <div class="product-top">
+          <div class="product-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
+          <div class="p-code" data-no>Forbruksmateriell</div><div class="p-code" data-en>Consumable</div>
+          <h3 data-no>Sponge Media</h3><h3 data-en>Sponge Media</h3>
+        </div>
+        <div class="product-body">
+          <p data-no>Svampbasert media med innebygd slipemiddel, i flere kvaliteter for aggressive og sensitive bruksområder.</p>
+          <p data-en>Sponge-based media with embedded abrasive, in multiple grades for aggressive and sensitive applications.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Klar til bruk, klumper ikke</span><span data-en>Ready to use, no clumping</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Flere abrasive alternativer</span><span data-en>Multiple abrasive options</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Gjenbrukbart opptil 10×</span><span data-en>Reusable up to 10×</span></li>
+          </ul>
+        </div>
       </div>
 
-      <div class="service-card reveal" data-delay="1">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      <div class="product-card reveal" data-delay="2">
+        <div class="product-top">
+          <div class="product-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
+          <div class="p-code">ES 200</div>
+          <h3 data-no>Blåseutstyr</h3><h3 data-en>Blasting Equipment</h3>
         </div>
-        <h3 data-no>Import &amp; logistikk</h3><h3 data-en>Import &amp; Logistics</h3>
-        <p data-no>Sømløs import av koreanske industriprodukter med full tollhåndtering til Norge.</p>
-        <p data-en>Seamless import of Korean industrial products with full customs handling to Norway.</p>
-        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </span>
+        <div class="product-body">
+          <p data-no>Robust blåseenhet designet for kontrollert, repeterbar ytelse i felt og offshore.</p>
+          <p data-en>Robust blasting unit designed for controlled, repeatable performance in the field and offshore.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Stabil og jevn medieflyt</span><span data-en>Stable, consistent media flow</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Kontrollerbar blåsetrykk</span><span data-en>Controllable blast pressure</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Bygget for felt- og offshorebruk</span><span data-en>Built for field &amp; offshore use</span></li>
+          </ul>
+        </div>
       </div>
 
-      <div class="service-card reveal" data-delay="2">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      <div class="product-card reveal" data-delay="3">
+        <div class="product-top">
+          <div class="product-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div>
+          <div class="p-code" data-no>Resirkulering</div><div class="p-code" data-en>Recycling</div>
+          <h3 data-no>Resirkuleringsenhet</h3><h3 data-en>Recycling Unit</h3>
         </div>
-        <h3 data-no>Kvalitetskontroll</h3><h3 data-en>Quality Control</h3>
-        <p data-no>Grundig inspeksjon og sertifisering som oppfyller europeiske krav og standarder.</p>
-        <p data-en>Thorough inspection and certification meeting European requirements and standards.</p>
-        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </span>
-      </div>
-
-      <div class="service-card reveal" data-delay="3">
-        <div class="service-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        <div class="product-body">
+          <p data-no>Separerer og klargjør brukt media for gjenbruk — med jevn renhet og profil hver gang.</p>
+          <p data-en>Separates and reconditions used media for reuse — with consistent cleanliness and profile each time.</p>
+          <ul>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Effektiv separering av media</span><span data-en>Efficient media separation</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Opprettholder kvalitet over sykluser</span><span data-en>Maintains quality across cycles</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span data-no>Maksimerer gjenbruk, minimerer tap</span><span data-en>Maximises reuse, minimises loss</span></li>
+          </ul>
         </div>
-        <h3 data-no>Skreddersydde løsninger</h3><h3 data-en>Custom Solutions</h3>
-        <p data-no>Spesialtilpassede produkter og systemer utviklet etter kundens spesifikasjoner.</p>
-        <p data-en>Specially tailored products and systems developed to customer specifications.</p>
-        <span class="arrow"><span data-no>Lær mer</span><span data-en>Learn more</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
-        </span>
       </div>
     </div>
   </div>
@@ -1445,75 +1132,59 @@
 <!-- NORWAY -->
 <section id="norway" class="block norway">
   <div class="inner">
-    <div class="eyebrow reveal">
-      <span data-no>Norgesavdelingen</span><span data-en>Norway Division</span>
-    </div>
+    <div class="eyebrow reveal"><span data-no>Norgesavdelingen</span><span data-en>Norway Division</span></div>
     <h2 class="reveal" data-delay="1">
       <span data-no>Vi er <span class="italic">her</span> i Norge</span>
       <span data-en>We are <span class="italic">here</span> in Norway</span>
     </h2>
     <p class="section-lead reveal" data-delay="2">
-      <span data-no>ESE Solution er tilgjengelig for norske kunder med lokalt kontaktpunkt, norsk kommunikasjon og tilpassede løsninger for det norske markedet.</span>
-      <span data-en>ESE Solution is available to Norwegian customers with a local contact point, Norwegian communication, and tailored solutions for the Norwegian market.</span>
+      <span data-no>Lokalt kontaktpunkt, norsk kommunikasjon og leveranse tilpasset offshore- og industrimarkedet.</span>
+      <span data-en>A local contact point, Norwegian communication, and delivery tailored to the offshore and industrial market.</span>
     </p>
 
     <div class="norway-grid">
       <div class="norway-cards">
         <div class="norway-card reveal" data-delay="1">
-          <div class="norway-card-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          </div>
+          <div class="norway-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
           <div>
             <h3 data-no>Lokalt kontaktpunkt</h3><h3 data-en>Local contact point</h3>
-            <p data-no>Norske representanter som snakker språket og kjenner markedet.</p>
-            <p data-en>Norwegian representatives who speak the language and know the market.</p>
+            <p data-no>Norske representanter som snakker språket og kjenner offshore-markedet.</p>
+            <p data-en>Norwegian representatives who speak the language and know the offshore market.</p>
           </div>
         </div>
-
         <div class="norway-card reveal" data-delay="2">
-          <div class="norway-card-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
-          </div>
+          <div class="norway-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
           <div>
-            <h3 data-no>Direkte frakt til Norge</h3><h3 data-en>Direct shipping to Norway</h3>
-            <p data-no>Vi håndterer frakt, toll og dokumentasjon fra Korea rett til din dør.</p>
-            <p data-en>We handle shipping, customs, and documentation from Korea straight to your door.</p>
+            <h3 data-no>Direkte leveranse</h3><h3 data-en>Direct supply</h3>
+            <p data-no>Vi håndterer frakt, toll og dokumentasjon fra Korea rett til ditt anlegg.</p>
+            <p data-en>We handle shipping, customs, and documentation from Korea straight to your site.</p>
           </div>
         </div>
-
         <div class="norway-card reveal" data-delay="3">
-          <div class="norway-card-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <div class="norway-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg></div>
+          <div>
+            <h3 data-no>Teknisk støtte</h3><h3 data-en>Technical support</h3>
+            <p data-no>Veiledning om mediavalg, profil og resirkulering for ditt bruksområde.</p>
+            <p data-en>Guidance on media selection, profile, and recycling for your application.</p>
           </div>
+        </div>
+        <div class="norway-card reveal" data-delay="4">
+          <div class="norway-card-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
           <div>
             <h3 data-no>Norsk arbeidstid</h3><h3 data-en>Norwegian business hours</h3>
-            <p data-no>Kundeservice på norsk man–fre 08:00–17:00 CET.</p>
-            <p data-en>Customer service in Norwegian Mon–Fri 08:00–17:00 CET.</p>
-          </div>
-        </div>
-
-        <div class="norway-card reveal" data-delay="4">
-          <div class="norway-card-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-          </div>
-          <div>
-            <h3 data-no>Norsk telefon &amp; e-post</h3><h3 data-en>Norwegian phone &amp; email</h3>
-            <p data-no>Ta kontakt direkte — alltid på norsk, alltid raskt.</p>
-            <p data-en>Reach us directly — always in Norwegian, always fast.</p>
+            <p data-no>Tilgjengelig på norsk man–fre 08:00–17:00 CET.</p>
+            <p data-en>Available in Norwegian Mon–Fri 08:00–17:00 CET.</p>
           </div>
         </div>
       </div>
 
       <div class="map-card reveal" data-delay="2">
         <div>
-          <div class="map-label" data-no>Vår tilstedeværelse</div>
-          <div class="map-label" data-en>Our presence</div>
+          <div class="map-label" data-no>Vår tilstedeværelse</div><div class="map-label" data-en>Our presence</div>
           <h3 style="font-family:'Space Grotesk';font-size:1.4rem;margin-top:6px;color:var(--white);" data-no>Norge</h3>
           <h3 style="font-family:'Space Grotesk';font-size:1.4rem;margin-top:6px;color:var(--white);" data-en>Norway</h3>
         </div>
-
         <div class="map-svg">
-          <!-- Simple stylized Norway silhouette -->
           <svg viewBox="0 0 200 320" xmlns="http://www.w3.org/2000/svg" fill="none">
             <path d="M120 8 C135 22 140 38 142 56 L156 70 L150 94 L172 110 L168 130 L184 144 L176 168 L184 188 L172 210 L180 234 L160 252 L140 268 L120 280 L108 296 L92 310 L78 304 L68 286 L72 268 L60 254 L62 234 L48 218 L52 194 L40 172 L46 148 L38 124 L52 102 L46 82 L58 64 L48 48 L62 32 L80 26 L96 14 Z"
               stroke="rgba(255,255,255,.18)" stroke-width="1.5" fill="rgba(255,255,255,.04)"/>
@@ -1523,11 +1194,9 @@
           <span class="pin pin-stavanger" title="Stavanger"></span>
           <span class="pin pin-oslo" title="Oslo"></span>
         </div>
-
         <address class="map-address">
           <strong>ESE Solution — Norge</strong><br/>
-          <span data-no>Adresse: ta kontakt for detaljer</span>
-          <span data-en>Address: contact us for details</span><br/>
+          <span data-no>Adresse: ta kontakt for detaljer</span><span data-en>Address: contact us for details</span><br/>
           <a href="tel:+4700000000">+47 XX XX XX XX</a><br/>
           <a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a>
         </address>
@@ -1536,79 +1205,13 @@
   </div>
 </section>
 
-<!-- WHY -->
-<section id="why" class="block why">
-  <div class="inner">
-    <div class="eyebrow reveal">
-      <span data-no>Hvorfor velge oss</span><span data-en>Why choose us</span>
-    </div>
-    <h2 class="reveal" data-delay="1">
-      <span data-no>Fem grunner til å <span class="italic">velge</span> ESE Solution</span>
-      <span data-en>Five reasons to <span class="italic">choose</span> ESE Solution</span>
-    </h2>
-    <p class="section-lead reveal" data-delay="2">
-      <span data-no>Vi forstår norske behov og leverer koreansk kvalitet — det beste fra begge verdener.</span>
-      <span data-en>We understand Norwegian needs and deliver Korean quality — the best of both worlds.</span>
-    </p>
-
-    <div class="why-grid">
-      <div class="why-card reveal" data-delay="1">
-        <div class="why-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
-        </div>
-        <h3 data-no>Overlegen kvalitet</h3><h3 data-en>Superior quality</h3>
-        <p data-no>Koreansk presisjonsproduksjon i verdensklasse.</p>
-        <p data-en>World-class Korean precision manufacturing.</p>
-      </div>
-
-      <div class="why-card reveal" data-delay="2">
-        <div class="why-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        </div>
-        <h3 data-no>Konkurransedyktig pris</h3><h3 data-en>Competitive pricing</h3>
-        <p data-no>Lavere kostnader uten kvalitetskompromiss.</p>
-        <p data-en>Lower costs without quality compromise.</p>
-      </div>
-
-      <div class="why-card reveal" data-delay="3">
-        <div class="why-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-        </div>
-        <h3 data-no>Norsk kommunikasjon</h3><h3 data-en>Norwegian communication</h3>
-        <p data-no>Full støtte på norsk fra start til slutt.</p>
-        <p data-en>Full support in Norwegian from start to finish.</p>
-      </div>
-
-      <div class="why-card reveal" data-delay="4">
-        <div class="why-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-        </div>
-        <h3 data-no>Rask respons</h3><h3 data-en>Fast response</h3>
-        <p data-no>Svar innen 24 timer på virkedager.</p>
-        <p data-en>Reply within 24 business hours.</p>
-      </div>
-
-      <div class="why-card reveal" data-delay="5">
-        <div class="why-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-        </div>
-        <h3 data-no>Pålitelig partner</h3><h3 data-en>Reliable partner</h3>
-        <p data-no>Over 20 år med fornøyde kunder.</p>
-        <p data-en>Over 20 years of happy customers.</p>
-      </div>
-    </div>
-  </div>
-</section>
-
 <!-- CONTACT -->
 <section id="contact" class="block">
   <div class="inner">
-    <div class="eyebrow reveal">
-      <span data-no>Kontakt</span><span data-en>Contact</span>
-    </div>
+    <div class="eyebrow reveal"><span data-no>Kontakt</span><span data-en>Contact</span></div>
     <h2 class="reveal" data-delay="1">
-      <span data-no>La oss <span class="italic">snakke</span> om dine behov</span>
-      <span data-en>Let's <span class="italic">talk</span> about your needs</span>
+      <span data-no>La oss <span class="italic">snakke</span> om ditt prosjekt</span>
+      <span data-en>Let's <span class="italic">talk</span> about your project</span>
     </h2>
     <p class="section-lead reveal" data-delay="2">
       <span data-no>Send oss en melding — vi svarer på norsk innen neste virkedag.</span>
@@ -1620,47 +1223,31 @@
         <h3 data-no>Kontaktinformasjon</h3><h3 data-en>Contact information</h3>
 
         <div class="contact-detail">
-          <div class="contact-detail-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
-          </div>
+          <div class="contact-detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
           <div class="contact-detail-text">
-            <strong data-no>Hovedkontor — Korea</strong>
-            <strong data-en>Head office — Korea</strong>
-            <div class="value"><a href="https://www.esesolution.co.kr">www.esesolution.co.kr</a></div>
+            <strong data-no>Hovedkontor — Korea</strong><strong data-en>Head office — Korea</strong>
+            <div class="value"><a href="https://en.esesolution.co.kr">en.esesolution.co.kr</a></div>
           </div>
         </div>
-
         <div class="contact-detail">
-          <div class="contact-detail-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
-          </div>
+          <div class="contact-detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
           <div class="contact-detail-text">
-            <strong data-no>Norsk kontakt</strong>
-            <strong data-en>Norwegian contact</strong>
+            <strong data-no>Norsk kontakt</strong><strong data-en>Norwegian contact</strong>
             <div class="value"><a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a></div>
           </div>
         </div>
-
         <div class="contact-detail">
-          <div class="contact-detail-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
-          </div>
+          <div class="contact-detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
           <div class="contact-detail-text">
-            <strong data-no>Telefon (Norge)</strong>
-            <strong data-en>Phone (Norway)</strong>
+            <strong data-no>Telefon (Norge)</strong><strong data-en>Phone (Norway)</strong>
             <div class="value"><a href="tel:+4700000000">+47 XX XX XX XX</a></div>
           </div>
         </div>
-
         <div class="contact-detail">
-          <div class="contact-detail-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </div>
+          <div class="contact-detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
           <div class="contact-detail-text">
-            <strong data-no>Åpningstider</strong>
-            <strong data-en>Business hours</strong>
-            <div class="value" data-no>Man–fre 08:00–17:00 CET</div>
-            <div class="value" data-en>Mon–Fri 08:00–17:00 CET</div>
+            <strong data-no>Åpningstider</strong><strong data-en>Business hours</strong>
+            <div class="value" data-no>Man–fre 08:00–17:00 CET</div><div class="value" data-en>Mon–Fri 08:00–17:00 CET</div>
           </div>
         </div>
       </div>
@@ -1669,48 +1256,35 @@
         <h3 data-no>Send oss en melding</h3><h3 data-en>Send us a message</h3>
         <p class="form-sub" data-no>Vi svarer på norsk innen neste virkedag.</p>
         <p class="form-sub" data-en>We reply in Norwegian within the next business day.</p>
-
         <form onsubmit="handleSubmit(event)">
           <div class="form-row">
-            <div class="form-group">
-              <label data-no>Fornavn</label><label data-en>First name</label>
-              <input type="text" required />
-            </div>
-            <div class="form-group">
-              <label data-no>Etternavn</label><label data-en>Last name</label>
-              <input type="text" required />
-            </div>
+            <div class="form-group"><label data-no>Fornavn</label><label data-en>First name</label><input type="text" required /></div>
+            <div class="form-group"><label data-no>Etternavn</label><label data-en>Last name</label><input type="text" required /></div>
           </div>
-          <div class="form-group">
-            <label data-no>E-postadresse</label><label data-en>Email address</label>
-            <input type="email" required />
-          </div>
-          <div class="form-group">
-            <label data-no>Bedrift (valgfritt)</label><label data-en>Company (optional)</label>
-            <input type="text" />
-          </div>
+          <div class="form-group"><label data-no>E-postadresse</label><label data-en>Email address</label><input type="email" required /></div>
+          <div class="form-group"><label data-no>Bedrift (valgfritt)</label><label data-en>Company (optional)</label><input type="text" /></div>
           <div class="form-group">
             <label data-no>Type henvendelse</label><label data-en>Type of enquiry</label>
             <select>
               <option data-no>Velg kategori…</option><option data-en>Select category…</option>
-              <option data-no>Forespørsel om produkt eller tjeneste</option><option data-en>Product or service enquiry</option>
-              <option data-no>Tilbud / priser</option><option data-en>Quote / pricing</option>
+              <option data-no>Sponge media / forbruksmateriell</option><option data-en>Sponge media / consumables</option>
+              <option data-no>Blåseutstyr (ES 200)</option><option data-en>Blasting equipment (ES 200)</option>
+              <option data-no>Resirkuleringsenhet</option><option data-en>Recycling unit</option>
+              <option data-no>Komplett system / prosjekt</option><option data-en>Complete system / project</option>
               <option data-no>Teknisk støtte</option><option data-en>Technical support</option>
               <option data-no>Annet</option><option data-en>Other</option>
             </select>
           </div>
           <div class="form-group">
             <label data-no>Melding</label><label data-en>Message</label>
-            <textarea data-no placeholder="Beskriv ditt behov eller spørsmål…"></textarea>
-            <textarea data-en placeholder="Describe your need or question…"></textarea>
+            <textarea data-no placeholder="Beskriv prosjektet, substrat og overflatekrav…"></textarea>
+            <textarea data-en placeholder="Describe your project, substrate, and surface requirements…"></textarea>
           </div>
-
           <button type="submit" class="btn-submit">
             <span data-no>Send melding</span><span data-en>Send message</span>
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </button>
         </form>
-
         <div class="form-success" id="formSuccess">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
           <span data-no>Takk! Vi tar kontakt med deg snart.</span>
@@ -1727,62 +1301,55 @@
     <div class="footer-brand">
       <div class="brand">
         <div class="brand-mark">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h6M9 13h6M9 17h6"/>
-          </svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h6M9 13h6M9 17h6"/></svg>
         </div>
         <div>
           <span class="brand-text">ESE Solution</span>
-          <span class="brand-sub" data-no>Industrielle løsninger</span>
-          <span class="brand-sub" data-en>Industrial solutions</span>
+          <span class="brand-sub" data-no>Sponge Blasting-systemer</span>
+          <span class="brand-sub" data-en>Sponge Blasting Systems</span>
         </div>
       </div>
-      <p data-no>Koreansk ingeniørkompetanse levert til det norske markedet. Kvalitet, pålitelighet og lokal service.</p>
-      <p data-en>Korean engineering expertise delivered to the Norwegian market. Quality, reliability, and local service.</p>
+      <p data-no>Ren, tørr og lavstøvs sponge blasting med gjenbrukbart media — levert til norsk offshore-, marin- og industrivirksomhet.</p>
+      <p data-en>Clean, dry, low-dust sponge blasting with reusable media — delivered to Norwegian offshore, marine, and industrial operations.</p>
     </div>
 
     <div>
       <h4 data-no>Navigasjon</h4><h4 data-en>Navigation</h4>
       <ul>
-        <li><a href="#about"    data-no>Om oss</a>    <a href="#about"    data-en>About</a></li>
-        <li><a href="#services" data-no>Tjenester</a> <a href="#services" data-en>Services</a></li>
-        <li><a href="#norway"   data-no>Norge</a>     <a href="#norway"   data-en>Norway</a></li>
-        <li><a href="#why"      data-no>Hvorfor oss</a><a href="#why"     data-en>Why us</a></li>
-        <li><a href="#contact"  data-no>Kontakt</a>   <a href="#contact"  data-en>Contact</a></li>
+        <li><a href="#about"    data-no>Teknologi</a>    <a href="#about"    data-en>Technology</a></li>
+        <li><a href="#diff"     data-no>Fordeler</a>     <a href="#diff"     data-en>Advantages</a></li>
+        <li><a href="#apps"     data-no>Bruksområder</a> <a href="#apps"     data-en>Applications</a></li>
+        <li><a href="#products" data-no>Produkter</a>    <a href="#products" data-en>Products</a></li>
+        <li><a href="#contact"  data-no>Kontakt</a>      <a href="#contact"  data-en>Contact</a></li>
       </ul>
     </div>
-
     <div>
-      <h4 data-no>Tjenester</h4><h4 data-en>Services</h4>
+      <h4 data-no>Produkter</h4><h4 data-en>Products</h4>
       <ul>
-        <li><a data-no>Industriproduksjon</a><a data-en>Industrial manufacturing</a></li>
-        <li><a data-no>Maskindeler</a><a data-en>Machine parts</a></li>
-        <li><a data-no>Teknisk rådgivning</a><a data-en>Technical consulting</a></li>
-        <li><a data-no>Import &amp; logistikk</a><a data-en>Import &amp; logistics</a></li>
-        <li><a data-no>Kvalitetskontroll</a><a data-en>Quality control</a></li>
+        <li><a data-no>Sponge Media</a><a data-en>Sponge Media</a></li>
+        <li><a data-no>Blåseutstyr ES 200</a><a data-en>ES 200 Blasting Equipment</a></li>
+        <li><a data-no>Resirkuleringsenhet</a><a data-en>Recycling Unit</a></li>
+        <li><a data-no>Komplette systemer</a><a data-en>Complete systems</a></li>
       </ul>
     </div>
-
     <div>
       <h4 data-no>Kontakt</h4><h4 data-en>Contact</h4>
       <ul>
         <li><a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a></li>
-        <li><a href="https://www.esesolution.co.kr">esesolution.co.kr</a></li>
+        <li><a href="https://en.esesolution.co.kr">en.esesolution.co.kr</a></li>
         <li><span data-no>Man–fre 08–17 CET</span><span data-en>Mon–Fri 08–17 CET</span></li>
       </ul>
     </div>
   </div>
-
   <div class="footer-bottom">
     <span data-no>© 2025 ESE Solution. Alle rettigheter forbeholdt.</span>
     <span data-en>© 2025 ESE Solution. All rights reserved.</span>
-    <a href="https://www.esesolution.co.kr" data-no>Koreansk nettside →</a>
-    <a href="https://www.esesolution.co.kr" data-en>Korean website →</a>
+    <a href="https://en.esesolution.co.kr" data-no>Hovedside →</a>
+    <a href="https://en.esesolution.co.kr" data-en>Main website →</a>
   </div>
 </footer>
 
 <script>
-  /* ── Language ── */
   function setLang(lang) {
     document.body.classList.toggle('lang-en', lang === 'en');
     document.documentElement.lang = lang === 'no' ? 'no' : 'en';
@@ -1791,7 +1358,6 @@
     });
   }
 
-  /* ── Form submit ── */
   function handleSubmit(e) {
     e.preventDefault();
     document.getElementById('formSuccess').classList.add('show');
@@ -1799,12 +1365,25 @@
     setTimeout(() => document.getElementById('formSuccess').classList.remove('show'), 6000);
   }
 
-  /* ── Mobile menu ── */
-  function toggleMenu() {
-    document.getElementById('mobileMenu').classList.toggle('open');
-  }
+  function toggleMenu() { document.getElementById('mobileMenu').classList.toggle('open'); }
 
-  /* ── Scroll progress + nav shadow ── */
+  /* Marquee build (duplicated for seamless loop) */
+  const marqueeItems = {
+    no: ['Klumper ikke', 'Klar fra sekken', '10× gjenbruk', '~5 % tap per syklus', 'Sa3 / SP5', 'Lavstøvs &amp; tørt', 'Offshore-klar'],
+    en: ['No clumping', 'Ready from the bag', '10× reuse', '~5% loss per cycle', 'Sa3 / SP5', 'Low-dust &amp; dry', 'Offshore-ready']
+  };
+  (function buildMarquee(){
+    const track = document.getElementById('marqueeTrack');
+    const star = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>';
+    let html = '';
+    for (let rep = 0; rep < 2; rep++) {
+      marqueeItems.no.forEach((no, i) => {
+        html += `<span class="marquee-item">${star}<span data-no>${no}</span><span data-en>${marqueeItems.en[i]}</span></span>`;
+      });
+    }
+    track.innerHTML = html;
+  })();
+
   const nav = document.getElementById('nav');
   const progress = document.getElementById('scrollProgress');
   window.addEventListener('scroll', () => {
@@ -1814,55 +1393,50 @@
     nav.classList.toggle('scrolled', h.scrollTop > 8);
   }, { passive: true });
 
-  /* ── Reveal on scroll ── */
   const io = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        e.target.classList.add('in');
-        io.unobserve(e.target);
-      }
-    });
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } });
   }, { threshold: 0.14, rootMargin: '0px 0px -40px 0px' });
   document.querySelectorAll('.reveal').forEach(el => io.observe(el));
 
-  /* ── Animated counters ── */
   const counterIO = new IntersectionObserver((entries) => {
     entries.forEach(e => {
       if (!e.isIntersecting) return;
       counterIO.unobserve(e.target);
-      const to = parseFloat(e.target.dataset.to);
-      const dur = 1600;
-      const start = performance.now();
+      const to = parseFloat(e.target.dataset.to), dur = 1600, start = performance.now();
       function tick(now) {
-        const t = Math.min((now - start) / dur, 1);
-        const eased = 1 - Math.pow(1 - t, 3);
+        const t = Math.min((now - start) / dur, 1), eased = 1 - Math.pow(1 - t, 3);
         e.target.textContent = Math.floor(to * eased);
-        if (t < 1) requestAnimationFrame(tick);
-        else      e.target.textContent = to;
+        if (t < 1) requestAnimationFrame(tick); else e.target.textContent = to;
       }
       requestAnimationFrame(tick);
     });
   }, { threshold: 0.4 });
   document.querySelectorAll('.counter').forEach(c => counterIO.observe(c));
 
-  /* ── Hero glow follows mouse ── */
+  /* Hero readout bars fill when visible */
+  const barIO = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (!e.isIntersecting) return;
+      barIO.unobserve(e.target);
+      e.target.querySelectorAll('.bar span').forEach(b => { b.style.width = b.dataset.w; });
+    });
+  }, { threshold: 0.3 });
+  const readout = document.querySelector('.readout');
+  if (readout) barIO.observe(readout);
+
   const heroSection = document.querySelector('.hero');
   const heroGlow = document.getElementById('heroGlow');
   heroSection.addEventListener('mousemove', (e) => {
     const r = heroSection.getBoundingClientRect();
-    const x = ((e.clientX - r.left) / r.width)  * 100;
-    const y = ((e.clientY - r.top)  / r.height) * 100;
-    heroGlow.style.setProperty('--mx', x + '%');
-    heroGlow.style.setProperty('--my', y + '%');
+    heroGlow.style.setProperty('--mx', ((e.clientX - r.left) / r.width) * 100 + '%');
+    heroGlow.style.setProperty('--my', ((e.clientY - r.top) / r.height) * 100 + '%');
   });
 
-  /* ── Service card subtle tilt ── */
-  document.querySelectorAll('.service-card').forEach(card => {
+  document.querySelectorAll('.diff-card, .app-card, .product-card').forEach(card => {
     card.addEventListener('mousemove', (e) => {
       const r = card.getBoundingClientRect();
-      const x = (e.clientX - r.left) / r.width  - 0.5;
-      const y = (e.clientY - r.top)  / r.height - 0.5;
-      card.style.transform = `translateY(-6px) perspective(900px) rotateX(${-y * 4}deg) rotateY(${x * 4}deg)`;
+      const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+      card.style.transform = `translateY(-6px) perspective(900px) rotateX(${-y * 3}deg) rotateY(${x * 3}deg)`;
     });
     card.addEventListener('mouseleave', () => { card.style.transform = ''; });
   });
