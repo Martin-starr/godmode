@@ -626,6 +626,74 @@
     .footer-bottom a { color: rgba(255,255,255,.6); transition: color .25s; }
     .footer-bottom a:hover { color: var(--white); }
 
+    /* ── Photo backgrounds ── */
+    .product-bg, .about-visual-bg {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      filter: grayscale(100%) contrast(1.05);
+      pointer-events: none; user-select: none;
+    }
+    .product-bg { opacity: .13; z-index: 0; transition: opacity .4s var(--ease); }
+    .product-card:hover .product-bg { opacity: .2; }
+    .about-visual-bg { opacity: .18; z-index: 0; }
+
+    /* ── Testimonials ── */
+    .testimonials { background: var(--paper); }
+    .testi-featured {
+      background: var(--white); border: 1px solid var(--line);
+      border-radius: 20px; padding: 44px 48px; position: relative;
+      margin-bottom: 32px; overflow: hidden;
+    }
+    .testi-featured::before {
+      content: '\201C';
+      font-family: 'Space Grotesk'; font-size: 9rem; line-height: 0.75;
+      color: var(--accent); opacity: .07; position: absolute;
+      top: 24px; left: 32px; pointer-events: none; user-select: none;
+    }
+    .testi-featured blockquote {
+      font-size: 1.02rem; line-height: 1.82; color: var(--text);
+      position: relative; z-index: 2; font-style: italic;
+    }
+    .testi-featured .tf-footer {
+      display: flex; align-items: center; gap: 14px;
+      margin-top: 24px; position: relative; z-index: 2;
+      padding-top: 20px; border-top: 1px solid var(--line); flex-wrap: wrap;
+    }
+    .testi-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .testi-card {
+      background: var(--white); border: 1px solid var(--line); border-radius: 16px;
+      padding: 28px 26px; display: flex; flex-direction: column;
+      transition: transform .4s var(--ease), box-shadow .3s, border-color .3s;
+      position: relative; overflow: hidden;
+    }
+    .testi-card::before {
+      content: '\201C';
+      font-family: 'Space Grotesk'; font-size: 5rem; line-height: 0.75;
+      color: var(--accent); opacity: .07; position: absolute;
+      top: 8px; left: 18px; pointer-events: none; user-select: none;
+    }
+    .testi-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--accent); }
+    .testi-q {
+      font-size: 0.93rem; color: var(--text); line-height: 1.72; font-style: italic;
+      flex: 1; position: relative; z-index: 2; margin-bottom: 20px;
+    }
+    .testi-foot {
+      display: flex; align-items: center; gap: 12px; padding-top: 16px;
+      border-top: 1px solid var(--line); position: relative; z-index: 2;
+    }
+    .t-avtr {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: grid; place-items: center; flex-shrink: 0;
+    }
+    .t-avtr svg { width: 18px; height: 18px; color: var(--white); }
+    .t-meta { flex: 1; }
+    .t-meta .t-n { font-size: 0.82rem; font-weight: 600; color: var(--ink); }
+    .t-meta .t-r { font-size: 0.74rem; color: var(--muted); }
+    .t-stars { display: flex; gap: 2px; }
+    .t-stars svg { width: 12px; height: 12px; fill: var(--yellow); color: var(--yellow); }
+
     /* ── Reveal ── */
     .reveal { opacity: 0; transform: translateY(28px); transition: opacity .9s var(--ease), transform .9s var(--ease); }
     .reveal.in { opacity: 1; transform: translateY(0); }
@@ -647,6 +715,7 @@
       .hero-inner, .about-grid, .norway-grid, .contact-grid { grid-template-columns: 1fr; gap: 60px; }
       .hero-visual { max-width: 420px; }
       .diff-grid, .apps-grid, .products-grid { grid-template-columns: repeat(2, 1fr); }
+      .testi-grid { grid-template-columns: repeat(2, 1fr); }
       .footer-grid { grid-template-columns: 1.5fr 1fr 1fr; }
       .stats-card { grid-template-columns: repeat(2, 1fr); gap: 28px 0; padding: 28px; }
       .stat-item { padding: 16px 14px; border-right: none; border-bottom: 1px solid var(--line); }
@@ -669,8 +738,9 @@
     @media (max-width: 640px) {
       .hero-visual { display: none; }
       .hero h1 { font-size: 2.1rem; }
-      .diff-grid, .apps-grid, .products-grid, .footer-grid { grid-template-columns: 1fr; }
+      .diff-grid, .apps-grid, .products-grid, .footer-grid, .testi-grid { grid-template-columns: 1fr; }
       .form-row { grid-template-columns: 1fr; }
+      .testi-featured { padding: 28px 24px; }
       .marquee-item { font-size: 0.95rem; }
       h2 { font-size: 1.7rem; }
       .about-visual { padding: 28px; } .contact-form { padding: 28px; }
@@ -909,6 +979,7 @@
       </div>
 
       <div class="about-visual reveal" data-delay="2">
+        <img class="about-visual-bg" src="https://images.pexels.com/photos/28628031/pexels-photo-28628031.jpeg?auto=compress&cs=tinysrgb&w=800" alt="" loading="lazy">
         <div class="about-visual-top">
           <div class="country-card">
             <div class="country-code">KR · KOREA</div>
@@ -1077,6 +1148,7 @@
     <div class="products-grid">
       <div class="product-card reveal" data-delay="1">
         <div class="product-top">
+          <img class="product-bg" src="https://images.pexels.com/photos/5657435/pexels-photo-5657435.png?auto=compress&cs=tinysrgb&w=600" alt="" loading="lazy">
           <div class="product-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg></div>
           <div class="p-code" data-no>Forbruksmateriell</div><div class="p-code" data-en>Consumable</div>
           <h3 data-no>Sponge Media</h3><h3 data-en>Sponge Media</h3>
@@ -1094,6 +1166,7 @@
 
       <div class="product-card reveal" data-delay="2">
         <div class="product-top">
+          <img class="product-bg" src="https://images.pexels.com/photos/36930607/pexels-photo-36930607.png?auto=compress&cs=tinysrgb&w=600" alt="" loading="lazy">
           <div class="product-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></div>
           <div class="p-code">ES 200</div>
           <h3 data-no>Blåseutstyr</h3><h3 data-en>Blasting Equipment</h3>
@@ -1111,6 +1184,7 @@
 
       <div class="product-card reveal" data-delay="3">
         <div class="product-top">
+          <img class="product-bg" src="https://images.pexels.com/photos/5657436/pexels-photo-5657436.png?auto=compress&cs=tinysrgb&w=600" alt="" loading="lazy">
           <div class="product-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg></div>
           <div class="p-code" data-no>Resirkulering</div><div class="p-code" data-en>Recycling</div>
           <h3 data-no>Resirkuleringsenhet</h3><h3 data-en>Recycling Unit</h3>
@@ -1200,6 +1274,103 @@
           <a href="tel:+4700000000">+47 XX XX XX XX</a><br/>
           <a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a>
         </address>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="block testimonials">
+  <div class="inner">
+    <div class="eyebrow reveal"><span data-no>Hva kundene sier</span><span data-en>What clients say</span></div>
+    <h2 class="reveal" data-delay="1">
+      <span data-no>Bransjens <span class="italic">vurdering</span></span>
+      <span data-en>Industry <span class="italic">assessment</span></span>
+    </h2>
+    <p class="section-lead reveal" data-delay="2">
+      <span data-no>Kunder som krever forutsigbar overflatebehandling av høy kvalitet velger ESE Solution.</span>
+      <span data-en>Clients who demand predictable, high-quality surface preparation choose ESE Solution.</span>
+    </p>
+
+    <div class="testi-featured reveal" data-delay="1">
+      <blockquote data-no>«ESE Solution skiller seg ut i markedet ved å levere sponge media som er virkelig klar til bruk – mediet er porøst og fastner ikke under lagring eller transport. Dette er en kritisk operasjonell fordel som tydelig differensierer ESE fra konkurrentene, og hjelper kundene med å unngå forsinkelser, fylle problemer og usikkerhet før blåsearbeidet i det hele tatt starter. Like viktig er det at sponge media kan resirkuleres opptil 10 ganger, samtidig som samme overflaterenhet og overflateprofil opprettholdes gjennom hver resirkuleringssyklus. Denne kombinasjonen av stabil håndtering, repeterbar blåseytelse og materialeffektivitet gjør ESE Solution til en sterk og troverdig partner for kunder som krever forutsigbar overflatebehandling av høy kvalitet.»</blockquote>
+      <blockquote data-en>"ESE Solution stands out in the market by delivering sponge media that is genuinely ready to use – the media is porous and does not clump during storage or transport. This is a critical operational advantage that clearly differentiates ESE from competitors, helping customers avoid delays, feed issues, and uncertainty before blasting work even begins. Equally important is that the sponge media can be recycled up to 10 times while maintaining the same surface cleanliness and surface profile throughout each recycling cycle. This combination of stable handling, repeatable blasting performance, and material efficiency makes ESE Solution a strong and credible partner for customers who require predictable, high-quality surface preparation."</blockquote>
+      <div class="tf-footer">
+        <div class="t-avtr">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
+        <div class="t-meta">
+          <div class="t-n" data-no>Bransjeekspert · Offshorevedlikehold</div>
+          <div class="t-n" data-en>Industry Expert · Offshore Maintenance</div>
+          <div class="t-r" data-no>Overflatebehandling &amp; korrosjonsbeskyttelse</div>
+          <div class="t-r" data-en>Surface preparation &amp; corrosion protection</div>
+        </div>
+        <div class="t-stars">
+          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="testi-grid">
+      <div class="testi-card reveal" data-delay="1">
+        <p class="testi-q" data-no>«Klar til bruk rett fra sekken – ESE Solution sponge mediet fastner ikke under lagring og transport, slik at kundene kommer raskere i gang og kan blåse med full trygghet.»</p>
+        <p class="testi-q" data-en>"Ready to use straight from the bag – ESE Solution sponge media does not clump during storage and transport, so customers get started faster and can blast with full confidence."</p>
+        <div class="testi-foot">
+          <div class="t-avtr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="t-meta">
+            <div class="t-n" data-no>Driftsansvarlig</div><div class="t-n" data-en>Operations Manager</div>
+            <div class="t-r" data-no>Offshore overflatebehandling</div><div class="t-r" data-en>Offshore surface preparation</div>
+          </div>
+          <div class="t-stars">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card reveal" data-delay="2">
+        <p class="testi-q" data-no>«Med opptil 10 resirkuleringssykluser og minimalt materialtap gjør ESE Solution sponge media til en smartere investering med lavere kostnad og høyere materialeffektivitet.»</p>
+        <p class="testi-q" data-en>"With up to 10 recycling cycles and minimal material loss, ESE Solution sponge media is a smarter investment with lower cost and higher material efficiency."</p>
+        <div class="testi-foot">
+          <div class="t-avtr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="t-meta">
+            <div class="t-n" data-no>Prosjektleder</div><div class="t-n" data-en>Project Manager</div>
+            <div class="t-r" data-no>Industrielt vedlikehold</div><div class="t-r" data-en>Industrial maintenance</div>
+          </div>
+          <div class="t-stars">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+        </div>
+      </div>
+
+      <div class="testi-card reveal" data-delay="3">
+        <p class="testi-q" data-no>«Hver resirkuleringssyklus gir samme overflaterenhet og overflateprofil, noe som sikrer repeterbare resultater av høy kvalitet og en tydelig fordel mot konkurrerende løsninger.»</p>
+        <p class="testi-q" data-en>"Each recycling cycle delivers the same surface cleanliness and surface profile, ensuring repeatable, high-quality results and a clear advantage over competing solutions."</p>
+        <div class="testi-foot">
+          <div class="t-avtr"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="t-meta">
+            <div class="t-n" data-no>Inspeksjonsleder</div><div class="t-n" data-en>Inspection Lead</div>
+            <div class="t-r" data-no>Coating &amp; korrosjonsbeskyttelse</div><div class="t-r" data-en>Coating &amp; corrosion protection</div>
+          </div>
+          <div class="t-stars">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+        </div>
       </div>
     </div>
   </div>
