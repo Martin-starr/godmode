@@ -218,8 +218,8 @@
       position: relative; z-index: 2;
       max-width: 1240px; margin: 0 auto;
       display: grid;
-      grid-template-columns: 1.25fr 1fr;
-      gap: 80px;
+      grid-template-columns: 1.15fr 1fr;
+      gap: 64px;
       align-items: center;
     }
     .hero-chip {
@@ -250,9 +250,10 @@
       100% { transform: scale(1.6); opacity: 0; }
     }
     .hero h1 {
-      font-size: clamp(2.3rem, 5vw, 3.9rem);
+      font-size: clamp(2.6rem, 6.2vw, 5.2rem);
       font-weight: 700;
-      line-height: 1.06;
+      line-height: 1.02;
+      letter-spacing: -0.035em;
       margin-bottom: 22px;
     }
     .hero h1 .accent {
@@ -297,64 +298,69 @@
     }
     .btn-ghost:hover { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.4); }
 
-    /* Hero visual — comparison readout */
+    /* Hero visual — cinematic photo with floating stat overlay */
     .hero-visual {
       position: relative;
       width: 100%;
-      max-width: 440px;
+      max-width: 520px;
       margin: 0 auto;
-    }
-    .readout {
-      background: rgba(255,255,255,.045);
-      border: 1px solid rgba(255,255,255,.12);
+      aspect-ratio: 4 / 5;
       border-radius: 20px;
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      padding: 26px;
-      box-shadow: 0 24px 60px rgba(0,0,0,.35);
+      overflow: hidden;
+      box-shadow: 0 30px 80px rgba(0,0,0,.55);
+      isolation: isolate;
     }
-    .readout-head {
-      display: flex; align-items: center; gap: 10px;
-      padding-bottom: 16px; margin-bottom: 18px;
-      border-bottom: 1px solid rgba(255,255,255,.1);
+    .hero-visual img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%; object-fit: cover;
+      transform: scale(1.04);
+      filter: contrast(1.06) saturate(.92);
     }
-    .readout-head .live-dot {
+    .hero-visual::after {
+      content: '';
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(180deg, rgba(11,18,32,.05) 0%, rgba(11,18,32,.55) 70%, rgba(11,18,32,.85) 100%),
+        radial-gradient(120% 80% at 50% 0%, transparent 0%, rgba(11,18,32,.35) 80%);
+      pointer-events: none;
+    }
+    .hv-tag {
+      position: absolute; top: 22px; left: 22px; z-index: 3;
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(11,18,32,.55);
+      backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      padding: 7px 14px 7px 8px;
+      font-family: 'Space Grotesk'; font-size: 0.72rem;
+      letter-spacing: .14em; text-transform: uppercase;
+      color: rgba(255,255,255,.85);
+    }
+    .hv-tag .live-dot {
       width: 8px; height: 8px; border-radius: 50%;
       background: var(--success);
       box-shadow: 0 0 0 4px rgba(16,185,129,.2);
       animation: pulse 2s var(--ease) infinite;
     }
-    .readout-head span { font-family: 'Space Grotesk'; font-size: 0.82rem; letter-spacing: .08em; text-transform: uppercase; color: rgba(255,255,255,.6); }
-    .readout-row { margin-bottom: 18px; }
-    .readout-row:last-child { margin-bottom: 0; }
-    .readout-row .rr-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
-    .readout-row .rr-label { font-size: 0.86rem; color: rgba(255,255,255,.8); }
-    .readout-row .rr-val { font-family: 'Space Grotesk'; font-weight: 700; font-size: 1.25rem; color: var(--white); }
-    .readout-row .rr-val .u { font-size: 0.85rem; color: var(--accent-2); }
-    .bar { height: 7px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
-    .bar span { display: block; height: 100%; width: 0; border-radius: 999px;
-      background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width 1.4s var(--ease); }
-    .readout-foot { margin-top: 20px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,.1);
-      font-size: 0.78rem; color: rgba(255,255,255,.45); display:flex; align-items:center; gap:8px; }
-    .readout-foot svg { width: 14px; height: 14px; color: var(--accent-2); }
-
-    .hero-orbit {
-      position: absolute;
-      top: -22px; right: -22px;
-      width: 88px; height: 88px;
-      border: 1px solid rgba(255,255,255,.1);
-      border-radius: 50%;
-      animation: spin 30s linear infinite;
-      pointer-events: none;
+    .hv-stat {
+      position: absolute; bottom: 22px; left: 22px; right: 22px; z-index: 3;
+      background: rgba(11,18,32,.55);
+      backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      padding: 18px 20px;
+      display: grid; grid-template-columns: 1fr 1px 1fr; gap: 18px; align-items: center;
     }
-    .hero-orbit::before {
-      content: '';
-      width: 12px; height: 12px;
-      background: var(--accent);
-      border-radius: 50%;
-      position: absolute;
-      top: -6px; left: 50%; transform: translateX(-50%);
-      box-shadow: 0 0 14px var(--accent);
+    .hv-stat .divider { background: rgba(255,255,255,.12); height: 36px; }
+    .hv-stat .hv-num {
+      font-family: 'Space Grotesk'; font-weight: 700;
+      font-size: 1.9rem; color: var(--white); line-height: 1;
+      display: flex; align-items: baseline; gap: 3px;
+    }
+    .hv-stat .hv-num .u { font-size: 1rem; color: var(--accent-2); }
+    .hv-stat .hv-lbl {
+      font-size: 0.74rem; color: rgba(255,255,255,.7);
+      margin-top: 6px; line-height: 1.3;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -737,7 +743,7 @@
     }
     @media (max-width: 640px) {
       .hero-visual { display: none; }
-      .hero h1 { font-size: 2.1rem; }
+      .hero h1 { font-size: 2.6rem; }
       .diff-grid, .apps-grid, .products-grid, .footer-grid, .testi-grid { grid-template-columns: 1fr; }
       .form-row { grid-template-columns: 1fr; }
       .testi-featured { padding: 28px 24px; }
@@ -768,7 +774,7 @@
   <span data-no>For offshore, marin og industriell overflatebehandling</span>
   <span data-en>For offshore, marine &amp; industrial surface preparation</span>
   <span class="dot">·</span>
-  <a href="mailto:contact@esesolution.co.kr">contact@esesolution.co.kr</a>
+  <a href="mailto:post@esesolutions.no">post@esesolutions.no</a>
 </div>
 
 <!-- Navigation -->
@@ -832,18 +838,18 @@
     <div>
       <div class="hero-chip reveal">
         <span class="chip-dot"></span>
-        <span data-no>Koreansk presisjon — norsk tilstedeværelse</span>
-        <span data-en>Korean precision — Norwegian presence</span>
+        <span data-no>Sponge blasting · Stavanger &amp; Seoul</span>
+        <span data-en>Sponge blasting · Stavanger &amp; Seoul</span>
       </div>
 
       <h1 class="reveal" data-delay="1">
-        <span data-no>Fjerner variasjon i<br/><span class="accent">sponge blasting</span></span>
-        <span data-en>Eliminating variability in<br/><span class="accent">sponge blasting</span></span>
+        <span data-no>Hver syklus.<br/><span class="accent">Samme resultat.</span></span>
+        <span data-en>Every cycle.<br/><span class="accent">Same result.</span></span>
       </h1>
 
       <p class="lead reveal" data-delay="2">
-        <span data-no>Stabilt, gjenbrukbart sponge media bygget for forutsigbar overflatebehandling — jevn ytelse, lavere kostnad per m², og pålitelig gjennomføring i de mest krevende offshore- og industrimiljøene.</span>
-        <span data-en>Stable, reusable sponge media engineered for predictable surface preparation — consistent performance, lower cost per m², and reliable execution in the most demanding offshore and industrial environments.</span>
+        <span data-no>Stabilt sponge media for nordsjøens mest krevende overflateprosjekter. Klar fra sekken, gjenbruk opp til 10 ganger, Sa3-renhet hver gang.</span>
+        <span data-en>Stable sponge media for the North Sea's most demanding surface projects. Ready from the bag, reused up to 10 times, Sa3 cleanliness every time.</span>
       </p>
 
       <div class="hero-buttons reveal" data-delay="3">
@@ -852,50 +858,31 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
         </a>
         <a href="#diff" class="btn-ghost">
-          <span data-no>Se fordelene</span><span data-en>See the advantages</span>
+          <span data-no>Se hvordan</span><span data-en>See how</span>
         </a>
       </div>
     </div>
 
     <div class="hero-visual reveal" data-delay="2">
-      <div class="readout">
-        <div class="readout-head">
-          <span class="live-dot"></span>
-          <span data-no>Ytelse mot konvensjonell blåsing</span>
-          <span data-en>Performance vs conventional blasting</span>
+      <img src="https://images.pexels.com/photos/3192662/pexels-photo-3192662.jpeg?auto=compress&cs=tinysrgb&w=900" alt="Offshore oil platform in Norway's North Sea" loading="eager">
+      <div class="hv-tag">
+        <span class="live-dot"></span>
+        <span data-no>Nordsjøen-klar</span>
+        <span data-en>North Sea-ready</span>
+      </div>
+      <div class="hv-stat">
+        <div>
+          <div class="hv-num">98<span class="u">%</span></div>
+          <div class="hv-lbl" data-no>Mindre luftbåret støv</div>
+          <div class="hv-lbl" data-en>Less airborne dust</div>
         </div>
-
-        <div class="readout-row">
-          <div class="rr-top">
-            <span class="rr-label" data-no>Mindre luftbåret støv</span><span class="rr-label" data-en>Less airborne dust</span>
-            <span class="rr-val">98<span class="u">%</span></span>
-          </div>
-          <div class="bar"><span data-w="98%"></span></div>
-        </div>
-
-        <div class="readout-row">
-          <div class="rr-top">
-            <span class="rr-label" data-no>Mindre avfall</span><span class="rr-label" data-en>Less waste generated</span>
-            <span class="rr-val">94<span class="u">%</span></span>
-          </div>
-          <div class="bar"><span data-w="94%"></span></div>
-        </div>
-
-        <div class="readout-row">
-          <div class="rr-top">
-            <span class="rr-label" data-no>Gjenbruk av media</span><span class="rr-label" data-en>Media reuse cycles</span>
-            <span class="rr-val">10<span class="u">×</span></span>
-          </div>
-          <div class="bar"><span data-w="100%"></span></div>
-        </div>
-
-        <div class="readout-foot">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-          <span data-no>Overflaterenhet opp til Sa3 / SP5</span>
-          <span data-en>Surface cleanliness up to Sa3 / SP5</span>
+        <div class="divider"></div>
+        <div>
+          <div class="hv-num">10<span class="u">×</span></div>
+          <div class="hv-lbl" data-no>Gjenbruk av media</div>
+          <div class="hv-lbl" data-en>Media reuse cycles</div>
         </div>
       </div>
-      <div class="hero-orbit"></div>
     </div>
   </div>
 </section>
@@ -987,7 +974,7 @@
           </div>
           <div class="country-card">
             <div class="country-code">NO · NORGE</div>
-            <div class="country-name">Oslo</div>
+            <div class="country-name">Stavanger</div>
           </div>
         </div>
         <div class="about-visual-arrow">
@@ -1270,9 +1257,9 @@
         </div>
         <address class="map-address">
           <strong>ESE Solution — Norge</strong><br/>
-          <span data-no>Adresse: ta kontakt for detaljer</span><span data-en>Address: contact us for details</span><br/>
-          <a href="tel:+4700000000">+47 XX XX XX XX</a><br/>
-          <a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a>
+          Gjerdeveien 49, 4027 Stavanger<br/>
+          <a href="tel:+4741351030">+47 413 51 030</a><br/>
+          <a href="mailto:post@esesolutions.no">post@esesolutions.no</a>
         </address>
       </div>
     </div>
@@ -1394,24 +1381,33 @@
         <h3 data-no>Kontaktinformasjon</h3><h3 data-en>Contact information</h3>
 
         <div class="contact-detail">
-          <div class="contact-detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+          <div class="contact-detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
           <div class="contact-detail-text">
-            <strong data-no>Hovedkontor — Korea</strong><strong data-en>Head office — Korea</strong>
-            <div class="value"><a href="https://en.esesolution.co.kr">en.esesolution.co.kr</a></div>
-          </div>
-        </div>
-        <div class="contact-detail">
-          <div class="contact-detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
-          <div class="contact-detail-text">
-            <strong data-no>Norsk kontakt</strong><strong data-en>Norwegian contact</strong>
-            <div class="value"><a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a></div>
+            <strong data-no>Din kontakt i Norge</strong><strong data-en>Your contact in Norway</strong>
+            <div class="value">Mathias Folkestad</div>
+            <div style="font-size:0.82rem;color:var(--muted);margin-top:2px;" data-no>Sales &amp; Service Manager</div>
+            <div style="font-size:0.82rem;color:var(--muted);margin-top:2px;" data-en>Sales &amp; Service Manager</div>
           </div>
         </div>
         <div class="contact-detail">
           <div class="contact-detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
           <div class="contact-detail-text">
-            <strong data-no>Telefon (Norge)</strong><strong data-en>Phone (Norway)</strong>
-            <div class="value"><a href="tel:+4700000000">+47 XX XX XX XX</a></div>
+            <strong data-no>Telefon</strong><strong data-en>Phone</strong>
+            <div class="value"><a href="tel:+4741351030">+47 413 51 030</a></div>
+          </div>
+        </div>
+        <div class="contact-detail">
+          <div class="contact-detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+          <div class="contact-detail-text">
+            <strong data-no>E-post</strong><strong data-en>Email</strong>
+            <div class="value"><a href="mailto:post@esesolutions.no">post@esesolutions.no</a></div>
+          </div>
+        </div>
+        <div class="contact-detail">
+          <div class="contact-detail-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div class="contact-detail-text">
+            <strong data-no>Adresse</strong><strong data-en>Address</strong>
+            <div class="value">Gjerdeveien 49, 4027 Stavanger</div>
           </div>
         </div>
         <div class="contact-detail">
@@ -1506,8 +1502,9 @@
     <div>
       <h4 data-no>Kontakt</h4><h4 data-en>Contact</h4>
       <ul>
-        <li><a href="mailto:norge@esesolution.co.kr">norge@esesolution.co.kr</a></li>
-        <li><a href="https://en.esesolution.co.kr">en.esesolution.co.kr</a></li>
+        <li><a href="mailto:post@esesolutions.no">post@esesolutions.no</a></li>
+        <li><a href="tel:+4741351030">+47 413 51 030</a></li>
+        <li>Gjerdeveien 49, 4027 Stavanger</li>
         <li><span data-no>Man–fre 08–17 CET</span><span data-en>Mon–Fri 08–17 CET</span></li>
       </ul>
     </div>
@@ -1515,8 +1512,8 @@
   <div class="footer-bottom">
     <span data-no>© 2025 ESE Solution. Alle rettigheter forbeholdt.</span>
     <span data-en>© 2025 ESE Solution. All rights reserved.</span>
-    <a href="https://en.esesolution.co.kr" data-no>Hovedside →</a>
-    <a href="https://en.esesolution.co.kr" data-en>Main website →</a>
+    <a href="https://esesolutions.no" data-no>esesolutions.no →</a>
+    <a href="https://esesolutions.no" data-en>esesolutions.no →</a>
   </div>
 </footer>
 
@@ -1583,17 +1580,6 @@
     });
   }, { threshold: 0.4 });
   document.querySelectorAll('.counter').forEach(c => counterIO.observe(c));
-
-  /* Hero readout bars fill when visible */
-  const barIO = new IntersectionObserver((entries) => {
-    entries.forEach(e => {
-      if (!e.isIntersecting) return;
-      barIO.unobserve(e.target);
-      e.target.querySelectorAll('.bar span').forEach(b => { b.style.width = b.dataset.w; });
-    });
-  }, { threshold: 0.3 });
-  const readout = document.querySelector('.readout');
-  if (readout) barIO.observe(readout);
 
   const heroSection = document.querySelector('.hero');
   const heroGlow = document.getElementById('heroGlow');
