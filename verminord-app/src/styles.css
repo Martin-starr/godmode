@@ -1,0 +1,117 @@
+:root { color-scheme: light; }
+html, body { color-scheme: light !important; background: #F4EEDF; margin: 0; padding: 0; }
+body { font-family: 'IBM Plex Sans', -apple-system, sans-serif; color: #0A1424; }
+#root { min-height: 100vh; }
+.vn-boot { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #F4EEDF; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: rgba(21,35,58,1); letter-spacing: 0.18em; text-transform: uppercase; }
+
+.vn-editable { transition: background 0.15s ease, box-shadow 0.15s ease; border-radius: 1px; cursor: text; }
+.vn-editable:hover { background: rgba(184,146,58,0.08); box-shadow: 0 0 0 3px rgba(184,146,58,0.08); }
+.vn-mono { font-family: 'IBM Plex Mono', monospace; font-feature-settings: 'tnum' 1; }
+.vn-row-hover { position: relative; transition: background 0.15s ease; }
+.vn-row-hover:hover { background: rgba(184,146,58,0.03); }
+.vn-row-actions { opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
+.vn-row-hover:hover .vn-row-actions { opacity: 1; pointer-events: auto; }
+.vn-remove-btn { background: none; border: 1px solid rgba(21,35,58,0.2); width: 22px; height: 22px; border-radius: 50%; cursor: pointer; color: rgba(21,35,58,1); font-size: 14px; line-height: 1; padding: 0; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; }
+.vn-remove-btn:hover { border-color: #A64B2A; color: #A64B2A; background: rgba(166,75,42,0.08); }
+.vn-cta { background: none; border: none; padding: 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase; color: rgba(21,35,58,1); cursor: pointer; transition: color 0.15s ease; }
+.vn-cta:hover { color: #B8923A; }
+.vn-rise { opacity: 0; transform: translateY(8px); animation: vn-rise 0.45s ease-out forwards; }
+@keyframes vn-rise { to { opacity: 1; transform: translateY(0); } }
+@keyframes vn-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+.vn-pulse { animation: vn-pulse 1.6s ease-in-out infinite; }
+
+@media (max-width: 1240px) {
+  .vn-nav { gap: 18px !important; }
+  .vn-nav button { font-size: 11px !important; }
+}
+@media (max-width: 1100px) {
+  /* On mobile/tablet, nav becomes horizontal scrollable strip below header */
+  .vn-header { padding: 14px 16px !important; flex-wrap: wrap !important; }
+  .vn-nav {
+    order: 99;
+    width: 100% !important;
+    overflow-x: auto !important;
+    flex-wrap: nowrap !important;
+    gap: 18px !important;
+    padding: 10px 0 4px !important;
+    margin-top: 8px !important;
+    border-top: 1px solid rgba(21,35,58,0.08);
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .vn-nav::-webkit-scrollbar { display: none; }
+  .vn-nav button { font-size: 11px !important; white-space: nowrap; flex-shrink: 0; }
+  .vn-shell { padding: 0 24px 60px !important; }
+  .vn-hero { grid-template-columns: 1fr !important; gap: 40px !important; padding: 48px 0 !important; }
+  .vn-hero-right { border-left: none !important; padding-left: 0 !important; border-top: 1px solid rgba(21,35,58,0.12); padding-top: 32px !important; }
+  .vn-three-col { grid-template-columns: 1fr !important; }
+  .vn-footrow { grid-template-columns: 1fr !important; }
+  .vn-quote { padding-left: 0 !important; border-left: none !important; border-top: 1px solid rgba(21,35,58,0.12); padding-top: 32px !important; }
+}
+@media (max-width: 720px) {
+  .vn-header-meta { display: none !important; }
+  .vn-compass-pillars { grid-template-columns: 1fr 1fr !important; }
+  /* Header is full-width navy bar but space-pressed on phone */
+  .vn-header { padding: 14px 16px !important; }
+  .vn-shell { padding: 0 16px 80px !important; }
+  /* Hero section — smaller titles */
+  .vn-hero { padding: 28px 0 !important; gap: 24px !important; }
+  /* Tighter cards row */
+  .vn-stats-row { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+  /* Action rows — stack the columns vertically */
+  .vn-action-row { grid-template-columns: 32px 1fr !important; gap: 12px !important; padding: 18px 16px !important; }
+  .vn-action-row > *:nth-child(3),
+  .vn-action-row > *:nth-child(4),
+  .vn-action-row > *:nth-child(5) {
+    grid-column: 2 / 3 !important;
+    margin-top: 6px;
+  }
+  /* Partner row — stack everything */
+  .vn-partner-row { grid-template-columns: 1fr !important; gap: 8px !important; padding: 16px !important; }
+  /* Generic rows */
+  section[style*="grid-template-columns"] > div[style*="grid-template-columns"] {
+    grid-template-columns: 1fr !important;
+    gap: 8px !important;
+  }
+  /* Section padding */
+  section { padding: 0 !important; }
+  /* Project cards */
+  .vn-project-card { padding: 18px 16px !important; }
+  /* SOP rows */
+  .vn-sop-row { grid-template-columns: 1fr !important; gap: 6px !important; padding: 14px 16px !important; }
+  /* Event rows */
+  .vn-event-row { grid-template-columns: 60px 1fr !important; gap: 12px !important; padding: 14px 16px !important; }
+  /* Hide remove buttons on mobile (long-press to delete instead) */
+  .vn-row-actions { display: none !important; }
+  /* Make text wrap better */
+  h1, h2, h3 { word-break: break-word; }
+  /* Reduce hero typography */
+  .vn-hero-headline { font-size: 32px !important; }
+  .vn-hero-sub { font-size: 26px !important; }
+  /* Sticky tab strip — must scroll horizontally on phone */
+  .vn-tabs-mobile {
+    display: flex !important;
+    overflow-x: auto;
+    gap: 16px;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid rgba(21,35,58,0.12);
+    background: #F4EEDF;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    -webkit-overflow-scrolling: touch;
+  }
+  .vn-tabs-mobile button { white-space: nowrap; font-size: 10px !important; }
+  /* Editable should not overflow */
+  .vn-editable { display: inline-block !important; max-width: 100% !important; word-break: break-word !important; }
+  input, textarea { font-size: 16px !important; /* prevents iOS zoom on focus */ }
+  /* Operasjonell Puls — stack the two columns vertically on mobile */
+  .vn-puls-body { grid-template-columns: 1fr !important; }
+  .vn-puls-body > div:first-child { border-right: none !important; border-bottom: 1px solid rgba(21,35,58,0.12); }
+  .vn-puls > div:first-child { padding: 14px 16px !important; }
+  .vn-puls-body > div { padding: 18px 16px !important; }
+}
+@media (max-width: 480px) {
+  .vn-stats-row { grid-template-columns: 1fr !important; }
+  .vn-compass-pillars { grid-template-columns: 1fr !important; }
+}
