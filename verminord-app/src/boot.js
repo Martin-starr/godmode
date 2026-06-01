@@ -26,7 +26,7 @@ export async function vnBoot() {
     }
 
     // Fetch all data in parallel
-    const [tasksRes, partnersRes, lagerRes, ordrerRes, obsRes, batcherRes, hostRes, labRes, martinRes] = await Promise.all([
+    const [tasksRes, partnersRes, lagerRes, ordrerRes, obsRes, batcherRes, hostRes, labRes, martinRes, projectsRes, sopsRes] = await Promise.all([
       sb.from('oppgaver').select('*').order('frist', { ascending: true, nullsFirst: false }),
       sb.from('partnere').select('*').order('siste_kontakt', { ascending: false, nullsFirst: false }),
       sb.from('lager').select('*').order('sortering'),
@@ -36,6 +36,8 @@ export async function vnBoot() {
       sb.from('host_batcher').select('*').order('hostedato', { ascending: false }).limit(3),
       sb.from('lab_rapporter').select('*').order('test_dato', { ascending: false }).limit(3),
       sb.from('martin_state').select('*'),
+      sb.from('projects').select('*').order('sortering'),
+      sb.from('sops').select('*').order('sortering'),
     ]);
 
     // Read any existing local state (preserves unsaved edits)
@@ -195,10 +197,76 @@ export async function vnBoot() {
     if (martinRes.data) {
       martinRes.data.forEach(row => {
         if (row.data && Object.keys(row.data).length > 0) {
-          state[row.section] = row.data;
+          // Strip blank garbage events (title === 'Ny hendelse' or empty)
+          if (row.section === 'events' && Array.isArray(row.data)) {
+            state[row.section] = row.data.filter(e =>
+              e.title && e.title.trim() !== '' && e.title !== 'Ny hendelse'
+            );
+          } else {
+            state[row.section] = row.data;
+          }
         }
       });
     }
+
+    // ── PROJECTS — read from dedicated table (overrides martin_state copy) ─
+    if (projectsRes.data && projectsRes.data.length > 0) {
+      state.projects = projectsRes.data.map(p => ({
+        name: p.name,
+        status: p.status || 'planlagt',
+        progress: 0,
+        partner: p.assigned_to || '—',
+        dueDate: '',
+        nextMilestone: p.description || '—',
+        notes: '',
+        _id: p.id,
+        _src: 'projects',
+      }));
+    }
+
+    // ── SOPs — read from dedicated table (overrides martin_state copy) ─────
+    if (sopsRes.data && sopsRes.data.length > 0) {
+      state.sops = sopsRes.data.map(s => ({
+        code: s.sop_nr || '—',
+        title: s.title,
+        category: s.category || 'Produksjon',
+        version: s.version || '1.0',
+        lastReviewed: s.updated_at ? s.updated_at.slice(0, 10) : '—',
+        owner: s.owner || '—',
+        status: s.status || 'aktiv',
+        _id: s.id,
+        _src: 'sops',
+      }));
+    }
+
+    // ── GREETING — auto-compute from today so it never goes stale ─────────
+    try {
+      const _now = new Date();
+      const _weekNum = (() => {
+        const d = new Date(Date.UTC(_now.getFullYear(), _now.getMonth(), _now.getDate()));
+        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+        const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+        return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+      })();
+      const _days = ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
+      const _dayName = _days[_now.getDay()];
+      const _activeTasks = (state.tasks || []).filter(t => t.status === 'active' || t.status === 'pagar').length;
+      const _taskText = _activeTasks === 0 ? 'Ingen ventende saker.' :
+                        _activeTasks === 1 ? 'Én sak venter.' :
+                        _activeTasks + ' saker venter.';
+      const _eom = new Date(_now.getFullYear(), _now.getMonth() + 1, 0);
+      const _daysLeft = Math.max(0, Math.ceil((_eom - _now) / 86400000));
+      const _mtd = (state.sales && state.sales.mtd) || 0;
+      const _target = (state.sales && state.sales.target) || 100000;
+      const _pct = Math.round(_mtd / _target * 100);
+      state.greeting = {
+        eyebrow: '00 — Daglig brief · uke ' + _weekNum,
+        headline: 'God ' + (_now.getHours() < 12 ? 'morgen' : _now.getHours() < 18 ? 'ettermiddag' : 'kveld') + ', Martin.',
+        subhead: _taskText,
+        intro: _daysLeft + ' dager igjen av måneden. ' +
+               (_pct > 0 ? _pct + '% av månedsmål (' + _mtd.toLocaleString('nb') + ' / ' + _target.toLocaleString('nb') + ' NOK).' : 'Ingen registrerte ordre denne måneden ennå.'),
+      };
+    } catch (e) { /* keep stored greeting as fallback */ }
 
     // P2-2 fix: auto-compute daysLeft from end-of-month each load (don't trust stored value)
     try {
@@ -212,7 +280,8 @@ export async function vnBoot() {
     localStorage.setItem(KEY_DATA, JSON.stringify(state));
 
     // Define explicit sync function (called from React's storageSet directly — more reliable than setItem override on iOS Safari)
-    const martinSections = ['projects', 'sops', 'compass', 'events', 'actions', 'quote',
+    // projects and sops now come from dedicated tables — exclude from martin_state sync
+    const martinSections = ['compass', 'events', 'actions', 'quote',
                             'greeting', 'feedstockAlert', 'feedstockOutreach', 'deliveries'];
 
     // Track last-known data per section so we only write CHANGES
