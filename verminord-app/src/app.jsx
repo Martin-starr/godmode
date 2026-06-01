@@ -1941,6 +1941,175 @@ function EventList({events,update,removeEvent,now,accent,openDetail}){
   );
 }
 
+// ═══════════════════════════════════════════════════════
+// LOGG — complete production-log register (Mattilsynet / traceability)
+// Lists EVERY entry from wedge_observasjoner + forkompost_logg, exportable to CSV.
+// ═══════════════════════════════════════════════════════
+function LoggPage(){
+  const [rows,setRows]=useState(null);
+  const [error,setError]=useState(null);
+  const [source,setSource]=useState('all');   // all | wedge | forkompost
+  const [unit,setUnit]=useState('all');        // specific wedge_id / batch_id
+  const [search,setSearch]=useState('');
+  const [sortDesc,setSortDesc]=useState(true);
+
+  useEffect(()=>{
+    let cancelled=false;
+    (async()=>{
+      const sb=window.__vnSb;
+      if(!sb){setError('Supabase ikke tilgjengelig.');return;}
+      try{
+        const [obs,fk]=await Promise.all([
+          sb.from('wedge_observasjoner').select('*').order('dato',{ascending:false}).order('tid',{ascending:false}),
+          sb.from('forkompost_logg').select('*').order('dato',{ascending:false}).order('tid',{ascending:false}),
+        ]);
+        if(obs.error) throw obs.error;
+        if(fk.error) throw fk.error;
+        const norm=[];
+        (obs.data||[]).forEach(o=>norm.push({
+          kilde:'Wedge', enhet:o.wedge_id||'—', dato:o.dato||'', tid:(o.tid||'').slice(0,5),
+          temp:o.temperatur_c, ph:o.ph,
+          fukt:o.fuktighet_pct!=null?o.fuktighet_pct+' %':(o.fukt||''),
+          lukt:o.lukt||'', struktur:o.struktur||'', aktivitet:o.mark_aktivitet||'',
+          avvik:o.avvik||'', tiltak:o.tiltak||'', ansvarlig:o.ansvarlig||'',
+          notater:o.notater||'', loggtype:o.loggtype||'', _id:o.id, _ts:(o.dato||'')+'T'+(o.tid||'00:00'),
+        }));
+        (fk.data||[]).forEach(o=>norm.push({
+          kilde:'Forkompost', enhet:o.batch_id||'—', dato:o.dato||'', tid:(o.tid||'').slice(0,5),
+          temp:o.temperatur_c, ph:o.ph,
+          fukt:o.fuktighet_pct!=null?o.fuktighet_pct+' %':(o.fukt||''),
+          lukt:o.lukt||'', struktur:o.struktur||'', aktivitet:o.aktivitet||'',
+          avvik:o.avvik||'', tiltak:o.tiltak||'', ansvarlig:o.ansvarlig||'',
+          notater:o.notater||'', loggtype:'', _id:o.id, _ts:(o.dato||'')+'T'+(o.tid||'00:00'),
+        }));
+        if(!cancelled) setRows(norm);
+      }catch(e){ if(!cancelled) setError(e.message||'Kunne ikke hente loggdata'); }
+    })();
+    return ()=>{cancelled=true;};
+  },[]);
+
+  const units=rows?Array.from(new Set(rows.filter(r=>source==='all'||r.kilde.toLowerCase().startsWith(source)).map(r=>r.enhet))).sort():[];
+
+  const filtered=(rows||[]).filter(r=>{
+    if(source!=='all' && !r.kilde.toLowerCase().startsWith(source)) return false;
+    if(unit!=='all' && r.enhet!==unit) return false;
+    if(search){
+      const q=search.toLowerCase();
+      const hay=[r.enhet,r.dato,r.ansvarlig,r.avvik,r.tiltak,r.notater,r.lukt,r.struktur,r.aktivitet].join(' ').toLowerCase();
+      if(!hay.includes(q)) return false;
+    }
+    return true;
+  }).sort((a,b)=> sortDesc ? (a._ts<b._ts?1:-1) : (a._ts>b._ts?1:-1));
+
+  const COLS=[
+    {k:'dato',label:'Dato'},{k:'tid',label:'Tid'},{k:'kilde',label:'Kilde'},{k:'enhet',label:'Enhet'},
+    {k:'temp',label:'Temp °C'},{k:'ph',label:'pH'},{k:'fukt',label:'Fukt'},{k:'lukt',label:'Lukt'},
+    {k:'struktur',label:'Struktur'},{k:'aktivitet',label:'Aktivitet'},{k:'avvik',label:'Avvik'},
+    {k:'tiltak',label:'Tiltak'},{k:'ansvarlig',label:'Ansvarlig'},{k:'notater',label:'Notater'},
+  ];
+
+  const exportCsv=()=>{
+    const esc=(v)=>{ const s=v==null?'':String(v); return /[",\n;]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+    const header=COLS.map(c=>c.label).join(';');
+    const lines=filtered.map(r=>COLS.map(c=>esc(r[c.k])).join(';'));
+    const csv='﻿'+[header,...lines].join('\r\n');   // BOM for Excel + Norwegian chars
+    const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;
+    a.download='verminord-loggregister-'+new Date().toISOString().slice(0,10)+'.csv';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const avvikCount=(rows||[]).filter(r=>r.avvik&&r.avvik.trim()).length;
+  const dateRange=rows&&rows.length?(()=>{ const ds=rows.map(r=>r.dato).filter(Boolean).sort(); return ds.length?ds[0]+' → '+ds[ds.length-1]:'—'; })():'—';
+
+  return (
+    <div>
+      <PageHero
+        eyebrow="08 — Loggregister"
+        headline="Full sporbarhet."
+        subhead={rows?(rows.length+' loggføringer totalt.'):'Henter…'}
+        intro={rows?('Komplett register over alle produksjonsobservasjoner — wedge-bed og forkompost. Periode: '+dateRange+'. '+avvikCount+' avvik registrert. Eksporter til CSV for Mattilsynet eller arkiv.'):'Laster loggdata fra databasen…'}
+        onSave={()=>{}}
+        rightContent={
+          <div>
+            <div style={{...T.monoLbl,marginBottom:20,letterSpacing:'0.22em'}}>Eksport</div>
+            <button onClick={exportCsv} disabled={!rows||filtered.length===0}
+              style={{width:'100%',padding:'14px 18px',background:C.ink,color:C.cream,border:'none',fontFamily:'"IBM Plex Mono",monospace',fontSize:11,letterSpacing:'0.16em',textTransform:'uppercase',cursor:!rows||filtered.length===0?'not-allowed':'pointer',opacity:!rows||filtered.length===0?0.4:1,marginBottom:12}}>
+              ↓ Last ned CSV ({filtered.length})
+            </button>
+            <div style={{...T.metaMono,color:C.navy60,lineHeight:1.5}}>
+              Lastes ned med semikolon-skille og BOM — åpnes rett i Excel med norske tegn.
+            </div>
+          </div>
+        }
+      />
+
+      {error && <div style={{margin:'0 0 20px',padding:'14px 18px',background:'rgba(166,75,42,0.10)',color:C.rust,border:'1px solid '+C.rust,fontSize:13}}>Feil: {error}</div>}
+
+      {/* Filters */}
+      <div style={{display:'flex',flexWrap:'wrap',gap:12,alignItems:'center',marginBottom:18}}>
+        <div style={{display:'inline-flex',border:'1px solid '+C.hairline,background:C.creamPaper}}>
+          {[['all','Alle'],['wedge','Wedge'],['forkompost','Forkompost']].map(([k,lbl])=>(
+            <button key={k} onClick={()=>{setSource(k);setUnit('all');}} className="vn-mono"
+              style={{padding:'9px 16px',background:source===k?C.ink:'transparent',color:source===k?C.cream:C.navy60,border:'none',cursor:'pointer',fontSize:10,letterSpacing:'0.14em',textTransform:'uppercase'}}>{lbl}</button>
+          ))}
+        </div>
+        <select value={unit} onChange={(e)=>setUnit(e.target.value)} className="vn-mono"
+          style={{padding:'9px 12px',border:'1px solid '+C.hairline,background:C.creamPaper,color:C.ink,fontSize:11,minHeight:38}}>
+          <option value="all">Alle enheter</option>
+          {units.map(u=><option key={u} value={u}>{u}</option>)}
+        </select>
+        <input value={search} onChange={(e)=>setSearch(e.target.value)} placeholder="Søk: dato, ansvarlig, avvik, notat…"
+          style={{flex:1,minWidth:200,padding:'9px 14px',border:'1px solid '+C.hairline,background:C.creamPaper,color:C.ink,fontSize:13,minHeight:38}}/>
+        <button onClick={()=>setSortDesc(!sortDesc)} className="vn-mono"
+          style={{padding:'9px 14px',border:'1px solid '+C.hairline,background:C.creamPaper,color:C.navy60,cursor:'pointer',fontSize:10,letterSpacing:'0.12em',textTransform:'uppercase',minHeight:38}}>
+          {sortDesc?'↓ Nyeste først':'↑ Eldste først'}
+        </button>
+      </div>
+
+      {!rows && !error && <div style={{...T.itemBody,color:C.navy60,padding:'40px 0',textAlign:'center'}}>Laster loggdata…</div>}
+
+      {rows && (
+        <div style={{overflowX:'auto',border:'1px solid '+C.hairline,background:C.creamPaper}}>
+          <table style={{borderCollapse:'collapse',width:'100%',minWidth:1100,fontSize:12}}>
+            <thead>
+              <tr style={{background:C.creamDeep}}>
+                {COLS.map(c=>(
+                  <th key={c.k} className="vn-mono" style={{textAlign:'left',padding:'12px 14px',fontSize:9.5,textTransform:'uppercase',letterSpacing:'0.12em',color:C.navy60,whiteSpace:'nowrap',borderBottom:'1px solid '+C.hairline,position:'sticky',top:0}}>{c.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.length===0 && (
+                <tr><td colSpan={COLS.length} style={{padding:'30px',textAlign:'center',color:C.navy60,fontSize:13}}>Ingen loggføringer matcher filteret.</td></tr>
+              )}
+              {filtered.map((r,i)=>(
+                <tr key={r._id||i} style={{borderBottom:'1px solid '+C.hairline,background:r.avvik&&r.avvik.trim()?'rgba(166,75,42,0.05)':'transparent'}}>
+                  {COLS.map(c=>{
+                    const v=r[c.k];
+                    const isMono=['dato','tid','temp','ph','fukt'].includes(c.k);
+                    const isEnhet=c.k==='enhet'||c.k==='kilde';
+                    return (
+                      <td key={c.k} style={{padding:'10px 14px',verticalAlign:'top',color:c.k==='avvik'&&v?C.rust:C.graphite,fontFamily:isMono?'"IBM Plex Mono",monospace':'inherit',fontWeight:isEnhet?500:400,whiteSpace:c.k==='notater'||c.k==='tiltak'?'normal':'nowrap',maxWidth:c.k==='notater'?260:undefined}}>
+                        {v==null||v===''?'—':String(v)}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {rows && <div style={{...T.metaMono,color:C.navy60,marginTop:14}}>Viser {filtered.length} av {rows.length} loggføringer.</div>}
+    </div>
+  );
+}
+
 function CalendarPage({data,update,replaceList,now,openDetail}){
   const addE=()=>replaceList('events',[...data.events,{date:new Date().toISOString().slice(0,10),time:'',title:'Ny hendelse',type:'møte',who:'Martin',notes:''}]);
   const removeE=(i)=>{if(confirm('Fjern denne hendelsen?'))replaceList('events',data.events.filter((_,idx)=>idx!==i));};
@@ -2157,6 +2326,7 @@ function VerminordApp(){
     {key:'tasks',label:'Oppgaver'},
     {key:'projects',label:'Prosjekter'},
     {key:'sops',label:'SOPs'},
+    {key:'logg',label:'Logg'},
     {key:'calendar',label:'Kalender'},
     {key:'compass',label:'Kompass'},
   ];
@@ -2201,6 +2371,7 @@ function VerminordApp(){
         {view==='tasks'&&<TasksPage data={data} update={update} replaceList={replaceList} now={now} openDetail={openDetail}/>}
         {view==='projects'&&<ProjectsPage data={data} update={update} replaceList={replaceList} now={now} openDetail={openDetail}/>}
         {view==='sops'&&<SopsPage data={data} update={update} replaceList={replaceList} now={now} openDetail={openDetail}/>}
+        {view==='logg'&&<LoggPage/>}
         {view==='calendar'&&<CalendarPage data={data} update={update} replaceList={replaceList} now={now} openDetail={openDetail}/>}
         {view==='compass'&&<CompassPage data={data} update={update} replaceList={replaceList}/>}
         <BrainDump data={data} update={update} replaceList={replaceList}/>
