@@ -1,0 +1,2196 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#5B7A56">
+  <title>Verminord · Mathias Drift</title>
+  <!-- PWA / installable -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <meta name="application-name" content="Verminord Drift">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Drift">
+  <link rel="apple-touch-icon" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="/icon-512.png">
+
+  <!--
+    ═══════════════════════════════════════════════════════════════════════
+    VERMINORD · MATHIAS' DAILY OPS COMMAND CENTER
+    ═══════════════════════════════════════════════════════════════════════
+
+    Standalone HTML file. Single file. No build step. No bundler.
+    Only external dependency: Google Fonts CDN (Fraunces + DM Sans + JetBrains Mono).
+    Open in any modern browser and it works.
+
+    BUILT FOR:
+      Mathias Folkestad — produksjonsansvarlig, Verminord AS
+      Mobile-first, phone-in-facility, dirty hands.
+      Norwegian UI throughout.
+
+    PERSISTENCE:
+      Uses browser localStorage. Survives reload. Per-browser, per-device.
+      Real cross-device / cross-user sync requires Base44 (see entity map below).
+
+    LOCALSTORAGE KEYS:
+      bins                 — list of CFT/PRE-KOMP/BREEDER units, editable
+      logs                 — array of pH/moisture/temp readings, newest first
+      tasks:YYYY-MM-DD     — completed daily routine tasks, one key per date
+      customTasks          — ad-hoc todo list (Mathias's own notes)
+      inv_pct              — inventory percentages (0–100 per item)
+      inv                  — derived symbolic status (green/amber/red) for Martin's tool
+
+    BASE44 ENTITY MAP (when migrating from prototype to production):
+      bins         → Bin (id, name, status)
+      logs         → DailyLog (date, time, bin, pH, moist, temp)
+      tasks:DATE   → RoutineTaskCompletion (date, taskId, done)
+      customTasks  → CustomTask (id, title, date, done, doneAt, createdAt)
+      inv_pct      → Inventory (item, percentage, lastChecked, updatedBy)
+
+    SOPS REFERENCED:
+      SOP-01 — Daglig drift og observasjon
+      SOP-04 — CFT Feeding Protocol
+      SOP-05 — Worm Health & Population Monitoring
+      SOP-06 — Harvesting & Screening
+    ═══════════════════════════════════════════════════════════════════════
+  -->
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..700;1,9..144,300..700&family=DM+Sans:opsz,wght@9..40,300..700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg: #F2ECE0;
+      --bg-warm: #EDE5D4;
+      --surface: #FAF6EC;
+      --surface-elev: #FFFFFF;
+      --ink: #1B1A17;
+      --ink-soft: #4A4842;
+      --ink-mute: #8A857A;
+      --moss: #2F4A2C;
+      --moss-deep: #1F3A1C;
+      --moss-soft: #5B7A56;
+      --terra: #B8553A;
+      --terra-soft: #E89678;
+      --sand: #C9A876;
+      --sand-pale: #E8D9B8;
+      --line: #D9D0BC;
+      --line-soft: #E5DDC9;
+      --green-go: #4A7A3F;
+      --amber: #C9892C;
+      --red-stop: #B33A2B;
+      --radius: 14px;
+      --radius-lg: 22px;
+      --radius-sm: 8px;
+      --shadow-sm: 0 1px 2px rgba(27,26,23,0.04), 0 2px 6px rgba(27,26,23,0.04);
+      --shadow-md: 0 2px 6px rgba(27,26,23,0.05), 0 8px 24px rgba(27,26,23,0.06);
+      --shadow-lg: 0 4px 12px rgba(27,26,23,0.06), 0 16px 40px rgba(27,26,23,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body, html {
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'DM Sans', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    /* A11y — kept from upgrade pass, harmless */
+    *:focus-visible { outline: 2px solid var(--moss); outline-offset: 2px; }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
+    }
+
+    .app {
+      max-width: 460px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding-bottom: 96px;
+      position: relative;
+      background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(201,168,118,0.18), transparent 50%),
+        radial-gradient(900px 500px at -10% 30%, rgba(91,122,86,0.10), transparent 50%),
+        var(--bg);
+    }
+
+    /* HEADER */
+    .header {
+      padding: 28px 22px 18px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .greet-block { flex: 1; }
+    .greet-eyebrow {
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink); font-weight: 500; margin-bottom: 6px;
+    }
+    .greet-name {
+      font-family: 'Fraunces', serif; font-weight: 400; font-style: italic; font-size: 30px; line-height: 1.05; color: var(--ink); letter-spacing: -0.01em;
+    }
+    .greet-name b { font-style: normal; font-weight: 500; color: var(--moss); }
+    .date-pill {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      padding: 8px 12px; border-radius: var(--radius-sm); text-align: center;
+      box-shadow: var(--shadow-sm); min-width: 60px;
+    }
+    .date-day { font-size: 22px; font-family: 'Fraunces', serif; font-weight: 500; line-height: 1; color: var(--moss); }
+    .date-mon { font-size: 10px; letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-mute); margin-top: 4px; }
+
+    .day-badge {
+      margin: 4px 22px 0;
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 999px;
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; font-weight: 600;
+    }
+    .day-badge.feed { background: var(--moss); color: var(--sand-pale); }
+    .day-badge.harvest { background: var(--terra); color: #fff; }
+    .day-badge.ops { background: var(--sand-pale); color: var(--moss-deep); }
+    .day-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 2.4s ease-in-out infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 0.4; transform: scale(1); }
+      50% { opacity: 1; transform: scale(1.3); }
+    }
+
+    /* STREAK */
+    .streak {
+      margin: 18px 22px 0; background: var(--moss); border-radius: var(--radius-lg);
+      padding: 22px 24px 24px; color: var(--sand-pale); position: relative; overflow: hidden;
+      box-shadow: var(--shadow-md);
+    }
+    .streak::before {
+      content: ''; position: absolute; right: -40px; top: -40px;
+      width: 180px; height: 180px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(201,168,118,0.22), transparent 70%);
+    }
+    .streak::after {
+      content: ''; position: absolute; right: 18px; top: 18px;
+      width: 28px; height: 28px;
+      background: radial-gradient(circle, var(--sand), transparent 60%);
+      border-radius: 50%; filter: blur(2px); animation: glow 3s ease-in-out infinite;
+    }
+    @keyframes glow {
+      0%, 100% { opacity: 0.5; transform: scale(0.9); }
+      50% { opacity: 1; transform: scale(1.1); }
+    }
+    .streak-label {
+      font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: rgba(232,217,184,0.7); margin-bottom: 6px; font-weight: 500;
+    }
+    .streak-num {
+      font-family: 'Fraunces', serif; font-size: 78px; font-weight: 300;
+      line-height: 0.9; letter-spacing: -0.04em;
+      display: flex; align-items: baseline; gap: 12px; position: relative; z-index: 1;
+    }
+    .streak-num small {
+      font-size: 14px; font-family: 'Fraunces', serif; font-weight: 400;
+      letter-spacing: 0.16em; text-transform: uppercase; color: rgba(232,217,184,0.7);
+    }
+    .streak-quote {
+      margin-top: 14px; font-family: 'Fraunces', serif; font-style: italic; font-size: 14px; line-height: 1.4; color: rgba(232,217,184,0.85);
+      border-top: 1px solid rgba(232,217,184,0.18); padding-top: 12px; position: relative; z-index: 1;
+    }
+
+    /* SECTION */
+    .section { margin: 28px 22px 0; }
+    .section-head {
+      display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 14px;
+    }
+    .section-title {
+      font-family: 'Fraunces', serif; font-weight: 500; font-size: 22px;
+      letter-spacing: -0.015em; color: var(--ink);
+    }
+    .section-title em { font-style: italic; color: var(--moss); font-weight: 400; }
+    .section-sub {
+      font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+      color: var(--ink-mute); font-weight: 500;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .section-edit {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      color: var(--ink-mute);
+    }
+    .section-edit:active { background: var(--bg-warm); }
+    .section-edit svg { width: 14px; height: 14px; }
+
+    /* TASKS (today's recurring) */
+    .tasks {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
+    }
+    .task {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 16px 18px; border-bottom: 1px solid var(--line-soft);
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      transition: background 0.18s; min-height: 56px;
+    }
+    .task:last-child { border-bottom: none; }
+    .task:active { background: var(--bg-warm); }
+    .task-check {
+      width: 24px; height: 24px; border-radius: 7px;
+      border: 1.5px solid var(--line); flex-shrink: 0; margin-top: 1px;
+      display: flex; align-items: center; justify-content: center;
+      background: var(--surface); transition: all 0.2s;
+    }
+    .task.done .task-check { background: var(--moss); border-color: var(--moss); }
+    .task.done .task-check svg { opacity: 1; transform: scale(1); }
+    .task-check svg { width: 14px; height: 14px; opacity: 0; transform: scale(0.6); transition: all 0.2s; }
+    .task-body { flex: 1; min-width: 0; }
+    .task-title {
+      font-size: 15px; font-weight: 500; color: var(--ink); line-height: 1.35;
+    }
+    .task-when {
+      font-weight: 400; color: var(--ink-mute); font-size: 13px; letter-spacing: 0.01em;
+    }
+    .task.done .task-title { color: var(--ink-mute); text-decoration: line-through; }
+    .task.done .task-when { color: var(--ink-mute); }
+    .task-meta {
+      font-size: 12px; color: var(--ink-mute); margin-top: 3px; letter-spacing: 0.02em;
+    }
+    .task-tag {
+      font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+      background: var(--sand-pale); color: var(--moss-deep);
+      padding: 3px 7px; border-radius: 4px; font-weight: 600;
+      flex-shrink: 0; margin-top: 2px;
+    }
+    .task-tag.crit { background: #F4D5C9; color: var(--terra); }
+    .task-tag.sop { background: #DDE6DA; color: var(--moss-deep); }
+
+    /* QUICK LOG */
+    .qlog {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-sm);
+    }
+    .qlog-row { margin-bottom: 18px; }
+    .qlog-row:last-of-type { margin-bottom: 0; }
+    .qlog-lbl {
+      display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;
+    }
+    .qlog-name {
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-mute); font-weight: 600;
+    }
+    .qlog-val {
+      font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500;
+      color: var(--moss); letter-spacing: -0.02em; line-height: 1;
+    }
+    .qlog-val small {
+      font-family: 'Fraunces', serif; font-size: 13px;
+      color: var(--ink-mute); font-weight: 400; margin-left: 3px;
+    }
+    .qlog-val.warn { color: var(--terra); }
+    .qlog-val.amber { color: var(--amber); }
+
+    /* Backfill date row */
+    .backfill-row.is-backfill .qlog-name { color: var(--amber); }
+    .backfill-row.is-backfill .backfill-date {
+      border-color: var(--amber); background: rgba(201,168,118,0.10);
+    }
+    .backfill-reset {
+      background: none; border: 1px solid var(--line); color: var(--ink-soft);
+      font-family: 'Fraunces', serif; font-size: 11px; font-weight: 600;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 5px 10px; border-radius: 8px; cursor: pointer;
+    }
+    .backfill-reset:active { background: var(--bg-warm); }
+    .backfill-date-wrap { display: flex; flex-direction: column; gap: 8px; }
+    .backfill-date {
+      width: 100%; padding: 12px 14px; border-radius: 10px;
+      border: 1px solid var(--line); background: var(--bg-warm);
+      font-family: 'Fraunces', serif; font-size: 15px; font-weight: 500;
+      color: var(--ink); min-height: 48px;
+    }
+    .backfill-date:focus { outline: none; border-color: var(--moss); }
+    .backfill-hint {
+      padding: 10px 12px; border-radius: 8px; font-size: 12.5px; line-height: 1.4;
+      background: rgba(201,168,118,0.14); color: var(--ink-soft);
+      border-left: 3px solid var(--amber);
+    }
+    .backfill-hint b { color: var(--ink); }
+    .save-btn.historic { background: var(--amber); }
+    .save-btn.historic:active { background: #B2925E; }
+
+    /* Bin grid */
+    .bin-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+      background: var(--bg-warm);
+      padding: 8px;
+      border-radius: 12px;
+    }
+    .bin-btn {
+      padding: 11px 6px; border-radius: 8px; border: none;
+      background: transparent; font-family: 'Fraunces', serif;
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+      color: var(--ink-mute); cursor: pointer;
+      -webkit-tap-highlight-color: transparent; transition: all 0.18s;
+      min-height: 44px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 2px;
+    }
+    .bin-btn.active {
+      background: var(--moss); color: var(--sand-pale); box-shadow: var(--shadow-sm);
+    }
+    .bin-btn.soon {
+      color: var(--ink-mute); opacity: 0.55; cursor: not-allowed;
+      border: 1px dashed var(--line);
+    }
+    .bin-btn.soon small {
+      font-size: 8px; letter-spacing: 0.14em; text-transform: uppercase;
+      font-weight: 700; color: var(--sand); opacity: 0.9;
+      font-family: 'Fraunces', serif;
+    }
+
+    /* Sliders */
+    .slider-wrap { position: relative; padding: 8px 0; }
+    .slider {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 6px; background: var(--line);
+      border-radius: 3px; outline: none;
+    }
+    .slider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--moss); border: 4px solid var(--surface-elev);
+      box-shadow: 0 2px 8px rgba(47,74,44,0.3); cursor: pointer;
+    }
+    .slider::-moz-range-thumb {
+      width: 30px; height: 30px; border-radius: 50%;
+      background: var(--moss); border: 4px solid var(--surface-elev);
+      box-shadow: 0 2px 8px rgba(47,74,44,0.3); cursor: pointer;
+    }
+    .slider-ticks {
+      display: flex; justify-content: space-between; margin-top: 8px;
+      font-size: 10px; color: var(--ink-mute); letter-spacing: 0.06em;
+    }
+
+    /*
+      Moisture slider track — visual zones reflecting moisture ranges
+      Range: 30–95%. Ideal zone: 60–75%.
+      Slider position math (for gradient breakpoints):
+        40% threshold → (40-30)/65 = 15.4%
+        60% threshold → (60-30)/65 = 46.2%   ← ideal zone starts
+        75% threshold → (75-30)/65 = 69.2%   ← ideal zone ends
+        85% threshold → (85-30)/65 = 84.6%
+    */
+    .moist-slider {
+      background: linear-gradient(to right,
+        var(--terra-soft) 0%,    var(--terra-soft) 15%,
+        #E8C98A 15%,             #E8C98A 46%,
+        var(--moss-soft) 46%,    var(--moss-soft) 69%,
+        #E8C98A 69%,             #E8C98A 85%,
+        var(--terra-soft) 85%,   var(--terra-soft) 100%);
+      height: 8px; border-radius: 4px;
+    }
+
+    /* Save button */
+    .save-btn {
+      margin-top: 20px; width: 100%; background: var(--ink); color: var(--sand-pale);
+      border: none; padding: 18px; border-radius: 12px;
+      font-family: 'Fraunces', serif; font-weight: 600; font-size: 14px;
+      letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer;
+      -webkit-tap-highlight-color: transparent; transition: all 0.2s;
+      min-height: 56px; display: flex; align-items: center; justify-content: center; gap: 10px;
+    }
+    .save-btn:active { transform: scale(0.98); }
+    .save-btn.saved { background: var(--green-go); color: #fff; }
+
+    /* HEATMAP */
+    .heatmap-wrap {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 20px; box-shadow: var(--shadow-sm);
+    }
+    .heatmap {
+      display: grid; grid-template-columns: repeat(15, 1fr);
+      gap: 5px; margin-top: 6px;
+    }
+    .hm-cell {
+      aspect-ratio: 1; border-radius: 4px; background: var(--line-soft);
+      position: relative; cursor: pointer;
+    }
+    .hm-cell[data-fill="0"] { background: var(--line-soft); }
+    .hm-cell[data-fill="1"] { background: #BCC9B7; }
+    .hm-cell[data-fill="2"] { background: var(--moss-soft); }
+    .hm-cell[data-fill="3"] { background: var(--moss); }
+    .hm-cell[data-fill="today"] {
+      background: var(--sand); box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--moss);
+    }
+    .hm-legend {
+      margin-top: 14px; display: flex; align-items: center; justify-content: space-between;
+      font-size: 11px; color: var(--ink-mute); letter-spacing: 0.04em;
+    }
+    .hm-scale { display: flex; align-items: center; gap: 4px; }
+    .hm-scale span { width: 12px; height: 12px; border-radius: 3px; }
+
+    /* WEEK STRIP */
+    .week {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
+    }
+    .week-day {
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 18px; border-bottom: 1px solid var(--line-soft);
+    }
+    .week-day:last-child { border-bottom: none; }
+    .week-day.today { background: var(--sand-pale); }
+    .week-d-name {
+      font-family: 'Fraunces', serif; font-size: 14px; font-weight: 500; color: var(--moss);
+      width: 70px; flex-shrink: 0;
+    }
+    .week-day.today .week-d-name { color: var(--terra); }
+    .week-d-tasks { font-size: 13px; color: var(--ink-soft); line-height: 1.4; }
+    .week-d-tasks b { color: var(--ink); font-weight: 600; }
+
+    /* INVENTORY DRAG BARS */
+    .inv-list { display: flex; flex-direction: column; gap: 12px; }
+    .inv-row {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 16px 18px;
+      box-shadow: var(--shadow-sm);
+    }
+    .inv-row-top {
+      display: flex; align-items: baseline; justify-content: space-between;
+      margin-bottom: 4px;
+    }
+    .inv-row-name {
+      font-family: 'Fraunces', serif; font-weight: 500; font-size: 17px;
+      color: var(--ink); letter-spacing: -0.01em;
+    }
+    .inv-row-pct {
+      font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+    .inv-row-pct.green { color: var(--green-go); }
+    .inv-row-pct.amber { color: var(--amber); }
+    .inv-row-pct.red { color: var(--red-stop); }
+    .inv-row-hint {
+      font-size: 11px; color: var(--ink-mute); margin-bottom: 12px;
+      letter-spacing: 0.02em;
+    }
+    .inv-bar-wrap { position: relative; padding: 4px 0; }
+    .inv-bar {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 32px; background: transparent;
+      cursor: ew-resize; outline: none; margin: 0;
+    }
+    .inv-bar::-webkit-slider-runnable-track {
+      height: 32px; border-radius: 8px;
+      background: linear-gradient(to right,
+        var(--fill-color, var(--green-go)) 0%,
+        var(--fill-color, var(--green-go)) var(--pct, 50%),
+        var(--bg-warm) var(--pct, 50%),
+        var(--bg-warm) 100%);
+      border: 1px solid var(--line);
+    }
+    .inv-bar::-moz-range-track {
+      height: 32px; border-radius: 8px;
+      background: linear-gradient(to right,
+        var(--fill-color, var(--green-go)) 0%,
+        var(--fill-color, var(--green-go)) var(--pct, 50%),
+        var(--bg-warm) var(--pct, 50%),
+        var(--bg-warm) 100%);
+      border: 1px solid var(--line);
+    }
+    .inv-bar::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 6px; height: 40px; background: var(--ink);
+      border-radius: 3px; cursor: ew-resize; margin-top: -5px;
+      border: 2px solid var(--surface-elev);
+      box-shadow: 0 2px 6px rgba(27,26,23,0.25);
+    }
+    .inv-bar::-moz-range-thumb {
+      width: 6px; height: 40px; background: var(--ink);
+      border-radius: 3px; cursor: ew-resize;
+      border: 2px solid var(--surface-elev);
+      box-shadow: 0 2px 6px rgba(27,26,23,0.25);
+    }
+    .inv-row-state {
+      margin-top: 8px;
+      font-size: 10px; letter-spacing: 0.18em; text-transform: uppercase;
+      font-weight: 700; text-align: right;
+    }
+    .inv-row-state.green { color: var(--green-go); }
+    .inv-row-state.amber { color: var(--amber); }
+    .inv-row-state.red { color: var(--red-stop); }
+
+    /* TASKS PAGE */
+    .custom-add {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      border-radius: var(--radius); padding: 14px; margin-bottom: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .custom-add-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .custom-add input[type="text"] {
+      flex: 1; background: var(--bg-warm); border: 1px solid transparent;
+      padding: 12px 14px; border-radius: 10px;
+      font-family: 'Fraunces', serif; font-size: 14px;
+      color: var(--ink); min-height: 44px;
+    }
+    .custom-add input[type="text"]:focus { outline: none; border-color: var(--moss); }
+    .custom-add input[type="date"] {
+      background: var(--bg-warm); border: 1px solid transparent;
+      padding: 12px 10px; border-radius: 10px; font-family: 'Fraunces', serif;
+      font-size: 13px; color: var(--ink); min-height: 44px; min-width: 90px;
+    }
+    .custom-add-btn {
+      background: var(--moss); color: var(--sand-pale); border: none;
+      width: 44px; height: 44px; border-radius: 10px;
+      font-size: 22px; font-weight: 500; cursor: pointer; flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .custom-add-btn:active { transform: scale(0.94); }
+
+    .custom-list {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
+      margin-bottom: 14px;
+    }
+    .custom-empty {
+      padding: 24px 16px; text-align: center; color: var(--ink-mute);
+      font-family: 'Fraunces', serif; font-size: 14px;
+    }
+    .custom-task {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 16px; border-bottom: 1px solid var(--line-soft);
+      min-height: 56px;
+    }
+    .custom-task:last-child { border-bottom: none; }
+    .custom-task .task-check { cursor: pointer; }
+    .custom-task-body { flex: 1; min-width: 0; }
+    .custom-task-title {
+      font-size: 14px; color: var(--ink); line-height: 1.3; font-weight: 500;
+      word-break: break-word;
+    }
+    .custom-task.done .custom-task-title { color: var(--ink-mute); text-decoration: line-through; }
+    .custom-task-date {
+      font-size: 11px; color: var(--ink-mute); margin-top: 2px;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .custom-task-date.overdue { color: var(--terra); font-weight: 600; }
+    .custom-task-del {
+      background: none; border: none; color: var(--ink-mute);
+      font-size: 18px; padding: 4px 10px; cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .custom-task-del:active { color: var(--terra); }
+
+    .group-label {
+      font-size: 10px; letter-spacing: 0.22em; text-transform: uppercase;
+      color: var(--ink-mute); font-weight: 700;
+      padding: 14px 16px 8px;
+    }
+    .group-label.today { color: var(--terra); }
+
+    .routine-week {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow-sm);
+    }
+    .routine-day {
+      padding: 14px 18px; border-bottom: 1px solid var(--line-soft);
+    }
+    .routine-day:last-child { border-bottom: none; }
+    .routine-day.today { background: var(--sand-pale); }
+    .routine-day-name {
+      font-family: 'Fraunces', serif; font-weight: 500;
+      font-size: 15px; color: var(--moss); margin-bottom: 6px;
+    }
+    .routine-day.today .routine-day-name { color: var(--terra); }
+    .routine-day-tasks {
+      font-size: 12px; color: var(--ink-soft); line-height: 1.5;
+    }
+    .routine-day-tasks ul { list-style: none; padding: 0; margin: 0; }
+    .routine-day-tasks li {
+      padding-left: 16px; position: relative; margin-bottom: 2px;
+    }
+    .routine-day-tasks li::before {
+      content: '·'; position: absolute; left: 6px; color: var(--moss-soft); font-weight: 700;
+    }
+
+    /* BOT NAV */
+    .botnav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: rgba(250,246,236,0.95);
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--line);
+      display: flex; justify-content: space-around;
+      padding: 10px 0 max(12px, env(safe-area-inset-bottom));
+      z-index: 100;
+    }
+    .botnav-inner {
+      max-width: 460px; margin: 0 auto;
+      display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; width: 100%;
+    }
+    .nav-btn {
+      background: none; border: none; padding: 8px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      cursor: pointer; -webkit-tap-highlight-color: transparent;
+      color: var(--ink-mute); transition: color 0.18s; min-height: 56px;
+    }
+    .nav-btn svg { width: 22px; height: 22px; }
+    .nav-btn span {
+      font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase; font-weight: 600;
+    }
+    .nav-btn.active { color: var(--moss); }
+    .nav-btn.active svg { stroke-width: 2; }
+
+    /* VIEWS */
+    .view { display: none; }
+    .view.active { display: block; animation: fadein 0.3s ease; }
+    @keyframes fadein {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 100px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--moss-deep); color: var(--sand-pale);
+      padding: 14px 22px; border-radius: 999px;
+      font-size: 13px; font-weight: 500; letter-spacing: 0.04em;
+      box-shadow: var(--shadow-lg); opacity: 0; pointer-events: none;
+      transition: all 0.3s; z-index: 200;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* LOG HISTORY */
+    .hist {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      border-radius: var(--radius); overflow: hidden; margin-top: 14px;
+      box-shadow: var(--shadow-sm);
+    }
+    .hist-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px; border-bottom: 1px solid var(--line-soft); font-size: 13px;
+    }
+    .hist-row:last-child { border-bottom: none; }
+    .hist-time {
+      font-family: 'JetBrains Mono', monospace; font-size: 11px;
+      color: var(--ink-mute); width: 90px; flex-shrink: 0;
+    }
+    .hist-bin {
+      font-size: 11px; letter-spacing: 0.1em;
+      background: var(--sand-pale); color: var(--moss-deep);
+      padding: 3px 7px; border-radius: 4px; font-weight: 600;
+      width: 70px; text-align: center; flex-shrink: 0;
+    }
+    .hist-vals {
+      flex: 1; display: flex; gap: 12px; font-size: 12px; color: var(--ink-soft);
+      flex-wrap: wrap;
+    }
+    .hist-vals b { color: var(--ink); font-weight: 600; }
+    .empty {
+      padding: 30px 20px; text-align: center; color: var(--ink-mute);
+      font-family: 'Fraunces', serif;
+    }
+
+    /* NOTICE */
+    .notice {
+      margin: 14px 22px; padding: 12px 16px;
+      background: var(--sand-pale); border-radius: 10px;
+      font-size: 12px; color: var(--moss-deep); line-height: 1.5;
+      border-left: 3px solid var(--sand);
+    }
+    .notice b { font-weight: 700; }
+    .sop-chip {
+      display: inline-block; font-family: 'JetBrains Mono', monospace;
+      font-size: 10px; background: var(--sand-pale); color: var(--moss-deep);
+      padding: 2px 6px; border-radius: 4px; font-weight: 600; letter-spacing: 0.04em;
+    }
+
+    /* MODAL */
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(27,26,23,0.5); backdrop-filter: blur(6px);
+      z-index: 300; display: none;
+      align-items: flex-end; justify-content: center;
+      animation: fadein 0.2s;
+    }
+    .modal-bg.show { display: flex; }
+    .modal {
+      background: var(--bg); border-radius: 22px 22px 0 0;
+      width: 100%; max-width: 460px;
+      padding: 26px 22px max(26px, env(safe-area-inset-bottom));
+      animation: slideup 0.3s ease; max-height: 80vh; overflow-y: auto;
+    }
+    @keyframes slideup {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+    .modal-head {
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px;
+    }
+    .modal-title { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; }
+    .modal-x {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      width: 36px; height: 36px; border-radius: 50%;
+      cursor: pointer; font-size: 18px; color: var(--ink-mute);
+    }
+    .bin-edit-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px; }
+    .bin-edit-row {
+      display: flex; gap: 8px; align-items: center;
+      background: var(--surface-elev); padding: 10px;
+      border-radius: 10px; border: 1px solid var(--line);
+    }
+    .bin-edit-row input[type="text"] {
+      flex: 1; background: transparent; border: none;
+      font-family: 'Fraunces', serif; font-size: 14px;
+      font-weight: 600; color: var(--ink); padding: 8px 4px; min-height: 36px;
+      min-width: 0;
+    }
+    .bin-edit-row input:focus { outline: 1px solid var(--moss); border-radius: 4px; }
+    .bin-edit-row select {
+      background: var(--bg-warm); border: none; padding: 8px 10px;
+      border-radius: 6px; font-size: 11px; font-weight: 600;
+      font-family: 'Fraunces', serif; color: var(--ink-soft);
+      letter-spacing: 0.06em; min-height: 36px;
+    }
+    .bin-edit-row .bin-del {
+      background: none; border: none; color: var(--ink-mute);
+      font-size: 18px; padding: 6px 10px; cursor: pointer; min-height: 36px;
+    }
+    .bin-edit-row .bin-del:active { color: var(--terra); }
+    .bin-add-row {
+      display: flex; gap: 8px; margin-top: 8px;
+    }
+    .bin-add-row input {
+      flex: 1; background: var(--surface-elev); border: 1px dashed var(--line);
+      padding: 12px 14px; border-radius: 10px;
+      font-family: 'Fraunces', serif; font-size: 14px; min-height: 44px;
+      min-width: 0;
+    }
+    .bin-add-row input:focus { outline: none; border-color: var(--moss); border-style: solid; }
+    .bin-add-row select {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      padding: 10px 12px; border-radius: 10px;
+      font-size: 12px; font-weight: 600; font-family: 'Fraunces', serif;
+      min-height: 44px;
+    }
+    .modal-done {
+      width: 100%; background: var(--ink); color: var(--sand-pale);
+      border: none; padding: 14px; border-radius: 10px;
+      font-family: 'Fraunces', serif; font-weight: 600; font-size: 13px;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      cursor: pointer; margin-top: 14px; min-height: 50px;
+    }
+
+    /* FOOT */
+    .foot {
+      margin: 32px 22px 12px; font-size: 11px; color: var(--ink-mute);
+      text-align: center; line-height: 1.6;
+      font-family: 'Fraunces', serif;
+    }
+
+    /* LOADER */
+    #loader {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      background: var(--bg); color: var(--ink-mute);
+      font-family: 'Fraunces', serif; font-size: 18px; font-weight: 500;
+      z-index: 500;
+    }
+    #loader[hidden] { display: none; }
+    .auth-screen[hidden] { display: none !important; }
+    .app[hidden] { display: none !important; }
+
+    /* AUTH SCREEN */
+    .auth-screen {
+      min-height: 100vh; padding: 24px;
+      display: flex; align-items: center; justify-content: center;
+      background:
+        radial-gradient(1200px 600px at 80% -10%, rgba(201,168,118,0.18), transparent 50%),
+        radial-gradient(900px 500px at -10% 30%, rgba(91,122,86,0.10), transparent 50%),
+        var(--bg);
+    }
+    .auth-card {
+      background: var(--surface-elev); border: 1px solid var(--line);
+      border-radius: var(--radius-lg); padding: 36px 28px;
+      max-width: 380px; width: 100%; box-shadow: var(--shadow-md);
+    }
+    .auth-eyebrow {
+      font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase;
+      color: var(--ink-mute); font-weight: 500; margin-bottom: 8px;
+    }
+    .auth-title {
+      font-family: 'Fraunces', serif; font-weight: 400; font-size: 36px; color: var(--ink); letter-spacing: -0.015em;
+      line-height: 1.05; margin-bottom: 10px;
+    }
+    .auth-sub {
+      font-size: 13px; color: var(--ink-soft); line-height: 1.5; margin-bottom: 22px;
+    }
+    .auth-form { display: flex; flex-direction: column; gap: 12px; }
+    .auth-form input[type="email"],
+    .auth-form input[type="password"] {
+      background: var(--bg-warm); border: 1px solid var(--line);
+      padding: 14px 16px; border-radius: 10px;
+      font-family: 'Fraunces', serif; font-size: 15px;
+      color: var(--ink); min-height: 52px;
+    }
+    .auth-form input[type="email"]:focus,
+    .auth-form input[type="password"]:focus {
+      outline: none; border-color: var(--moss);
+    }
+    .auth-btn {
+      background: var(--ink); color: var(--sand-pale);
+      border: none; padding: 16px; border-radius: 12px;
+      font-family: 'Fraunces', serif; font-weight: 600; font-size: 14px;
+      letter-spacing: 0.14em; text-transform: uppercase; cursor: pointer;
+      min-height: 56px;
+    }
+    .auth-btn:disabled { opacity: 0.6; cursor: wait; }
+    .auth-msg {
+      margin-top: 14px; padding: 12px 14px; border-radius: 10px;
+      font-size: 13px; line-height: 1.4;
+    }
+    .auth-msg.success {
+      background: rgba(74,122,63,0.12); color: var(--moss-deep);
+      border: 1px solid rgba(74,122,63,0.30);
+    }
+    .auth-msg.error {
+      background: rgba(179,58,43,0.10); color: var(--red-stop);
+      border: 1px solid rgba(179,58,43,0.30);
+    }
+
+    /* LOGOUT */
+    .logout-btn {
+      display: block; margin: 18px auto 0;
+      background: none; border: none; color: var(--ink-mute);
+      font-family: 'Fraunces', serif; font-size: 12px; font-weight: 500;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      cursor: pointer; padding: 8px 14px;
+    }
+    .logout-btn:active { color: var(--terra); }
+  </style>
+</head>
+<body>
+
+<div id="loader">Laster…</div>
+
+<div class="auth-screen" hidden>
+  <div class="auth-card">
+    <div class="auth-eyebrow">Verminord · Drift</div>
+    <h1 class="auth-title">Tilgang</h1>
+    <p class="auth-sub">Skriv inn PIN-koden for å åpne driftsappen.</p>
+    <form class="auth-form" id="authForm">
+      <input type="text" id="authPin" placeholder="••••" required autocomplete="off" inputmode="numeric" pattern="[0-9]*" maxlength="8" name="access-code" data-lpignore="true" data-1p-ignore="true" style="text-align:center; letter-spacing:0.6em; font-size:22px; -webkit-text-security:disc; text-security:disc;" />
+      <button type="submit" class="auth-btn">Åpne</button>
+    </form>
+    <div class="auth-msg" id="authMsg" hidden></div>
+  </div>
+</div>
+
+<div class="app" hidden>
+  <!-- HEADER -->
+  <div class="header">
+    <div class="greet-block">
+      <div class="greet-eyebrow">Verminord · Drift</div>
+      <div class="greet-name" id="greeting">God morgen, <b>Mathias</b></div>
+    </div>
+    <div class="date-pill">
+      <div class="date-day" id="dateDay">22</div>
+      <div class="date-mon" id="dateMon">Mai</div>
+    </div>
+  </div>
+  <div><span class="day-badge" id="dayBadge"><span class="dot"></span><span id="dayBadgeTxt">Fôringsdag</span></span></div>
+
+  <!-- ============ I DAG ============ -->
+  <div class="view active" data-view="today">
+
+    <!-- Streak -->
+    <div class="streak">
+      <div class="streak-label">Sammenhengende dager med logg</div>
+      <div class="streak-num"><span id="streakNum">0</span><small>dager</small></div>
+      <div class="streak-quote" id="streakQuote">"Konsistent slår optimalt. Logg i dag."</div>
+    </div>
+
+    <!-- Hurtig-logg -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title"><em>Hurtig-logg.</em></div>
+        <div class="section-sub">
+          <span>Under 60 sek</span>
+          <button class="section-edit" id="editBinsBtn" title="Endre enheter" aria-label="Endre enheter">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="qlog">
+        <div class="qlog-row backfill-row">
+          <div class="qlog-lbl">
+            <span class="qlog-name">Dato</span>
+            <button type="button" class="backfill-reset" id="backfillResetBtn" hidden>I dag</button>
+          </div>
+          <div class="backfill-date-wrap">
+            <input type="date" class="backfill-date" id="backfillDate" />
+            <div class="backfill-hint" id="backfillHint" hidden></div>
+          </div>
+        </div>
+
+        <div class="qlog-row">
+          <div class="qlog-lbl"><span class="qlog-name">Enhet</span></div>
+          <div class="bin-grid" id="binGrid"></div>
+        </div>
+
+        <div class="qlog-row">
+          <div class="qlog-lbl">
+            <span class="qlog-name">pH</span>
+            <span class="qlog-val"><span id="phVal">6.5</span></span>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" class="slider" id="phSlider" min="50" max="80" value="65" step="1">
+            <div class="slider-ticks"><span>5.0</span><span>6.0</span><span>7.0</span><span>8.0</span></div>
+          </div>
+        </div>
+
+        <div class="qlog-row">
+          <div class="qlog-lbl">
+            <span class="qlog-name">Fuktighet</span>
+            <span class="qlog-val"><span id="moistPct">65</span><small>%</small></span>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" class="slider moist-slider" id="moistSlider" min="30" max="95" value="65" step="5">
+            <div class="slider-ticks">
+              <span>30%</span><span>50%</span><span>70%</span><span>90%</span>
+            </div>
+            <div style="text-align:center; margin-top:10px; font-size:12px; color:var(--ink-soft); font-family: 'Fraunces', serif" id="moistLabel">Som svamp · ideelt</div>
+          </div>
+        </div>
+
+        <div class="qlog-row">
+          <div class="qlog-lbl">
+            <span class="qlog-name">Temperatur</span>
+            <span class="qlog-val"><span id="tempVal">18</span><small>°C</small></span>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" class="slider" id="tempSlider" min="0" max="65" value="18" step="1">
+            <div class="slider-ticks"><span>0°</span><span>20°</span><span>40°</span><span>65°</span></div>
+          </div>
+        </div>
+
+        <button class="save-btn" id="saveLogBtn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Lagre logg
+        </button>
+      </div>
+    </div>
+
+    <!-- Today's tasks -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title"><em>I dag.</em> Hva som må gjøres</div>
+      </div>
+      <div class="tasks" id="taskList"></div>
+    </div>
+
+    <!-- Heatmap -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title"><em>Konsistens.</em></div>
+        <div class="section-sub">Siste 30 dager</div>
+      </div>
+      <div class="heatmap-wrap">
+        <div class="heatmap" id="heatmap"></div>
+        <div class="hm-legend">
+          <span id="hmStats">— logger / 30 dager</span>
+          <div class="hm-scale">
+            <span>mindre</span>
+            <span style="background:var(--line-soft)"></span>
+            <span style="background:#BCC9B7"></span>
+            <span style="background:var(--moss-soft)"></span>
+            <span style="background:var(--moss)"></span>
+            <span>mer</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Week -->
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title"><em>Uke-rytme.</em></div>
+        <div class="section-sub">Denne uka</div>
+      </div>
+      <div class="week" id="weekStrip"></div>
+    </div>
+
+    <div class="foot">
+      "Drift handler ikke om perfekte dager.<br>Det handler om hver dag."
+      <button type="button" class="logout-btn" id="logoutBtn">Logg ut</button>
+    </div>
+  </div>
+
+  <!-- ============ LOGG ============ -->
+  <div class="view" data-view="log">
+    <div class="section" style="margin-top:18px">
+      <div class="section-head">
+        <div class="section-title"><em>Logg-historikk.</em></div>
+        <div class="section-sub" id="logCount">0 oppføringer</div>
+      </div>
+      <div class="notice">
+        <b>Loggføring</b> kobler direkte til <span class="sop-chip">SOP-04</span> Fôring og <span class="sop-chip">SOP-05</span> Helse. Hver oppføring lagres med dato, tid, enhet og verdier.
+      </div>
+      <div class="hist" id="histList"></div>
+    </div>
+  </div>
+
+  <!-- ============ OPPGAVER ============ -->
+  <div class="view" data-view="tasks">
+    <div class="section" style="margin-top:18px">
+      <div class="section-head">
+        <div class="section-title"><em>Mine notater.</em></div>
+        <div class="section-sub" id="customTaskCount">0 åpne</div>
+      </div>
+
+      <div class="custom-add">
+        <div class="custom-add-row">
+          <input type="text" id="newTaskTitle" placeholder="Hva må huskes?" maxlength="120">
+          <input type="date" id="newTaskDate" title="Velg dato (valgfritt)">
+          <button class="custom-add-btn" id="newTaskBtn" aria-label="Legg til">+</button>
+        </div>
+      </div>
+
+      <div id="customListsWrap"></div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <div class="section-title"><em>Ukentlig rutine.</em></div>
+        <div class="section-sub">Referanse</div>
+      </div>
+      <div class="routine-week" id="routineWeek"></div>
+    </div>
+  </div>
+
+  <!-- ============ LAGER ============ -->
+  <div class="view" data-view="inv">
+    <div class="section" style="margin-top:18px">
+      <div class="section-head">
+        <div class="section-title"><em>Lager.</em></div>
+        <div class="section-sub">Dra for å oppdatere</div>
+      </div>
+      <div class="notice">
+        <b>Grønn</b> = nok lager · <b>Gul</b> = bestill snart · <b>Rød</b> = bestill nå. Dra slideren etter hvor mye som er igjen. Status deles automatisk med Martin.
+      </div>
+      <div class="inv-list" id="invList"></div>
+    </div>
+  </div>
+
+  <!-- BOT NAV -->
+  <div class="botnav">
+    <div class="botnav-inner">
+      <button class="nav-btn active" data-nav="today">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+        <span>I dag</span>
+      </button>
+      <button class="nav-btn" data-nav="log">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h12a2 2 0 0 1 2 2v14l-4-3-4 3-4-3-4 3V6a2 2 0 0 1 2-2z"/><line x1="8" y1="9" x2="14" y2="9"/><line x1="8" y1="13" x2="14" y2="13"/></svg>
+        <span>Logg</span>
+      </button>
+      <button class="nav-btn" data-nav="tasks">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+        <span>Oppgaver</span>
+      </button>
+      <button class="nav-btn" data-nav="inv">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4-9 4-9-4z"/><polyline points="3 7 3 17 12 21 21 17 21 7"/><line x1="12" y1="11" x2="12" y2="21"/></svg>
+        <span>Lager</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+    <span id="toastTxt">Lagret</span>
+  </div>
+
+  <!-- BIN EDIT MODAL -->
+  <div class="modal-bg" id="binEditModal">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">Endre enheter</div>
+        <button class="modal-x" id="closeBinModal" aria-label="Lukk">×</button>
+      </div>
+      <div class="bin-edit-list" id="binEditList"></div>
+      <div class="bin-add-row">
+        <input type="text" id="newBinName" placeholder="Nytt enhetsnavn (f.eks. W4)" maxlength="20">
+        <select id="newBinStatus">
+          <option value="active">Aktiv</option>
+          <option value="soon">Kommer snart</option>
+        </select>
+      </div>
+      <button class="modal-done" id="addBinBtn">+ Legg til enhet</button>
+      <button class="modal-done" id="binDoneBtn" style="background:var(--moss);margin-top:8px">Ferdig</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// CDN watchdog
+(function(){
+  var t = setTimeout(function(){
+    var el = document.getElementById('loader');
+    if (el && !el.hidden) {
+      el.innerHTML = '<div style="text-align:center;padding:24px">' +
+        '<div style="font-size:14px;letter-spacing:.15em;text-transform:uppercase;color:#2F4A2C;font-weight:600;margin-bottom:16px">VERMINORD</div>' +
+        '<p style="color:#1B1A17;font-size:15px;line-height:1.5;margin-bottom:20px">Appen tar lang tid å laste.<br>Sjekk internett og prøv igjen.</p>' +
+        '<button onclick="location.reload()" style="padding:12px 28px;background:#2F4A2C;color:#fff;border:none;border-radius:8px;font-size:14px;cursor:pointer;font-weight:500">Last på nytt</button>' +
+        '</div>';
+    }
+  }, 12000);
+  window.__cdnWatchdog = t;
+})();
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+'use strict';
+if(window.__cdnWatchdog){clearTimeout(window.__cdnWatchdog);}
+
+// =========================================================================
+// STORAGE — localStorage wrapper with same shape as Base44's API
+// All values are JSON-stringified for safe round-tripping.
+// =========================================================================
+const STORE = {
+  async get(key, defaultValue = null) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw === null ? defaultValue : JSON.parse(raw);
+    } catch (e) {
+      console.warn('STORE.get failed for', key, e);
+      return defaultValue;
+    }
+  },
+  async set(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+      return true;
+    } catch (e) {
+      console.error('STORE.set failed for', key, e);
+      return false;
+    }
+  }
+};
+
+// =========================================================================
+// SUPABASE — production backend (project pxduiwrgosdzrkapsuqu)
+// =========================================================================
+const SUPA_URL = 'https://pxduiwrgosdzrkapsuqu.supabase.co';
+const SUPA_KEY = 'sb_publishable_BwasPYmhhkeCzszYpB0XBg_gRbdcZoy';
+const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+// SHARED ACCESS — PIN-gated single team session
+const ACCESS_PIN    = '1234';
+const TEAM_EMAIL    = 'team@verminord.no';
+const TEAM_PASSWORD = 'vmnd_team_shared_2026_q9XmK3pL';
+
+const QUEUE_KEY = 'verminord_log_queue';
+const UNITS_CACHE = 'verminord_units_cache';
+let BIN_KIND = {};    // unit-name → 'bed' | 'precompost', for save routing
+let _logCache = null; // shared log fetch (streak/heatmap/history reuse one call)
+
+function queueGet() { try { return JSON.parse(localStorage.getItem(QUEUE_KEY)) || []; } catch (e) { return []; } }
+function queueSet(q) { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); }
+async function flushQueue() {
+  const q = queueGet();
+  if (!q.length) return;
+  const remaining = [];
+  for (const item of q) {
+    try {
+      const { error } = await sb.from(item.table).insert(item.payload);
+      if (error) throw error;
+    } catch (e) { remaining.push(item); }
+  }
+  queueSet(remaining);
+  const synced = q.length - remaining.length;
+  if (synced > 0) showToast(`${synced} offline-logg${synced === 1 ? '' : 'er'} synkronisert`);
+}
+
+// =========================================================================
+// CONSTANTS
+// =========================================================================
+const today = new Date();
+const todayKey = today.toISOString().slice(0, 10);
+const dayIdx = today.getDay(); // 0=Sun, 1=Mon ... 6=Sat
+const dayNames = ['Søndag','Mandag','Tirsdag','Onsdag','Torsdag','Fredag','Lørdag'];
+const monthsNo = ['Jan','Feb','Mar','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Des'];
+const monthsNoLower = ['jan','feb','mar','apr','mai','jun','jul','aug','sep','okt','nov','des'];
+
+// =========================================================================
+// HEADER & DAY TYPE
+// =========================================================================
+function setHeader() {
+  document.getElementById('dateDay').textContent = today.getDate();
+  document.getElementById('dateMon').textContent = monthsNo[today.getMonth()];
+
+  const hour = today.getHours();
+  let greet = 'God morgen';
+  if (hour >= 11 && hour < 17) greet = 'God dag';
+  else if (hour >= 17) greet = 'God kveld';
+  document.getElementById('greeting').innerHTML = `${greet}, <b>Mathias</b>`;
+
+  // Day-type derived from UKEPLAN:
+  //   Mon/Fri = feeding day
+  //   Wed     = harvest planning day
+  //   Other   = ops/logistics day
+  const badge = document.getElementById('dayBadge');
+  const txt = document.getElementById('dayBadgeTxt');
+  if (dayIdx === 1 || dayIdx === 5) {
+    badge.className = 'day-badge feed';
+    txt.textContent = 'Fôringsdag · ' + dayNames[dayIdx];
+  } else if (dayIdx === 3) {
+    badge.className = 'day-badge harvest';
+    txt.textContent = 'Høstedag · ' + dayNames[dayIdx];
+  } else {
+    badge.className = 'day-badge ops';
+    txt.textContent = 'Driftsdag · ' + dayNames[dayIdx];
+  }
+}
+
+// =========================================================================
+// BINS — editable list of production units (CFT-1, Breeder bin, etc.)
+// B.BIN = Breeder Bin (worm breeding bin, kept short for grid layout)
+// =========================================================================
+const DEFAULT_BINS = [
+  { id: 'cft1',    name: 'CFT-1',    status: 'active' },
+  { id: 'cft2',    name: 'CFT-2',    status: 'active' },
+  { id: 'cft3',    name: 'CFT-3',    status: 'active' },
+  { id: 'bbin',    name: 'B.BIN',    status: 'active' }, // Breeder Bin
+  { id: 'prekomp', name: 'PRE-KOMP', status: 'active' },
+  { id: 'w1',      name: 'W1',       status: 'soon' },
+  { id: 'w2',      name: 'W2',       status: 'soon' },
+  { id: 'w3',      name: 'W3',       status: 'soon' }
+];
+
+let currentBin = 'CFT-1';
+
+async function getBins() {
+  try {
+    const [w, f] = await Promise.all([
+      sb.from('wedger').select('wedge_id,status').order('wedge_id'),
+      sb.from('forkompost_batcher').select('batch_id,status').order('batch_id')
+    ]);
+    if (w.error) throw w.error;
+    if (f.error) throw f.error;
+    const bins = [
+      ...w.data.map(x => ({ id: 'w_' + x.wedge_id, name: x.wedge_id, status: x.status === 'soon' ? 'soon' : 'active', kind: 'bed' })),
+      ...f.data.map(x => ({ id: 'f_' + x.batch_id, name: x.batch_id, status: 'active', kind: 'precompost' }))
+    ];
+    localStorage.setItem(UNITS_CACHE, JSON.stringify(bins));
+    BIN_KIND = Object.fromEntries(bins.map(b => [b.name, b.kind]));
+    return bins;
+  } catch (e) {
+    const cached = JSON.parse(localStorage.getItem(UNITS_CACHE) || 'null');
+    const bins = cached || DEFAULT_BINS.map(b => ({ ...b, kind: 'bed' }));
+    BIN_KIND = Object.fromEntries(bins.map(b => [b.name, b.kind || 'bed']));
+    return bins;
+  }
+}
+
+async function renderBinGrid() {
+  const bins = await getBins();
+  const grid = document.getElementById('binGrid');
+  const activeBins = bins.filter(b => b.status === 'active');
+  if (!activeBins.find(b => b.name === currentBin)) {
+    currentBin = activeBins[0]?.name || 'CFT-1';
+  }
+  grid.innerHTML = bins.map(b => `
+    <button class="bin-btn ${b.status === 'active' && b.name === currentBin ? 'active' : ''} ${b.status === 'soon' ? 'soon' : ''}"
+            data-bin="${escapeHtml(b.name)}" data-status="${b.status}">
+      ${escapeHtml(b.name)}
+      ${b.status === 'soon' ? '<small>snart</small>' : ''}
+    </button>
+  `).join('');
+
+  grid.querySelectorAll('.bin-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.dataset.status === 'soon') {
+        showToast(`${btn.dataset.bin} kommer snart`);
+        return;
+      }
+      grid.querySelectorAll('.bin-btn').forEach(x => x.classList.remove('active'));
+      btn.classList.add('active');
+      currentBin = btn.dataset.bin;
+    });
+  });
+}
+
+async function renderBinEditList() {
+  const bins = (await getBins()).filter(b => b.kind === 'bed');
+  const list = document.getElementById('binEditList');
+  list.innerHTML = bins.map(b => `
+    <div class="bin-edit-row" data-name="${escapeHtml(b.name)}">
+      <input type="text" value="${escapeHtml(b.name)}" data-field="name" maxlength="20">
+      <select data-field="status">
+        <option value="active" ${b.status === 'active' ? 'selected' : ''}>Aktiv</option>
+        <option value="soon" ${b.status === 'soon' ? 'selected' : ''}>Kommer snart</option>
+      </select>
+      <button class="bin-del" data-action="del" aria-label="Slett">×</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.bin-edit-row').forEach(row => {
+    const name = row.dataset.name;
+    row.querySelector('[data-field="name"]').addEventListener('change', async (e) => {
+      const newName = e.target.value.trim();
+      if (!newName || newName === name) return;
+      const ok = await updateWedge(name, { wedge_id: newName });
+      showToast(ok ? 'Navn endret' : 'Kan ikke endre navn — enheten har loggføringer');
+      await renderBinEditList();
+      await renderBinGrid();
+    });
+    row.querySelector('[data-field="status"]').addEventListener('change', async (e) => {
+      const ok = await updateWedge(name, { status: e.target.value });
+      if (!ok) showToast('Ingen nett — prøv igjen');
+      await renderBinGrid();
+    });
+    row.querySelector('[data-action="del"]').addEventListener('click', async () => {
+      const ok = await deleteWedge(name);
+      showToast(ok ? `${name} slettet` : 'Kan ikke slette — enheten har loggføringer');
+      await renderBinEditList();
+      await renderBinGrid();
+    });
+  });
+}
+async function updateWedge(name, patch) {
+  try {
+    const { error } = await sb.from('wedger').update(patch).eq('wedge_id', name);
+    if (error) throw error;
+    return true;
+  } catch (e) { return false; }
+}
+async function deleteWedge(name) {
+  try {
+    const { error } = await sb.from('wedger').delete().eq('wedge_id', name);
+    if (error) throw error;
+    return true;
+  } catch (e) { return false; }
+}
+async function addWedge(name, status) {
+  try {
+    const { error } = await sb.from('wedger').insert({ wedge_id: name, status: status });
+    if (error) throw error;
+    return true;
+  } catch (e) { return false; }
+}
+
+function setupBinModal() {
+  const modal = document.getElementById('binEditModal');
+  document.getElementById('editBinsBtn').addEventListener('click', async () => {
+    await renderBinEditList();
+    modal.classList.add('show');
+  });
+  document.getElementById('closeBinModal').addEventListener('click', () => modal.classList.remove('show'));
+  document.getElementById('binDoneBtn').addEventListener('click', () => modal.classList.remove('show'));
+  modal.addEventListener('click', e => { if (e.target === modal) modal.classList.remove('show'); });
+
+  document.getElementById('addBinBtn').addEventListener('click', async () => {
+    const name = document.getElementById('newBinName').value.trim();
+    const status = document.getElementById('newBinStatus').value;
+    if (!name) return;
+    const ok = await addWedge(name, status);
+    if (!ok) { showToast('Kunne ikke legge til — finnes navnet allerede?'); return; }
+    document.getElementById('newBinName').value = '';
+    await renderBinEditList();
+    await renderBinGrid();
+    showToast(`${name} lagt til`);
+  });
+}
+
+// =========================================================================
+// RECURRING TASKS (day-aware checklist)
+//   Daily tasks appear every day. Day-specific tasks appear only on that day.
+//   The (mandag og fredag)-style suffix shows the natural recurrence in italic gray.
+// =========================================================================
+const dailyTasks = [
+  { id: 'visual',       t: 'Visuell sjekk – mark og pre-kompost', when: 'daglig', m: 'Termofil fase = ekstra obs', tag: 'SOP-01', tagcls: 'sop' },
+  { id: 'log',          t: 'Logg pH, fuktighet, temperatur',     when: 'daglig', m: 'Hver CFT + pre-kompost',     tag: 'SOP-05', tagcls: 'sop' },
+  { id: 'rydd',         t: 'Renhold og orden',                    when: 'daglig', m: 'Skadedyrforebygging',         tag: '',       tagcls: '' },
+  { id: 'email',        t: 'Sjekk e-post',                        when: 'daglig', m: 'Prioriter kunder/leverandører', tag: '',     tagcls: '' },
+  { id: 'insta_engage', t: 'Instagram – 30 min aktiv',           when: 'daglig', m: 'Lik, kommenter, engagement',  tag: '',       tagcls: '' }
+];
+
+const dayTasks = {
+  1: [ // Mandag
+    { id: 'feed',     t: 'Mat markene',  when: 'mandag og fredag',       m: '5–10cm pre-kompost, lett vanning, dekk med løv', tag: 'SOP-04', tagcls: 'sop' },
+    { id: 'post_mon', t: 'Instagram post', when: 'man-, ons- og fredag', m: 'Etter firmaets prosedyre/stil',                  tag: '',       tagcls: '' }
+  ],
+  2: [ // Tirsdag
+    { id: 'matkontroll', t: 'Sjekk materialbeholdningen og organiser mer om trengs', when: 'tirsdag', m: 'Papp · pre-kompost · løv · llama · sekker · etiketter', tag: '', tagcls: '' }
+  ],
+  3: [ // Onsdag
+    { id: 'harv_plan', t: 'Planlegg høsting',  when: 'onsdag',                m: 'Bunnlag CFT — sjekk modning >7 dager', tag: 'SOP-06', tagcls: 'sop' },
+    { id: 'post_wed',  t: 'Instagram post',    when: 'man-, ons- og fredag',  m: '',                                     tag: '',       tagcls: '' }
+  ],
+  4: [ // Torsdag
+    { id: 'harv_exec_thu', t: 'Utfør høsting etter plannen lagt tidligere i uken', when: 'tors/fredag', m: '', tag: 'SOP-06', tagcls: 'sop' }
+  ],
+  5: [ // Fredag
+    { id: 'feed',          t: 'Mat markene',                                   when: 'mandag og fredag',     m: '5–10cm pre-kompost, lett vanning, dekk med løv', tag: 'SOP-04', tagcls: 'sop' },
+    { id: 'post_fri',      t: 'Instagram post',                                when: 'man-, ons- og fredag', m: '',                                                 tag: '',       tagcls: '' },
+    { id: 'harv_exec_fri', t: 'Utfør høsting etter plannen lagt tidligere i uken', when: 'tors/fredag',     m: '',                                                 tag: 'SOP-06', tagcls: 'sop' }
+  ]
+};
+
+async function getRoutineDone() {
+  try {
+    const { data, error } = await sb.from('rutine_avhuking')
+      .select('task_id,done').eq('dato', todayKey);
+    if (error) throw error;
+    const map = {};
+    data.forEach(r => { map[r.task_id] = r.done; });
+    localStorage.setItem('verminord_routine_cache', JSON.stringify({ dato: todayKey, map }));
+    return map;
+  } catch (e) {
+    const c = JSON.parse(localStorage.getItem('verminord_routine_cache') || 'null');
+    return (c && c.dato === todayKey) ? c.map : {};
+  }
+}
+async function setRoutineDone(taskId, done) {
+  try {
+    const { error } = await sb.from('rutine_avhuking')
+      .upsert({ dato: todayKey, task_id: taskId, done: done, oppdatert_av: 'Mathias' },
+              { onConflict: 'dato,task_id' });
+    if (error) throw error;
+    return true;
+  } catch (e) { return false; }
+}
+
+async function renderTasks() {
+  const done = await getRoutineDone();
+  const extra = dayTasks[dayIdx] || [];
+  const all = [...extra, ...dailyTasks];
+
+  const list = document.getElementById('taskList');
+  list.innerHTML = all.map(t => `
+    <div class="task ${done[t.id] ? 'done' : ''}" data-id="${t.id}">
+      <div class="task-check">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <div class="task-body">
+        <div class="task-title">${escapeHtml(t.t)}${t.when ? ` <span class="task-when">(${escapeHtml(t.when)})</span>` : ''}</div>
+        ${t.m ? `<div class="task-meta">${escapeHtml(t.m)}</div>` : ''}
+      </div>
+      ${t.tag ? `<div class="task-tag ${t.tagcls}">${escapeHtml(t.tag)}</div>` : ''}
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.task').forEach(el => {
+    el.addEventListener('click', async () => {
+      const id = el.dataset.id;
+      const newDone = !el.classList.contains('done');
+      const ok = await setRoutineDone(id, newDone);
+      if (!ok) { showToast('Ingen nett — prøv igjen'); return; }
+      el.classList.toggle('done', newDone);
+      const total = list.querySelectorAll('.task').length;
+      const completed = list.querySelectorAll('.task.done').length;
+      if (completed === total) showToast('Alle dagens oppgaver fullført');
+    });
+  });
+}
+
+// =========================================================================
+// STREAK & HEATMAP — computed from actual log history
+// =========================================================================
+async function getLogs() {
+  if (_logCache) return _logCache;
+  let rows = [];
+  try {
+    const [w, f] = await Promise.all([
+      sb.from('wedge_observasjoner').select('wedge_id,dato,tid,temperatur_c,ph,fuktighet_pct'),
+      sb.from('forkompost_logg').select('batch_id,dato,tid,temperatur_c,ph,fuktighet_pct')
+    ]);
+    if (w.error) throw w.error;
+    if (f.error) throw f.error;
+    rows = [
+      ...w.data.map(r => normLog(r.wedge_id, r)),
+      ...f.data.map(r => normLog(r.batch_id, r))
+    ];
+  } catch (e) {
+    rows = [];
+  }
+  const pending = queueGet().map(it => normLog(it.payload.wedge_id || it.payload.batch_id, it.payload));
+  const all = [...pending, ...rows].sort((a, b) => b.ts - a.ts);
+  _logCache = all;
+  return all;
+}
+function normLog(bin, r) {
+  const tid = r.tid || '00:00:00';
+  return {
+    date: r.dato,
+    time: tid.slice(0, 5),
+    ts: new Date(`${r.dato}T${tid}`).getTime(),
+    bin: bin,
+    pH: r.ph != null ? Number(r.ph) : null,
+    moist: r.fuktighet_pct != null ? Number(r.fuktighet_pct) : null,
+    temp: r.temperatur_c != null ? Number(r.temperatur_c) : null
+  };
+}
+
+async function calcStreak() {
+  const logs = await getLogs();
+  if (logs.length === 0) return 0;
+  const days = new Set(logs.map(l => l.date));
+  let streak = 0;
+  let d = new Date();
+  while (true) {
+    const k = d.toISOString().slice(0, 10);
+    if (days.has(k)) { streak++; d.setDate(d.getDate() - 1); }
+    else break;
+  }
+  return streak;
+}
+
+async function renderStreak() {
+  const s = await calcStreak();
+  document.getElementById('streakNum').textContent = s;
+  const q = document.getElementById('streakQuote');
+  if (s === 0)       q.textContent = '"Konsistent slår optimalt. Logg i dag for å starte."';
+  else if (s < 5)    q.textContent = '"Hver dag teller. Bygg vanen."';
+  else if (s < 14)   q.textContent = '"Det er ikke perfeksjon — det er sammenheng."';
+  else if (s < 30)   q.textContent = '"Du er ryggraden i driften nå."';
+  else               q.textContent = '"Mester. Ikke bryt kjeden."';
+}
+
+async function renderHeatmap() {
+  const logs = await getLogs();
+  const counts = {};
+  logs.forEach(l => { counts[l.date] = (counts[l.date] || 0) + 1; });
+
+  const hm = document.getElementById('heatmap');
+  const cells = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const k = d.toISOString().slice(0, 10);
+    const c = counts[k] || 0;
+    let fill = '0';
+    if (k === todayKey) fill = c > 0 ? '3' : 'today';
+    else if (c >= 3) fill = '3';
+    else if (c === 2) fill = '2';
+    else if (c === 1) fill = '1';
+    cells.push(`<div class="hm-cell" data-fill="${fill}" title="${d.getDate()}.${d.getMonth() + 1} – ${c} logger"></div>`);
+  }
+  hm.innerHTML = cells.join('');
+
+  const loggedDays = Object.keys(counts).filter(k => {
+    const d = new Date(k);
+    const diff = (today - d) / (1000 * 60 * 60 * 24);
+    return diff <= 30;
+  }).length;
+  document.getElementById('hmStats').textContent = `${loggedDays} logget / 30 dager`;
+}
+
+// =========================================================================
+// QUICK LOG — sliders, descriptive moisture label, save to logs[]
+//   Moisture ideal zone: 60–75% (vermicompost / earthworm best practice)
+// =========================================================================
+function moistLabelFor(pct) {
+  if (pct < 40)  return { txt: 'Tørr · for lite vann',     cls: 'warn'  };
+  if (pct < 60)  return { txt: 'Litt tørr',                cls: 'amber' };
+  if (pct <= 75) return { txt: 'Som svamp · ideelt',       cls: ''      };
+  if (pct < 85)  return { txt: 'Litt vått',                cls: 'amber' };
+  return         { txt: 'Vått · risiko anaerobt',          cls: 'warn'  };
+}
+
+function setupQuickLog() {
+  const phS = document.getElementById('phSlider');
+  const phV = document.getElementById('phVal');
+  phS.addEventListener('input', () => { phV.textContent = (phS.value / 10).toFixed(1); });
+
+  const mS = document.getElementById('moistSlider');
+  const mP = document.getElementById('moistPct');
+  const mL = document.getElementById('moistLabel');
+  function updateMoist() {
+    const v = parseInt(mS.value, 10);
+    mP.textContent = v;
+    const { txt, cls } = moistLabelFor(v);
+    mL.textContent = txt;
+    const valSpan = mP.parentElement;
+    valSpan.classList.remove('warn', 'amber');
+    if (cls) valSpan.classList.add(cls);
+  }
+  mS.addEventListener('input', updateMoist);
+  updateMoist();
+
+  const tS = document.getElementById('tempSlider');
+  const tV = document.getElementById('tempVal');
+  tS.addEventListener('input', () => { tV.textContent = tS.value; });
+
+  // === Backfill date picker ===
+  const bfInput  = document.getElementById('backfillDate');
+  const bfReset  = document.getElementById('backfillResetBtn');
+  const bfHint   = document.getElementById('backfillHint');
+  const bfRow    = bfInput.closest('.backfill-row');
+  const saveBtn  = document.getElementById('saveLogBtn');
+  bfInput.value = todayKey;
+  bfInput.max = todayKey;
+  function updateBackfillUI() {
+    const picked = bfInput.value || todayKey;
+    const isBack = picked !== todayKey;
+    bfRow.classList.toggle('is-backfill', isBack);
+    bfReset.hidden = !isBack;
+    if (isBack) {
+      const d = new Date(picked + 'T00:00:00');
+      const human = d.toLocaleDateString('nb-NO', {weekday:'long', day:'numeric', month:'long', year:'numeric'});
+      bfHint.innerHTML = `<b>Historisk loggføring:</b> målingen lagres med dato ${human}. Sliderne tilbakestilles etter lagring så du kan legge inn flere raskt.`;
+      bfHint.hidden = false;
+      saveBtn.classList.add('historic');
+      saveBtn.querySelector('svg').nextSibling.textContent = ' Lagre historisk';
+    } else {
+      bfHint.hidden = true;
+      saveBtn.classList.remove('historic');
+      saveBtn.querySelector('svg').nextSibling.textContent = ' Lagre logg';
+    }
+  }
+  bfInput.addEventListener('change', updateBackfillUI);
+  bfReset.addEventListener('click', () => { bfInput.value = todayKey; updateBackfillUI(); });
+  updateBackfillUI();
+
+  document.getElementById('saveLogBtn').addEventListener('click', async () => {
+    const now = new Date();
+    const kind = BIN_KIND[currentBin] || 'bed';
+    const pickedDate = bfInput.value || todayKey;
+    const isBackfill = pickedDate !== todayKey;
+    const payload = {
+      dato: pickedDate,
+      tid: isBackfill ? '12:00:00' : now.toTimeString().slice(0, 8),
+      temperatur_c: parseInt(tS.value, 10),
+      ph: parseFloat((phS.value / 10).toFixed(1)),
+      fuktighet_pct: parseInt(mS.value, 10),
+      ansvarlig: 'Mathias'
+    };
+    let table;
+    if (kind === 'precompost') {
+      table = 'forkompost_logg';
+      payload.batch_id = currentBin;
+    } else {
+      table = 'wedge_observasjoner';
+      payload.wedge_id = currentBin;
+      payload.loggtype = 'Observasjon';
+    }
+
+    let offline = false;
+    try {
+      const { error } = await sb.from(table).insert(payload);
+      if (error) throw error;
+    } catch (e) {
+      queueSet([...queueGet(), { table, payload }]);
+      offline = true;
+    }
+    _logCache = null;
+
+    const btn = document.getElementById('saveLogBtn');
+    btn.classList.add('saved');
+    const savedLabel = offline ? 'Lagret offline' : (isBackfill ? 'Lagret historisk' : 'Lagret');
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg> ${savedLabel}`;
+    const dateLabel = isBackfill ? new Date(pickedDate + 'T00:00:00').toLocaleDateString('nb-NO', {day:'numeric', month:'short'}) : null;
+    showToast(offline
+      ? `${currentBin} lagret offline`
+      : (isBackfill ? `${currentBin} · ${dateLabel} lagret` : `${currentBin} logget · streak oppdatert`));
+    setTimeout(() => {
+      btn.classList.remove('saved');
+      // Restore the right label (Lagre historisk vs Lagre logg)
+      updateBackfillUI();
+    }, 1400);
+
+    // In backfill mode: reset sliders to defaults so the next entry is fresh, but keep date+bin.
+    if (isBackfill) {
+      phS.value = 65; phS.dispatchEvent(new Event('input'));
+      mS.value  = 65; mS.dispatchEvent(new Event('input'));
+      tS.value  = (kind === 'precompost') ? 50 : 18; tS.dispatchEvent(new Event('input'));
+    }
+
+    await renderStreak();
+    await renderHeatmap();
+    await renderHistory();
+  });
+}
+
+// =========================================================================
+// WEEK STRIP (on I DAG view) — read-only reference
+// =========================================================================
+function renderWeek() {
+  const week = document.getElementById('weekStrip');
+  const weekData = [
+    { d: 1, tasks: '<b>Mat markene</b> · Instagram-post · Daglig drift' },
+    { d: 2, tasks: '<b>Sjekk materialbeholdningen</b> · Daglig drift' },
+    { d: 3, tasks: '<b>Planlegg høsting</b> · Instagram-post · Daglig drift' },
+    { d: 4, tasks: '<b>Utfør planlagt høsting</b> · Daglig drift' },
+    { d: 5, tasks: '<b>Mat markene</b> · Instagram-post · Evt. høsting' }
+  ];
+  week.innerHTML = weekData.map(d => `
+    <div class="week-day ${d.d === dayIdx ? 'today' : ''}">
+      <div class="week-d-name">${dayNames[d.d]}</div>
+      <div class="week-d-tasks">${d.tasks}</div>
+    </div>
+  `).join('');
+}
+
+// =========================================================================
+// LOG HISTORY
+// =========================================================================
+async function renderHistory() {
+  const logs = await getLogs();
+  const list = document.getElementById('histList');
+  document.getElementById('logCount').textContent = `${logs.length} oppføring${logs.length === 1 ? '' : 'er'}`;
+
+  if (logs.length === 0) {
+    list.innerHTML = '<div class="empty">Ingen logger ennå.<br>Bruk hurtig-loggen for å starte.</div>';
+    return;
+  }
+  list.innerHTML = logs.slice(0, 50).map(l => {
+    const d = new Date(l.ts);
+    const dateStr = `${d.getDate()}.${d.getMonth() + 1} ${l.time}`;
+    const moistTxt = (typeof l.moist === 'number') ? `${l.moist}%` : (l.moistLabel || '–');
+    return `
+      <div class="hist-row">
+        <div class="hist-time">${dateStr}</div>
+        <div class="hist-bin">${escapeHtml(l.bin)}</div>
+        <div class="hist-vals">
+          <span>pH <b>${l.pH ?? '–'}</b></span>
+          <span><b>${l.temp ?? '–'}</b>°C</span>
+          <span>fukt <b>${moistTxt}</b></span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// =========================================================================
+// CUSTOM TASKS (ad-hoc todo on Oppgaver page)
+// =========================================================================
+async function getCustomTasks() {
+  try {
+    const { data, error } = await sb.from('oppgaver')
+      .select('id,tittel,frist,status,fullfort_at,created_at')
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    const tasks = data.map(r => ({
+      id: r.id,
+      title: r.tittel,
+      date: r.frist,
+      done: r.status === 'ferdig',
+      doneAt: r.fullfort_at ? new Date(r.fullfort_at).getTime() : null,
+      createdAt: r.created_at ? new Date(r.created_at).getTime() : 0
+    }));
+    localStorage.setItem('verminord_tasks_cache', JSON.stringify(tasks));
+    return tasks;
+  } catch (e) {
+    return JSON.parse(localStorage.getItem('verminord_tasks_cache') || '[]');
+  }
+}
+async function addTask(title, date) {
+  try {
+    const { error } = await sb.from('oppgaver').insert({
+      tittel: title, frist: date || null, ansvarlig: 'Mathias', status: 'ikke_startet'
+    });
+    if (error) throw error;
+    return true;
+  } catch (e) { return false; }
+}
+async function setTaskDone(id, done) {
+  try {
+    const { error } = await sb.from('oppgaver').update({
+      status: done ? 'ferdig' : 'ikke_startet',
+      fullfort_at: done ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString()
+    }).eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (e) { return false; }
+}
+async function deleteTask(id) {
+  try {
+    const { error } = await sb.from('oppgaver').delete().eq('id', id);
+    if (error) throw error;
+    return true;
+  } catch (e) { return false; }
+}
+
+async function renderCustomTasks() {
+  const all = await getCustomTasks();
+  const open = all.filter(t => !t.done);
+  const done = all.filter(t => t.done);
+  document.getElementById('customTaskCount').textContent = `${open.length} åpne`;
+
+  const wrap = document.getElementById('customListsWrap');
+
+  const todayList = [];
+  const overdueList = [];
+  const upcomingList = [];
+  const anytimeList = [];
+  open.forEach(t => {
+    if (!t.date) { anytimeList.push(t); return; }
+    if (t.date === todayKey) todayList.push(t);
+    else if (t.date < todayKey) overdueList.push(t);
+    else upcomingList.push(t);
+  });
+  upcomingList.sort((a, b) => a.date.localeCompare(b.date));
+  overdueList.sort((a, b) => a.date.localeCompare(b.date));
+
+  function renderGroup(label, items, klass = '') {
+    if (items.length === 0) return '';
+    return `<div class="custom-list">
+      <div class="group-label ${klass}">${label} · ${items.length}</div>
+      ${items.map(t => renderCustomTask(t)).join('')}
+    </div>`;
+  }
+
+  function renderCustomTask(t) {
+    let dateStr = '';
+    if (t.date) {
+      const d = new Date(t.date);
+      const diff = Math.round((d - today) / (1000 * 60 * 60 * 24));
+      let dateLbl = `${d.getDate()}. ${monthsNoLower[d.getMonth()]}`;
+      if (t.date === todayKey) dateLbl = 'I dag';
+      else if (diff === 1) dateLbl = 'I morgen';
+      else if (diff === -1) dateLbl = 'I går';
+      const overdueCls = (!t.done && t.date < todayKey) ? 'overdue' : '';
+      dateStr = `<div class="custom-task-date ${overdueCls}">${dateLbl}${overdueCls ? ' · forfalt' : ''}</div>`;
+    }
+    return `
+      <div class="custom-task ${t.done ? 'done' : ''}" data-id="${t.id}">
+        <div class="task-check">
+          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="custom-task-body">
+          <div class="custom-task-title">${escapeHtml(t.title)}</div>
+          ${dateStr}
+        </div>
+        <button class="custom-task-del" data-action="del" aria-label="Slett">×</button>
+      </div>
+    `;
+  }
+
+  let html = '';
+  if (open.length === 0 && done.length === 0) {
+    html = `<div class="custom-list"><div class="custom-empty">Ingen notater ennå.<br>Legg til en oppe — alt fra "ring ALS" til "kjøp papp".</div></div>`;
+  } else {
+    html += renderGroup('Forfalt', overdueList);
+    html += renderGroup('I dag', todayList, 'today');
+    html += renderGroup('Kommende', upcomingList);
+    html += renderGroup('Uten dato', anytimeList);
+    if (done.length > 0) {
+      html += `<details class="custom-list"><summary class="group-label" style="cursor:pointer;padding:14px 16px;display:block">Fullført · ${done.length}</summary>${done.slice(0, 15).map(t => renderCustomTask(t)).join('')}</details>`;
+    }
+  }
+  wrap.innerHTML = html;
+
+  wrap.querySelectorAll('.custom-task').forEach(el => {
+    const id = el.dataset.id;
+    el.querySelector('.task-check').addEventListener('click', async () => {
+      const newDone = !el.classList.contains('done');
+      const ok = await setTaskDone(id, newDone);
+      if (!ok) { showToast('Ingen nett — prøv igjen'); return; }
+      await renderCustomTasks();
+      if (newDone) showToast('Oppgave fullført');
+    });
+    el.querySelector('[data-action="del"]').addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const ok = await deleteTask(id);
+      if (!ok) { showToast('Ingen nett — prøv igjen'); return; }
+      await renderCustomTasks();
+    });
+  });
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function setupCustomAdd() {
+  const titleInp = document.getElementById('newTaskTitle');
+  const dateInp = document.getElementById('newTaskDate');
+  const btn = document.getElementById('newTaskBtn');
+
+  async function add() {
+    const title = titleInp.value.trim();
+    if (!title) return;
+    const ok = await addTask(title, dateInp.value || null);
+    if (!ok) { showToast('Ingen nett — prøv igjen'); return; }
+    titleInp.value = '';
+    dateInp.value = '';
+    await renderCustomTasks();
+    showToast('Lagt til');
+  }
+
+  btn.addEventListener('click', add);
+  titleInp.addEventListener('keypress', e => { if (e.key === 'Enter') add(); });
+}
+
+// =========================================================================
+// ROUTINE REFERENCE (on Oppgaver page)
+// =========================================================================
+function renderRoutineWeek() {
+  const data = [
+    { d: 1, tasks: ['Mat markene', 'Instagram post', 'Daglig drift (5 oppgaver)'] },
+    { d: 2, tasks: ['Sjekk materialbeholdningen og organiser', 'Daglig drift'] },
+    { d: 3, tasks: ['Planlegg høsting', 'Instagram post', 'Daglig drift'] },
+    { d: 4, tasks: ['Utfør høsting (planlagt fra onsdag)', 'Daglig drift'] },
+    { d: 5, tasks: ['Mat markene', 'Instagram post', 'Utfør høsting (om planlagt)', 'Daglig drift'] }
+  ];
+  document.getElementById('routineWeek').innerHTML = data.map(r => `
+    <div class="routine-day ${r.d === dayIdx ? 'today' : ''}">
+      <div class="routine-day-name">${dayNames[r.d]}</div>
+      <div class="routine-day-tasks">
+        <ul>${r.tasks.map(t => `<li>${escapeHtml(t)}</li>`).join('')}</ul>
+      </div>
+    </div>
+  `).join('');
+}
+
+// =========================================================================
+// INVENTORY DRAG BARS
+//   Each item has a 0–100% slider. Thresholds:
+//     < 25%  → red    (kritisk · bestill nå)
+//     < 60%  → amber  (bestill snart)
+//     ≥ 60%  → green  (nok på lager)
+//   Symbolic state is mirrored to `inv` key for downstream consumers (Martin's tool).
+// =========================================================================
+const invItems = [
+  { k: 'papp',       name: 'Papp',           hint: 'Karbonkilde' },
+  { k: 'prekomp',    name: 'Pre-kompost',    hint: 'Klar for fôring' },
+  { k: 'lov',        name: 'Løvblader',      hint: 'Topp-dekke' },
+  { k: 'llama',      name: 'Llama-gjødsel',  hint: 'Nitrogenkilde' },
+  { k: 'sekker',     name: '5L PP-sekker',   hint: 'Pakkemateriale' },
+  { k: 'etiketter',  name: 'Etiketter',      hint: 'Med QR + Debio' }
+];
+
+function statusForPct(p) {
+  if (p < 25) return 'red';
+  if (p < 60) return 'amber';
+  return 'green';
+}
+function colorForPct(p) {
+  const s = statusForPct(p);
+  return s === 'red' ? '#B33A2B' : s === 'amber' ? '#C9892C' : '#4A7A3F';
+}
+function labelForStatus(s) {
+  return s === 'red'   ? 'KRITISK · BESTILL NÅ'
+       : s === 'amber' ? 'BESTILL SNART'
+       :                 'NOK PÅ LAGER';
+}
+
+async function getInvPct() {
+  try {
+    const { data, error } = await sb.from('lager').select('vare,prosent');
+    if (error) throw error;
+    const pcts = {};
+    data.forEach(r => { pcts[r.vare] = Number(r.prosent); });
+    localStorage.setItem('verminord_inv_cache', JSON.stringify(pcts));
+    return pcts;
+  } catch (e) {
+    const cached = JSON.parse(localStorage.getItem('verminord_inv_cache') || 'null');
+    return cached || invItems.reduce((a, i) => (a[i.k] = 75, a), {});
+  }
+}
+
+async function saveInvPct(key, pct) {
+  try {
+    const { error } = await sb.from('lager')
+      .update({ prosent: pct, oppdatert_av: 'Mathias', oppdatert_at: new Date().toISOString() })
+      .eq('vare', key);
+    if (error) throw error;
+    return true;
+  } catch (e) { return false; }
+}
+
+async function renderInv() {
+  const pcts = await getInvPct();
+  const list = document.getElementById('invList');
+  list.innerHTML = invItems.map(i => {
+    const p = pcts[i.k] ?? 75;
+    const s = statusForPct(p);
+    const color = colorForPct(p);
+    return `
+      <div class="inv-row" data-key="${i.k}">
+        <div class="inv-row-top">
+          <div class="inv-row-name">${i.name}</div>
+          <div class="inv-row-pct ${s}"><span data-val>${p}</span>%</div>
+        </div>
+        <div class="inv-row-hint">${i.hint}</div>
+        <div class="inv-bar-wrap">
+          <input type="range" class="inv-bar" min="0" max="100" step="5" value="${p}"
+                 style="--pct: ${p}%; --fill-color: ${color};">
+        </div>
+        <div class="inv-row-state ${s}" data-state>${labelForStatus(s)}</div>
+      </div>
+    `;
+  }).join('');
+
+  list.querySelectorAll('.inv-row').forEach(row => {
+    const key = row.dataset.key;
+    const bar = row.querySelector('.inv-bar');
+    const valEl = row.querySelector('[data-val]');
+    const pctEl = row.querySelector('.inv-row-pct');
+    const stateEl = row.querySelector('[data-state]');
+
+    bar.addEventListener('input', () => {
+      const p = parseInt(bar.value, 10);
+      const s = statusForPct(p);
+      const color = colorForPct(p);
+      bar.style.setProperty('--pct', p + '%');
+      bar.style.setProperty('--fill-color', color);
+      valEl.textContent = p;
+      pctEl.className = 'inv-row-pct ' + s;
+      stateEl.className = 'inv-row-state ' + s;
+      stateEl.textContent = labelForStatus(s);
+    });
+    bar.addEventListener('change', async () => {
+      const p = parseInt(bar.value, 10);
+      const ok = await saveInvPct(key, p);
+      const itemName = invItems.find(x => x.k === key).name;
+      if (!ok) { showToast('Ingen nett — prøv igjen'); return; }
+      if (p < 25)      showToast(`${itemName} — kritisk, bestill nå`);
+      else if (p < 60) showToast(`${itemName} — bestill snart`);
+    });
+  });
+}
+
+// =========================================================================
+// BOTTOM NAV
+// =========================================================================
+function setupNav() {
+  document.querySelectorAll('.nav-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      const v = b.dataset.nav;
+      document.querySelectorAll('.nav-btn').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+      document.querySelectorAll('.view').forEach(x => x.classList.remove('active'));
+      document.querySelector(`.view[data-view="${v}"]`).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+// =========================================================================
+// TOAST
+// =========================================================================
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  document.getElementById('toastTxt').textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// =========================================================================
+// INIT
+// =========================================================================
+async function initApp() {
+  document.getElementById('loader').hidden = true;
+  document.querySelector('.auth-screen').hidden = true;
+  document.querySelector('.app').hidden = false;
+  const lo = document.getElementById('logoutBtn');
+  if (lo) lo.addEventListener('click', async () => {
+    await sb.auth.signOut();
+    location.reload();
+  });
+  setHeader();
+  await flushQueue();
+  window.addEventListener('online', async () => { await flushQueue(); _logCache = null; });
+  await renderBinGrid();
+  setupBinModal();
+  await renderTasks();
+  await renderStreak();
+  await renderHeatmap();
+  renderWeek();
+  setupQuickLog();
+  await renderHistory();
+  await renderCustomTasks();
+  setupCustomAdd();
+  renderRoutineWeek();
+  await renderInv();
+  setupNav();
+}
+
+function showLoginScreen() {
+  document.getElementById('loader').hidden = true;
+  document.querySelector('.app').hidden = true;
+  document.querySelector('.auth-screen').hidden = false;
+  const form = document.getElementById('authForm');
+  const msg = document.getElementById('authMsg');
+  const btn = form.querySelector('.auth-btn');
+  const pin = document.getElementById('authPin');
+  setTimeout(() => pin.focus(), 50);
+  if (form.dataset.bound === '1') return;
+  form.dataset.bound = '1';
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const entered = (pin.value || '').trim();
+    if (!entered) return;
+    if (entered !== ACCESS_PIN) {
+      msg.textContent = 'Feil PIN. Prøv igjen.';
+      msg.className = 'auth-msg error';
+      msg.hidden = false;
+      pin.value = '';
+      pin.focus();
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = 'Åpner…';
+    msg.hidden = true;
+    const { error } = await sb.auth.signInWithPassword({ email: TEAM_EMAIL, password: TEAM_PASSWORD });
+    if (error) {
+      msg.textContent = 'Kunne ikke åpne: ' + error.message;
+      msg.className = 'auth-msg error';
+      msg.hidden = false;
+      btn.disabled = false;
+      btn.textContent = 'Åpne';
+    }
+    // On success: onAuthStateChange fires SIGNED_IN → gateAuth → initApp
+  });
+}
+
+let _appStarted = false;
+let _loginShown  = false;
+function gateAuth(session) {
+  if (session) {
+    if (_appStarted) return;
+    _appStarted = true; _loginShown = false;
+    initApp();
+  } else {
+    if (_loginShown) return;
+    _loginShown = true; _appStarted = false;
+    showLoginScreen();
+  }
+}
+
+function bootAuth() {
+  // onAuthStateChange fires INITIAL_SESSION on subscribe, so this gates everything.
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') { location.reload(); return; }
+    gateAuth(session);
+  });
+}
+
+document.addEventListener('DOMContentLoaded', bootAuth);
+if (document.readyState !== 'loading') bootAuth();
+
+// Register service worker for PWA install + offline shell
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(err => console.warn('SW register failed:', err));
+  });
+}
+</script>
+
+</body>
+</html>
