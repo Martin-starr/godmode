@@ -903,8 +903,9 @@ export default function KontrollromPage() {
                 if (!latestBySystem[r.system]) latestBySystem[r.system] = r
               })
             }
+            const alias = { "Wedge 1": "W1", "Wedge 2": "W2", "Breeder Bin": "BBIN", "Forkompost 1": "BIN 1", "Forkompost 2": "BIN 2" }
             mock.SYSTEMS = mock.SYSTEMS.map((s) => {
-              const live = latestBySystem[s.name]
+              const live = latestBySystem[s.name] || latestBySystem[alias[s.name]]
               if (!live) return s
               return {
                 ...s,
