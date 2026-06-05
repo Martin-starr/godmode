@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verminord Storskjerm</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0e14;--card:#141a24;--border:#1e2a3a;
+  --text:#e0e6ed;--muted:#6b7d93;--accent:#4fc3f7;
+  --green:#66bb6a;--gold:#ffa726;--red:#ef5350;
+  --teal:#26a69a;
+}
+body{background:var(--bg);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;height:100vh}
+.container{display:flex;flex-direction:column;height:100vh;padding:20px 28px}
+header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-shrink:0}
+.logo{font-size:28px;font-weight:700;letter-spacing:2px;color:var(--accent)}
+.logo span{color:var(--muted);font-weight:400;font-size:16px;margin-left:12px}
+.clock{font-size:22px;color:var(--muted);font-variant-numeric:tabular-nums}
+.kpi-bar{display:flex;gap:12px;margin-bottom:16px;flex-shrink:0}
+.kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 18px;flex:1;text-align:center}
+.kpi .value{font-size:28px;font-weight:700}
+.kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-top:2px}
+.kpi.green .value{color:var(--green)}
+.kpi.gold .value{color:var(--gold)}
+.kpi.red .value{color:var(--red)}
+.kpi.teal .value{color:var(--teal)}
+.kpi.accent .value{color:var(--accent)}
+.grid{display:grid;gap:12px;flex:1;min-height:0}
+.grid.g9{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr)}
+.grid.g8{grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(2,1fr)}
+.grid.g6{grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr)}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;display:flex;flex-direction:column;overflow:hidden;position:relative}
+.card.ok{border-left:4px solid var(--green)}
+.card.watch{border-left:4px solid var(--gold)}
+.card.under{border-left:4px solid var(--red)}
+.card-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.card-name{font-size:17px;font-weight:700}
+.card-status{font-size:11px;font-weight:600;padding:3px 10px;border-radius:12px;text-transform:uppercase;letter-spacing:.5px}
+.card.ok .card-status{background:rgba(102,187,106,.15);color:var(--green)}
+.card.watch .card-status{background:rgba(255,167,38,.15);color:var(--gold)}
+.card.under .card-status{background:rgba(239,83,80,.15);color:var(--red)}
+.card-updated{font-size:11px;color:var(--muted)}
+.metrics{display:flex;gap:16px;margin:8px 0}
+.metric{flex:1}
+.metric .val{font-size:22px;font-weight:700}
+.metric .unit{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.metric.in-range .val{color:var(--green)}
+.metric.out-range .val{color:var(--gold)}
+.chart-area{flex:1;min-height:0;position:relative}
+canvas{width:100%!important;height:100%!important}
+.hygiene{background:rgba(38,166,154,.08);border:1px solid rgba(38,166,154,.2);border-radius:8px;padding:6px 10px;margin-top:4px;font-size:12px;display:flex;justify-content:space-between;align-items:center}
+.hygiene .streak-val{font-weight:700;color:var(--teal)}
+.hygiene.fail{background:rgba(239,83,80,.08);border-color:rgba(239,83,80,.2)}
+.hygiene.fail .streak-val{color:var(--red)}
+.range-tabs{display:flex;gap:6px;margin-bottom:12px;flex-shrink:0}
+.range-tab{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:6px 14px;font-size:12px;color:var(--muted);cursor:pointer;font-weight:600}
+.range-tab.active{background:var(--accent);color:var(--bg);border-color:var(--accent)}
+footer{display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-shrink:0}
+.regulatory{display:flex;gap:12px;flex-wrap:wrap}
+.reg-item{font-size:12px;padding:4px 12px;border-radius:6px}
+.reg-item.green{background:rgba(102,187,106,.12);color:var(--green)}
+.reg-item.bad{background:rgba(239,83,80,.12);color:var(--red)}
+.sync-info{font-size:11px;color:var(--muted)}
+.no-data{color:var(--muted);font-size:14px;text-align:center;padding-top:20px}
+</style>
+</head>
+<body>
+<div class="container" id="app">
+  <div class="no-data" style="margin:auto">Laster data...</div>
+</div>
+<script id="embedded-data" type="application/json">{"RANGES":[{"key":"7D","label":"7 DGR","n":7},{"key":"21D","label":"21 DGR","n":21},{"key":"3M","label":"3 MND","n":90},{"key":"6M","label":"6 MND","n":180},{"key":"YTD","label":"I ÅR","n":154},{"key":"ALL","label":"ALT","n":332}],"SYSTEMS":[{"id":"cft1","name":"CFT1","group":"prod","updated":"03.06 18:26","temp":22,"ph":7.5,"fukt":73,"for":10,"targets":{"temp":[15,25],"fukt":[60,85],"ph":[6.0,8.0]},"tempSeries":{"7D":[21.0,22.0,19.0],"21D":[20.3,20.8,25.0,24.0,16.8,21.0,22.0,19.0],"3M":[14.0,16.0,18.0,18.0,17.0,17.0,17.0,18.0,17.0,19.0,17.0,19.0,18.0,19.0,16.0,22.0,22.0,20.5,18.0,19.4,20.3,20.8,25.0,24.0,16.8,21.0,22.0,19.0],"6M":[19.0,13.0,15.0,15.0,16.0,17.0,19.0,20.0,20.0,20.0,20.0,21.0,20.0,20.0,19.0,20.0,19.0,18.0,13.0,17.0,19.0,16.0,14.0,14.0,16.0,18.0,18.0,17.0,17.0,17.0,18.0,17.0,19.0,17.0,19.0,18.0,19.0,16.0,22.0,22.0,20.5,18.0,19.4,20.3,20.8,25.0,24.0,16.8,21.0,22.0,19.0],"YTD":[19.0,18.0,13.0,17.0,19.0,16.0,14.0,14.0,16.0,18.0,18.0,17.0,17.0,17.0,18.0,17.0,19.0,17.0,19.0,18.0,19.0,16.0,22.0,22.0,20.5,18.0,19.4,20.3,20.8,25.0,24.0,16.8,21.0,22.0,19.0],"ALL":[16.0,16.0,16.0,14.0,16.0,16.0,17.0,19.0,14.0,19.0,13.0,15.0,15.0,16.0,17.0,19.0,20.0,20.0,20.0,20.0,21.0,20.0,20.0,19.0,20.0,19.0,18.0,13.0,17.0,19.0,16.0,14.0,14.0,16.0,18.0,18.0,17.0,17.0,17.0,18.0,17.0,19.0,17.0,19.0,18.0,19.0,16.0,22.0,22.0,20.5,18.0,19.4,20.3,20.8,25.0,24.0,16.8,21.0,22.0,19.0]},"fuktSeries":{"7D":[63.0,75.0,64.0],"21D":[68.0,74.0,74.0,83.0,65.0,63.0,75.0,64.0],"3M":[76.0,77.0,78.0,80.0,70.0,76.0,74.0,75.0,80.0,83.0,77.0,82.0,64.0,75.0,78.0,64.0,60.0,75.0,84.0,60.0,68.0,74.0,74.0,83.0,65.0,63.0,75.0,64.0],"6M":[58.0,62.0,65.0,61.0,64.0,66.0,61.0,65.0,75.0,78.0,81.0,67.0,65.0,62.0,63.0,75.0,62.0,63.0,73.0,76.0,77.0,75.0,75.0,76.0,77.0,78.0,80.0,70.0,76.0,74.0,75.0,80.0,83.0,77.0,82.0,64.0,75.0,78.0,64.0,60.0,75.0,84.0,60.0,68.0,74.0,74.0,83.0,65.0,63.0,75.0,64.0],"YTD":[62.0,63.0,73.0,76.0,77.0,75.0,75.0,76.0,77.0,78.0,80.0,70.0,76.0,74.0,75.0,80.0,83.0,77.0,82.0,64.0,75.0,78.0,64.0,60.0,75.0,84.0,60.0,68.0,74.0,74.0,83.0,65.0,63.0,75.0,64.0],"ALL":[61.0,59.0,58.0,55.0,55.0,56.0,61.0,65.0,55.0,58.0,62.0,65.0,61.0,64.0,66.0,61.0,65.0,75.0,78.0,81.0,67.0,65.0,62.0,63.0,75.0,62.0,63.0,73.0,76.0,77.0,75.0,75.0,76.0,77.0,78.0,80.0,70.0,76.0,74.0,75.0,80.0,83.0,77.0,82.0,64.0,75.0,78.0,64.0,60.0,75.0,84.0,60.0,68.0,74.0,74.0,83.0,65.0,63.0,75.0,64.0]},"phSeries":{"7D":[7.2,7.5,7.5],"21D":[7.5,7.5,7.5,7.3,7.4,7.2,7.5,7.5],"3M":[7.0,6.5,6.0,6.5,7.0,7.5,7.5,7.5,6.5,6.5,6.0,6.0,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.3,7.4,7.2,7.5,7.5],"6M":[6.5,7.0,7.5,6.0,6.5,7.0,7.5,7.5,7.0,7.5,6.5,6.5,7.0,7.5,7.5,6.5,7.0,7.5,7.0,7.0,6.0,7.5,7.5,7.0,6.5,6.0,6.5,7.0,7.5,7.5,7.5,6.5,6.5,6.0,6.0,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.3,7.4,7.2,7.5,7.5],"YTD":[7.0,7.5,7.0,7.0,6.0,7.5,7.5,7.0,6.5,6.0,6.5,7.0,7.5,7.5,7.5,6.5,6.5,6.0,6.0,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.3,7.4,7.2,7.5,7.5],"ALL":[6.5,7.0,7.0,7.5,6.5,7.5,7.0,7.5,7.5,6.5,7.0,7.5,6.0,6.5,7.0,7.5,7.5,7.0,7.5,6.5,6.5,7.0,7.5,7.5,6.5,7.0,7.5,7.0,7.0,6.0,7.5,7.5,7.0,6.5,6.0,6.5,7.0,7.5,7.5,7.5,6.5,6.5,6.0,6.0,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.5,7.3,7.4,7.2,7.5,7.5]},"status":"ok"},{"id":"cft2","name":"CFT2","group":"prod","updated":"03.06 18:22","temp":24,"ph":7.5,"fukt":76,"for":10,"targets":{"temp":[15,25],"fukt":[60,85],"ph":[6.0,8.0]},"tempSeries":{"7D":[22.0,24.0],"21D":[20.4,21.8,28.0,19.0,20.6,22.0,24.0],"3M":[14.0,15.0,15.0,17.0,17.0,16.0,17.0,18.0,18.0,12.0,15.0,18.0,18.0,18.0,17.0,21.0,19.4,26.6,28.0,23.3,20.4,21.8,28.0,19.0,20.6,22.0,24.0],"6M":[13.0,14.0,16.0,16.0,16.0,20.0,20.0,20.0,19.0,20.0,21.0,21.0,20.0,19.0,19.0,19.0,18.0,15.0,15.0,19.0,17.0,15.0,14.0,15.0,15.0,17.0,17.0,16.0,17.0,18.0,18.0,12.0,15.0,18.0,18.0,18.0,17.0,21.0,19.4,26.6,28.0,23.3,20.4,21.8,28.0,19.0,20.6,22.0,24.0],"YTD":[19.0,18.0,15.0,15.0,19.0,17.0,15.0,14.0,15.0,15.0,17.0,17.0,16.0,17.0,18.0,18.0,12.0,15.0,18.0,18.0,18.0,17.0,21.0,19.4,26.6,28.0,23.3,20.4,21.8,28.0,19.0,20.6,22.0,24.0],"ALL":[16.0,17.0,16.0,17.0,16.0,17.0,14.0,13.0,14.0,16.0,16.0,16.0,20.0,20.0,20.0,19.0,20.0,21.0,21.0,20.0,19.0,19.0,19.0,18.0,15.0,15.0,19.0,17.0,15.0,14.0,15.0,15.0,17.0,17.0,16.0,17.0,18.0,18.0,12.0,15.0,18.0,18.0,18.0,17.0,21.0,19.4,26.6,28.0,23.3,20.4,21.8,28.0,19.0,20.6,22.0,24.0]},"fuktSeries":{"7D":[68.0,76.0],"21D":[72.0,74.0,78.0,68.0,60.0,68.0,76.0],"3M":[76.0,76.0,76.0,76.0,74.0,76.0,76.0,76.0,63.0,83.0,72.0,74.0,75.0,74.0,72.0,64.0,80.0,74.0,78.0,70.0,72.0,74.0,78.0,68.0,60.0,68.0,76.0],"6M":[64.0,64.0,62.0,65.0,65.0,62.0,63.0,69.0,75.0,74.0,65.0,64.0,64.0,64.0,62.0,65.0,65.0,75.0,76.0,80.0,75.0,74.0,76.0,76.0,76.0,76.0,74.0,76.0,76.0,76.0,63.0,83.0,72.0,74.0,75.0,74.0,72.0,64.0,80.0,74.0,78.0,70.0,72.0,74.0,78.0,68.0,60.0,68.0,76.0],"YTD":[65.0,65.0,75.0,76.0,80.0,75.0,74.0,76.0,76.0,76.0,76.0,74.0,76.0,76.0,76.0,63.0,83.0,72.0,74.0,75.0,74.0,72.0,64.0,80.0,74.0,78.0,70.0,72.0,74.0,78.0,68.0,60.0,68.0,76.0],"ALL":[64.0,66.0,53.0,55.0,65.0,65.0,50.0,64.0,64.0,62.0,65.0,65.0,62.0,63.0,69.0,75.0,74.0,65.0,64.0,64.0,64.0,62.0,65.0,65.0,75.0,76.0,80.0,75.0,74.0,76.0,76.0,76.0,76.0,74.0,76.0,76.0,76.0,63.0,83.0,72.0,74.0,75.0,74.0,72.0,64.0,80.0,74.0,78.0,70.0,72.0,74.0,78.0,68.0,60.0,68.0,76.0]},"phSeries":{"7D":[7.5,7.5],"21D":[7.2,7.5,7.5,7.3,7.3,7.5,7.5],"3M":[7.0,6.0,6.0,6.0,7.0,7.5,7.5,7.5,7.0,6.5,6.0,6.0,7.5,7.5,7.5,7.0,7.5,7.5,7.5,7.5,7.2,7.5,7.5,7.3,7.3,7.5,7.5],"6M":[7.0,7.0,6.3,6.5,7.5,7.5,8.0,7.5,7.5,7.0,7.0,7.5,7.0,6.5,6.5,7.0,7.5,7.0,6.0,6.2,7.0,7.0,7.0,6.0,6.0,6.0,7.0,7.5,7.5,7.5,7.0,6.5,6.0,6.0,7.5,7.5,7.5,7.0,7.5,7.5,7.5,7.5,7.2,7.5,7.5,7.3,7.3,7.5,7.5],"YTD":[7.0,7.5,7.0,6.0,6.2,7.0,7.0,7.0,6.0,6.0,6.0,7.0,7.5,7.5,7.5,7.0,6.5,6.0,6.0,7.5,7.5,7.5,7.0,7.5,7.5,7.5,7.5,7.2,7.5,7.5,7.3,7.3,7.5,7.5],"ALL":[6.0,6.0,6.5,7.0,7.5,7.5,7.6,7.0,7.0,6.3,6.5,7.5,7.5,8.0,7.5,7.5,7.0,7.0,7.5,7.0,6.5,6.5,7.0,7.5,7.0,6.0,6.2,7.0,7.0,7.0,6.0,6.0,6.0,7.0,7.5,7.5,7.5,7.0,6.5,6.0,6.0,7.5,7.5,7.5,7.0,7.5,7.5,7.5,7.5,7.2,7.5,7.5,7.3,7.3,7.5,7.5]},"status":"ok"},{"id":"cft3","name":"CFT3","group":"prod","updated":"03.06 00:16","temp":22,"ph":7.0,"fukt":75,"for":2,"targets":{"temp":[15,25],"fukt":[60,85],"ph":[6.0,8.0]},"tempSeries":{"7D":[22.0],"21D":[22.0],"3M":[22.0],"6M":[22.0],"YTD":[22.0],"ALL":[22.0]},"fuktSeries":{"7D":[75.0],"21D":[75.0],"3M":[75.0],"6M":[75.0],"YTD":[75.0],"ALL":[75.0]},"phSeries":{"7D":[7.0],"21D":[7.0],"3M":[7.0],"6M":[7.0],"YTD":[7.0],"ALL":[7.0]},"status":"ok"},{"id":"wedge1","name":"Wedge 1","group":"prod","updated":"03.06 18:10","temp":23,"ph":7.5,"fukt":63,"for":0,"targets":{"temp":[15,25],"fukt":[60,85],"ph":[6.0,8.0]},"tempSeries":{"7D":[23.0],"21D":[23.0],"3M":[25.0,23.0],"6M":[25.0,23.0],"YTD":[25.0,23.0],"ALL":[13.0,15.0,15.0,15.0,18.0,19.0,20.0,20.0,20.0,20.0,21.0,20.0,20.0,20.0,19.0,17.0,19.0,20.0,19.0,18.0,18.0,19.0,20.0,19.0,20.0,19.0,20.0,19.0,20.0,20.0,19.0,19.0,20.0,20.0,19.0,14.0,19.0,20.0,20.0,20.0,25.0,23.0]},"fuktSeries":{"7D":[63.0],"21D":[63.0],"3M":[71.0,63.0],"6M":[71.0,63.0],"YTD":[71.0,63.0],"ALL":[62.0,65.0,61.0,64.0,66.0,61.0,65.0,75.0,78.0,81.0,67.0,65.0,59.0,64.0,71.0,65.0,69.0,65.0,60.0,64.0,72.0,57.0,65.0,69.0,61.0,65.0,69.0,75.0,71.0,65.0,66.0,61.0,65.0,70.0,60.0,72.0,52.0,57.0,61.0,60.0,71.0,63.0]},"phSeries":{"7D":[7.5],"21D":[7.5],"3M":[7.5,7.5],"6M":[7.5,7.5],"YTD":[7.5,7.5],"ALL":[7.0,6.5,6.0,6.5,7.0,7.5,7.5,7.0,7.5,6.5,6.5,7.0,7.5,7.0,7.0,8.0,8.0,7.0,6.5,6.0,5.0,6.0,6.0,6.0,6.5,7.0,7.5,7.0,6.3,7.0,6.5,7.0,7.0,6.5,6.3,5.0,6.0,5.5,7.8,7.0,7.5,7.5]},"status":"ok"},{"id":"wedge2","name":"Wedge 2","group":"prod","updated":"03.06 18:12","temp":21,"ph":7.5,"fukt":62,"for":0,"targets":{"temp":[15,25],"fukt":[60,85],"ph":[6.0,8.0]},"tempSeries":{"7D":[21.0],"21D":[21.0],"3M":[21.0],"6M":[21.0],"YTD":[21.0],"ALL":[13.0,14.0,16.0,16.0,16.0,20.0,20.0,19.0,18.0,20.0,21.0,21.0,20.0,19.0,19.0,18.0,19.0,19.0,19.0,19.0,17.0,18.0,19.0,19.0,19.0,19.0,18.0,19.0,19.0,19.0,18.0,18.0,17.0,19.0,19.0,17.0,18.0,19.0,19.0,19.0,14.0,17.0,21.0]},"fuktSeries":{"7D":[62.0],"21D":[62.0],"3M":[62.0],"6M":[62.0],"YTD":[62.0],"ALL":[64.0,64.0,62.0,65.0,65.0,62.0,63.0,69.0,75.0,74.0,65.0,64.0,60.0,62.0,70.0,68.0,61.0,70.0,67.0,62.0,61.0,62.0,62.0,65.0,54.0,61.0,65.0,71.0,69.0,61.0,65.0,54.0,78.0,67.0,62.0,61.0,65.0,71.0,77.0,75.0,86.0,60.0,62.0]},"phSeries":{"7D":[7.5],"21D":[7.5],"3M":[7.5],"6M":[7.5],"YTD":[7.5],"ALL":[7.5,7.0,6.3,6.5,7.5,7.5,8.0,7.5,7.5,7.0,7.0,7.5,7.5,7.5,7.0,7.0,7.5,6.5,6.5,6.0,6.0,6.0,6.0,6.0,6.5,6.5,6.0,6.5,6.0,6.0,7.5,7.5,6.0,6.5,6.0,6.0,8.0,7.5,6.5,7.0,5.0,6.0,7.5]},"status":"ok"},{"id":"breeder","name":"Breeder Bin","group":"prod","updated":"03.06 18:22","temp":23,"ph":7.5,"fukt":73,"for":10,"targets":{"temp":[15,25],"fukt":[60,85],"ph":[6.0,8.0]},"tempSeries":{"7D":[23.0],"21D":[18.0,23.0],"3M":[24.0,18.0,23.0],"6M":[24.0,18.0,23.0],"YTD":[24.0,18.0,23.0],"ALL":[24.0,18.0,23.0]},"fuktSeries":{"7D":[73.0],"21D":[74.0,73.0],"3M":[65.0,74.0,73.0],"6M":[65.0,74.0,73.0],"YTD":[65.0,74.0,73.0],"ALL":[65.0,74.0,73.0]},"phSeries":{"7D":[7.5],"21D":[7.0,7.5],"3M":[7.5,7.0,7.5],"6M":[7.5,7.0,7.5],"YTD":[7.5,7.0,7.5],"ALL":[7.5,7.0,7.5]},"status":"ok"},{"id":"forkompost1","name":"Forkompost 1","group":"precompost","updated":"03.06 00:50","temp":33,"ph":7.5,"fukt":77,"for":0,"targets":{"temp":[55,80],"fukt":[50,70],"ph":[6.0,8.5]},"tempSeries":{"7D":[33.0],"21D":[33.0],"3M":[16.0,31.0,24.0,24.0,19.0,16.0,17.0,17.0,59.0,56.0,17.0,16.0,36.0,28.0,17.0,16.0,13.0,17.0,19.0,9.0,16.0,22.0,26.0,24.0,21.0,25.0,21.0,19.0,16.3,20.0,33.0],"6M":[30.0,30.0,22.0,29.0,45.0,63.0,16.0,31.0,24.0,24.0,19.0,16.0,17.0,17.0,59.0,56.0,17.0,16.0,36.0,28.0,17.0,16.0,13.0,17.0,19.0,9.0,16.0,22.0,26.0,24.0,21.0,25.0,21.0,19.0,16.3,20.0,33.0],"YTD":[30.0,30.0,22.0,29.0,45.0,63.0,16.0,31.0,24.0,24.0,19.0,16.0,17.0,17.0,59.0,56.0,17.0,16.0,36.0,28.0,17.0,16.0,13.0,17.0,19.0,9.0,16.0,22.0,26.0,24.0,21.0,25.0,21.0,19.0,16.3,20.0,33.0],"ALL":[21.0,23.0,21.0,34.0,41.0,56.0,64.0,67.0,61.0,57.0,48.0,41.0,40.0,36.0,34.0,36.0,20.0,30.0,45.0,57.0,67.0,64.0,66.0,54.0,51.0,43.0,38.0,33.0,31.0,24.0,21.0,22.0,21.0,22.0,25.0,26.0,26.0,25.0,25.0,25.0,20.0,33.0,46.0,55.0,56.0,61.0,35.0,49.0,46.0,42.0,29.0,31.0,30.0,30.0,22.0,29.0,45.0,63.0,16.0,31.0,24.0,24.0,19.0,16.0,17.0,17.0,59.0,56.0,17.0,16.0,36.0,28.0,17.0,16.0,13.0,17.0,19.0,9.0,16.0,22.0,26.0,24.0,21.0,25.0,21.0,19.0,16.3,20.0,33.0]},"fuktSeries":{"7D":[77.0],"21D":[77.0],"3M":[73.0,74.0,74.0,79.0,69.0,70.0,81.0,66.0,70.0,75.0,76.0,67.0,77.0,83.0,73.0,71.0,75.0,64.0,75.0,64.0,78.0,64.0,64.0,79.0,61.0,61.0,65.0,74.0,74.0,70.0,77.0],"6M":[55.0,65.0,73.0,65.0,85.0,80.0,73.0,74.0,74.0,79.0,69.0,70.0,81.0,66.0,70.0,75.0,76.0,67.0,77.0,83.0,73.0,71.0,75.0,64.0,75.0,64.0,78.0,64.0,64.0,79.0,61.0,61.0,65.0,74.0,74.0,70.0,77.0],"YTD":[55.0,65.0,73.0,65.0,85.0,80.0,73.0,74.0,74.0,79.0,69.0,70.0,81.0,66.0,70.0,75.0,76.0,67.0,77.0,83.0,73.0,71.0,75.0,64.0,75.0,64.0,78.0,64.0,64.0,79.0,61.0,61.0,65.0,74.0,74.0,70.0,77.0],"ALL":[60.0,65.0,61.0,69.0,75.0,65.0,78.0,71.0,69.0,65.0,55.0,61.0,65.0,68.0,65.0,61.0,59.0,69.0,61.0,71.0,65.0,68.0,78.0,75.0,69.0,61.0,63.0,61.0,63.0,64.0,74.0,68.0,58.0,66.0,60.0,65.0,67.0,71.0,78.0,58.0,59.0,71.0,69.0,66.0,60.0,85.0,64.0,64.0,64.0,71.0,68.0,79.0,55.0,65.0,73.0,65.0,85.0,80.0,73.0,74.0,74.0,79.0,69.0,70.0,81.0,66.0,70.0,75.0,76.0,67.0,77.0,83.0,73.0,71.0,75.0,64.0,75.0,64.0,78.0,64.0,64.0,79.0,61.0,61.0,65.0,74.0,74.0,70.0,77.0]},"phSeries":{"7D":[7.5],"21D":[7.5],"3M":[7.0,6.5,7.4,7.4,7.0,7.0,7.5,7.5,6.5,6.5,6.0,7.6,6.6,7.2,8.0,7.2,6.9,7.5,7.5,7.4,7.5,7.5,7.5,7.5,7.5,7.0,7.5,7.5,7.5,7.0,7.5],"6M":[8.5,8.0,6.0,7.0,6.5,6.5,7.0,6.5,7.4,7.4,7.0,7.0,7.5,7.5,6.5,6.5,6.0,7.6,6.6,7.2,8.0,7.2,6.9,7.5,7.5,7.4,7.5,7.5,7.5,7.5,7.5,7.0,7.5,7.5,7.5,7.0,7.5],"YTD":[8.5,8.0,6.0,7.0,6.5,6.5,7.0,6.5,7.4,7.4,7.0,7.0,7.5,7.5,6.5,6.5,6.0,7.6,6.6,7.2,8.0,7.2,6.9,7.5,7.5,7.4,7.5,7.5,7.5,7.5,7.5,7.0,7.5,7.5,7.5,7.0,7.5],"ALL":[6.8,6.0,6.5,7.5,6.5,6.5,7.0,7.5,6.5,6.0,6.5,7.0,7.5,7.0,7.0,7.8,7.0,6.5,7.5,7.0,6.5,6.0,6.0,7.5,7.5,7.0,6.5,7.5,7.0,7.5,6.0,6.6,7.5,7.0,7.0,6.5,7.0,6.5,8.0,7.0,7.5,6.5,6.0,6.0,6.0,6.0,6.0,6.0,6.0,6.5,5.8,5.5,8.5,8.0,6.0,7.0,6.5,6.5,7.0,6.5,7.4,7.4,7.0,7.0,7.5,7.5,6.5,6.5,6.0,7.6,6.6,7.2,8.0,7.2,6.9,7.5,7.5,7.4,7.5,7.5,7.5,7.5,7.5,7.0,7.5,7.5,7.5,7.0,7.5]},"threshold":55,"required":5,"dailyLow":[33.0],"streak":0,"status":"under"},{"id":"forkompost2","name":"Forkompost 2","group":"precompost","updated":"—","temp":null,"ph":null,"fukt":null,"for":0,"targets":{"temp":[55,80],"fukt":[50,70],"ph":[6.0,8.5]},"tempSeries":{"7D":[],"21D":[],"3M":[19.0,17.0,17.0,34.0,38.0,40.0,46.0,17.0,43.0,19.0,13.0,18.0,8.0,17.0,8.0,18.0,18.0,8.0,17.0,24.0,25.0,25.0,25.0,24.0,18.0,18.0,17.3,22.0],"6M":[25.6,31.0,19.0,17.0,17.0,34.0,38.0,40.0,46.0,17.0,43.0,19.0,13.0,18.0,8.0,17.0,8.0,18.0,18.0,8.0,17.0,24.0,25.0,25.0,25.0,24.0,18.0,18.0,17.3,22.0],"YTD":[25.6,31.0,19.0,17.0,17.0,34.0,38.0,40.0,46.0,17.0,43.0,19.0,13.0,18.0,8.0,17.0,8.0,18.0,18.0,8.0,17.0,24.0,25.0,25.0,25.0,24.0,18.0,18.0,17.3,22.0],"ALL":[26.0,35.0,39.0,54.0,60.0,62.0,65.0,61.0,65.0,53.0,47.0,35.0,31.0,29.0,24.0,22.0,23.0,23.0,24.0,22.0,26.0,25.0,27.0,25.0,24.0,36.0,38.0,52.0,54.0,64.0,65.0,35.0,55.0,49.0,49.0,39.0,38.0,38.0,29.0,25.6,31.0,19.0,17.0,17.0,34.0,38.0,40.0,46.0,17.0,43.0,19.0,13.0,18.0,8.0,17.0,8.0,18.0,18.0,8.0,17.0,24.0,25.0,25.0,25.0,24.0,18.0,18.0,17.3,22.0]},"fuktSeries":{"7D":[],"21D":[],"3M":[72.0,68.0,70.0,80.0,69.0,75.0,76.0,68.0,76.0,75.0,82.0,80.0,82.0,62.0,74.0,56.0,75.0,74.0,62.0,72.0,66.0,74.0,74.0,68.0,65.0,78.0,64.0,70.0,74.0],"6M":[60.0,61.0,72.0,68.0,70.0,80.0,69.0,75.0,76.0,68.0,76.0,75.0,82.0,80.0,82.0,62.0,74.0,56.0,75.0,74.0,62.0,72.0,66.0,74.0,74.0,68.0,65.0,78.0,64.0,70.0,74.0],"YTD":[60.0,61.0,72.0,68.0,70.0,80.0,69.0,75.0,76.0,68.0,76.0,75.0,82.0,80.0,82.0,62.0,74.0,56.0,75.0,74.0,62.0,72.0,66.0,74.0,74.0,68.0,65.0,78.0,64.0,70.0,74.0],"ALL":[71.0,65.0,75.0,69.0,72.0,71.0,72.0,65.0,71.0,72.0,67.0,60.0,64.0,65.0,63.0,64.0,64.0,63.0,63.0,63.0,71.0,76.0,74.0,77.0,65.0,69.0,75.0,62.0,67.0,69.0,81.0,86.0,86.0,85.0,75.0,67.0,65.0,61.0,62.0,60.0,61.0,72.0,68.0,70.0,80.0,69.0,75.0,76.0,68.0,76.0,75.0,82.0,80.0,82.0,62.0,74.0,56.0,75.0,74.0,62.0,72.0,66.0,74.0,74.0,68.0,65.0,78.0,64.0,70.0,74.0]},"phSeries":{"7D":[],"21D":[],"3M":[8.0,6.0,7.5,6.5,6.5,7.1,6.8,6.5,7.0,5.5,7.0,7.5,7.0,7.5,7.2,7.0,7.5,7.5,7.3,7.5,7.2,7.0,7.5,7.0,7.5,7.3,7.5,7.5,7.0],"6M":[9.0,6.5,8.0,6.0,7.5,6.5,6.5,7.1,6.8,6.5,7.0,5.5,7.0,7.5,7.0,7.5,7.2,7.0,7.5,7.5,7.3,7.5,7.2,7.0,7.5,7.0,7.5,7.3,7.5,7.5,7.0],"YTD":[9.0,6.5,8.0,6.0,7.5,6.5,6.5,7.1,6.8,6.5,7.0,5.5,7.0,7.5,7.0,7.5,7.2,7.0,7.5,7.5,7.3,7.5,7.2,7.0,7.5,7.0,7.5,7.3,7.5,7.5,7.0],"ALL":[6.0,7.0,7.5,6.8,6.5,5.5,5.5,7.0,7.0,6.8,7.0,6.5,7.0,7.5,7.5,6.5,6.0,7.0,7.0,7.0,6.0,6.5,6.5,7.5,6.5,6.5,6.3,5.5,5.5,6.0,6.5,6.5,6.0,5.5,6.0,6.0,6.0,6.5,6.0,9.0,6.5,8.0,6.0,7.5,6.5,6.5,7.1,6.8,6.5,7.0,5.5,7.0,7.5,7.0,7.5,7.2,7.0,7.5,7.5,7.3,7.5,7.2,7.0,7.5,7.0,7.5,7.3,7.5,7.5,7.0]},"threshold":55,"required":5,"dailyLow":[],"streak":0,"status":"watch"},{"id":"forkompost3","name":"Forkompost 3","group":"precompost","updated":"—","temp":null,"ph":null,"fukt":null,"for":0,"targets":{"temp":[55,80],"fukt":[50,70],"ph":[6.0,8.5]},"tempSeries":{"7D":[],"21D":[],"3M":[],"6M":[],"YTD":[],"ALL":[]},"fuktSeries":{"7D":[],"21D":[],"3M":[],"6M":[],"YTD":[],"ALL":[]},"phSeries":{"7D":[],"21D":[],"3M":[],"6M":[],"YTD":[],"ALL":[]},"threshold":55,"required":5,"dailyLow":[],"streak":0,"status":"watch"}],"KPIS":{"avvik":1,"hygienisering":{"met":0,"total":3},"aktive":7,"populasjon":15936,"hosting":67,"oppgaver":9,"omsetning":47200,"omsetningMaal":100000,"omsetningDager":9},"REMINDERS":[{"id":1,"tag":"AKUTT","tone":"gold","title":"Forkompost 1 under 55 °C","meta":"Siste: 33 °C — streak nullstilt","sub":"Sjekk isolasjon og vending"}],"PROJECTS":[{"id":1,"name":"Utvidet CFT-kapasitet","status":"I gang","progress":60,"value":"↑ 40 % kapasitet","due":"4 dgr","tone":"gold"},{"id":2,"name":"Klasse I-sertifisering","status":"Bestått","progress":100,"value":"ALS-rapport klar","due":"—","tone":"green"}],"REGULATORY":[{"id":1,"label":"§19 Hygienisering — Forkompost 1","state":"Avvik","tone":"bad","detail":"Streak 0/5 dager over 55 °C"},{"id":2,"label":"§19 Hygienisering — Forkompost 2","state":"Ingen data","tone":"muted","detail":"Ingen logg ennå"},{"id":3,"label":"§19 Hygienisering — Forkompost 3","state":"Ingen data","tone":"muted","detail":"Ingen logg ennå"}],"WEEK":{"number":23,"title":"Ukens fokus","goal":"Rette opp Forkompost 1, forberede neste batch","tasks":[{"t":"Vend FK1, sjekk isolasjon","who":"Habiba","tone":"gold"},{"t":"Logg alle systemer daglig","who":"Martin","tone":"teal"},{"t":"Oppdater foto-indeks","who":"Martin","tone":"muted"}],"metric":{"label":"Omsetning mot 100 000-mål","value":47200,"target":100000}},"MILESTONES":[{"title":"15 936 i populasjon","detail":"Ny rekord for anlegget","tone":"green","icon":"▲"},{"title":"Klasse I oppnådd","detail":"ALS Lab NO2604972","tone":"green","icon":"✓"}],"MOTIVATION":[{"tag":"UKENS MÅL","text":"350 / 500 poser solgt · 16 dager igjen — stå på!"}],"fmt":{}}</script>
+<script src="mock-data.js"></script>
+<script>
+(function(){
+try { var _e = document.getElementById('embedded-data'); if(_e) window.VN = JSON.parse(_e.textContent); } catch(e){}
+var VN = window.VN || null;
+var activeRange = '7D';
+function $(sel, el){ return (el||document).querySelector(sel) }
+function $$(sel, el){ return Array.from((el||document).querySelectorAll(sel)) }
+function loadData(){
+  var urls = ['data.json?t='+Date.now(),'https://raw.githubusercontent.com/Martin-starr/verminord-interactive/master/data.json'];
+  tryFetch(urls, 0);
+}
+function tryFetch(urls, i){
+  if(i >= urls.length){ if(VN) render(); else $('#app').innerHTML = '<div class="no-data" style="margin:auto">Kunne ikke laste data.</div>'; return; }
+  fetch(urls[i]).then(function(r){ if(!r.ok) throw r; return r.json() }).then(function(d){ if(d && d.SYSTEMS && d.SYSTEMS.length){ VN = d; window.VN = d; render(); } else { tryFetch(urls, i+1); } }).catch(function(){ tryFetch(urls, i+1); });
+}
+function inRange(val, targets){ if(val===null||val===undefined||!targets) return true; return val >= targets[0] && val <= targets[1]; }
+function fmt(v, unit){ if(v===null||v===undefined) return '<span style="color:var(--muted)">—</span>'; return v + (unit||''); }
+function statusLabel(s){ if(s==='ok') return 'OK'; if(s==='watch') return 'Avvik'; if(s==='under') return 'Under'; return s; }
+function sparkline(canvas, data, color){
+  if(!canvas||!data||!data.length) return;
+  var ctx = canvas.getContext('2d');
+  var w = canvas.width = canvas.offsetWidth * 2;
+  var h = canvas.height = canvas.offsetHeight * 2;
+  ctx.clearRect(0,0,w,h);
+  var min = Math.min.apply(null,data); var max = Math.max.apply(null,data); var range = max-min || 1; var pad = 4;
+  ctx.beginPath(); ctx.strokeStyle = color || 'rgba(79,195,247,.7)'; ctx.lineWidth = 2; ctx.lineJoin = 'round';
+  for(var i=0;i<data.length;i++){ var x = pad + (i/(data.length-1||1)) * (w-pad*2); var y = h-pad - ((data[i]-min)/range) * (h-pad*2); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); }
+  ctx.stroke();
+  ctx.lineTo(w-pad, h-pad); ctx.lineTo(pad, h-pad); ctx.closePath();
+  var _c = color||'rgba(79,195,247,.7)'; ctx.fillStyle = _c.replace(/[\d.]+\)$/,'.08)'); ctx.fill();
+}
+function render(){
+  if(!VN) return;
+  var c = $('#app'); var S = VN.SYSTEMS; var K = VN.KPIS || {};
+  var total = S.length; var okCount = S.filter(function(s){return s.status==='ok'}).length;
+  var health = total ? Math.round(100*okCount/total) : 0;
+  var healthClass = health>=80?'green':health>=50?'gold':'red';
+  var hyg = K.hygienisering||{met:0,total:0};
+  var gridClass = total<=6?'g6':total<=8?'g8':'g9';
+  var html = '';
+  html += '<header><div class="logo">VERMINORD<span>Storskjerm</span></div><div class="clock" id="clock"></div></header>';
+  html += '<div class="kpi-bar">';
+  html += '<div class="kpi '+healthClass+'"><div class="value">'+health+'%</div><div class="label">Anleggshelse ('+okCount+'/'+total+')</div></div>';
+  html += '<div class="kpi '+(K.avvik?'red':'green')+'"><div class="value">'+K.avvik+'</div><div class="label">Avvik</div></div>';
+  html += '<div class="kpi teal"><div class="value">'+hyg.met+'/'+hyg.total+'</div><div class="label">Hygienisering</div></div>';
+  html += '<div class="kpi accent"><div class="value">'+K.aktive+'</div><div class="label">Aktive systemer</div></div>';
+  html += '</div>';
+  html += '<div class="range-tabs">'; (VN.RANGES||[]).forEach(function(r){ html += '<div class="range-tab'+(r.key===activeRange?' active':'')+'" data-range="'+r.key+'">'+r.label+'</div>'; }); html += '</div>';
+  html += '<div class="grid '+gridClass+'">';
+  S.forEach(function(s){
+    var st = s.status||'watch'; var tgt = s.targets||{};
+    var tempOk = inRange(s.temp, tgt.temp); var fuktOk = inRange(s.fukt, tgt.fukt); var phOk = inRange(s.ph, tgt.ph);
+    html += '<div class="card '+st+'">';
+    html += '<div class="card-head"><span class="card-name">'+s.name+'</span><span class="card-status">'+statusLabel(st)+'</span></div>';
+    html += '<div class="card-updated">Oppdatert: '+(s.updated||'—')+'</div>';
+    html += '<div class="metrics">';
+    html += '<div class="metric '+(tempOk?'in-range':'out-range')+'"><div class="val">'+fmt(s.temp,'°')+'</div><div class="unit">Temp</div></div>';
+    html += '<div class="metric '+(phOk?'in-range':'out-range')+'"><div class="val">'+fmt(s.ph)+'</div><div class="unit">pH</div></div>';
+    html += '<div class="metric '+(fuktOk?'in-range':'out-range')+'"><div class="val">'+fmt(s.fukt,'%')+'</div><div class="unit">Fukt</div></div>';
+    html += '</div>';
+    if(s.group==='precompost' && s.streak!==undefined){ var ok = s.streak >= (s.required||5); html += '<div class="hygiene '+(ok?'':'fail')+'"><span>§19 Streak</span><span class="streak-val">'+s.streak+'/'+(s.required||5)+' dgr</span></div>'; }
+    html += '<div class="chart-area"><canvas data-sys="'+s.id+'"></canvas></div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '<footer><div class="regulatory">'; (VN.REGULATORY||[]).forEach(function(r){ html += '<div class="reg-item '+(r.tone||'')+'">'+r.label+': '+r.state+'</div>'; }); html += '</div><div class="sync-info">Auto-refresh 5 min</div></footer>';
+  c.innerHTML = html;
+  S.forEach(function(s){ var canvas = $('canvas[data-sys="'+s.id+'"]'); var series = (s.tempSeries||{})[activeRange]||[]; if(series.length) sparkline(canvas, series, 'rgba(79,195,247,.7)'); });
+  $$('.range-tab').forEach(function(tab){ tab.addEventListener('click', function(){ activeRange = this.getAttribute('data-range'); render(); }); });
+}
+function updateClock(){ var now = new Date(); var h = ('0'+now.getHours()).slice(-2); var m = ('0'+now.getMinutes()).slice(-2); var s = ('0'+now.getSeconds()).slice(-2); var el = document.getElementById('clock'); if(el) el.textContent = h+':'+m+':'+s+'  uke '+getWeek(now); }
+function getWeek(d){ var t = new Date(d.getFullYear(),0,1); return Math.ceil(((d-t)/86400000+t.getDay()+1)/7); }
+if(VN) render();
+updateClock();
+setTimeout(loadData, 3000);
+setInterval(loadData, 5*60*1000);
+setInterval(updateClock, 1000);
+})();
+</script>
+</body>
+</html>
