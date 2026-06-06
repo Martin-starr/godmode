@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ESE Solution — Sales One-Pager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0b1220; --ink-2:#111a2e; --paper:#f4f6f8;
+    --accent:#ff5b1f; --accent-2:#ff8a5b; --steel:#2563eb;
+    --line:rgba(255,255,255,.1); --muted:rgba(255,255,255,.62);
+    --yellow:#ffd23f; --ok:#10b981;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:#3a4a5a;font-family:'Inter',sans-serif;-webkit-font-smoothing:antialiased;color:#fff;}
+  h1,h2,h3,h4{font-family:'Space Grotesk','Inter',sans-serif;letter-spacing:-.02em;}
+
+  /* Each page = A4 landscape */
+  .page{
+    width:297mm;height:210mm;
+    margin:18px auto;
+    position:relative;overflow:hidden;
+    background:var(--ink);
+    box-shadow:0 24px 64px rgba(0,0,0,.4);
+    page-break-after:always;
+  }
+  .page:last-child{page-break-after:auto;}
+
+  /* ── Shared decorative grid ── */
+  .grid-bg{
+    position:absolute;inset:0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+    background-size:48px 48px;pointer-events:none;
+  }
+  .glow{position:absolute;border-radius:50%;filter:blur(90px);pointer-events:none;}
+
+  .brand-row{display:flex;align-items:center;gap:12px;}
+  .brand-mark{width:42px;height:42px;background:#fff;border-radius:10px;display:grid;place-items:center;}
+  .brand-mark svg{width:24px;height:24px;color:var(--ink);}
+  .brand-name{font-family:'Space Grotesk';font-weight:700;font-size:20px;line-height:1;}
+  .brand-sub{font-size:11px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-top:3px;}
+
+  .pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,91,31,.14);
+    border:1px solid rgba(255,91,31,.35);color:var(--accent-2);
+    font-family:'Space Grotesk';font-weight:600;font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase;padding:7px 15px;border-radius:999px;}
+
+  .foot{position:absolute;bottom:26px;left:48px;right:48px;display:flex;justify-content:space-between;
+    align-items:center;font-size:11px;color:rgba(255,255,255,.4);letter-spacing:.06em;}
+  .foot .url{color:var(--accent-2);}
+
+  /* ════ PAGE 1 — COVER ════ */
+  .cover{padding:60px 64px;display:flex;flex-direction:column;}
+  .cover .glow-1{width:520px;height:520px;background:rgba(255,91,31,.30);top:-160px;right:-120px;}
+  .cover .glow-2{width:440px;height:440px;background:rgba(37,99,235,.28);bottom:-180px;left:-100px;}
+
+  .cover-mid{flex:1;display:flex;flex-direction:column;justify-content:center;max-width:760px;position:relative;z-index:2;}
+  .cover h1{font-size:62px;font-weight:700;line-height:1.04;margin:26px 0 22px;}
+  .cover h1 .hl{background:linear-gradient(135deg,var(--accent),var(--accent-2));-webkit-background-clip:text;background-clip:text;color:transparent;}
+  .cover .sub{font-size:19px;color:var(--muted);max-width:620px;line-height:1.55;}
+
+  .cover-tags{display:flex;gap:10px;margin-top:34px;flex-wrap:wrap;}
+  .tag{background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;
+    padding:9px 16px;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;}
+  .tag svg{width:15px;height:15px;color:var(--accent-2);}
+
+  /* floating media specks on cover */
+  .specks{position:absolute;inset:0;z-index:1;pointer-events:none;}
+  .speck{position:absolute;border-radius:50%;background:var(--accent);opacity:.5;}
+
+  /* ════ PAGE 2 — DIFFERENTIATORS ════ */
+  .diff{padding:50px 56px;display:flex;flex-direction:column;}
+  .diff .glow-1{width:480px;height:480px;background:rgba(255,91,31,.18);top:-200px;left:40%;}
+  .diff-head{position:relative;z-index:2;margin-bottom:24px;}
+  .diff h2{font-size:34px;font-weight:700;margin-top:14px;line-height:1.1;}
+  .diff h2 .it{font-style:italic;font-weight:500;color:var(--accent-2);}
+
+  .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;position:relative;z-index:2;flex:1;align-content:start;}
+  .card{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:16px;
+    padding:24px 22px;display:flex;flex-direction:column;}
+  .card-ico{width:50px;height:50px;border-radius:13px;display:grid;place-items:center;margin-bottom:16px;
+    background:linear-gradient(135deg,var(--accent),var(--accent-2));}
+  .card:nth-child(2) .card-ico{background:linear-gradient(135deg,var(--steel),#60a5fa);}
+  .card:nth-child(3) .card-ico{background:linear-gradient(135deg,var(--ok),#34d399);}
+  .card-ico svg{width:24px;height:24px;color:#fff;}
+  .card h3{font-size:17px;margin-bottom:4px;}
+  .card .tagline{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent-2);margin-bottom:14px;font-weight:600;}
+  .card ul{list-style:none;display:flex;flex-direction:column;gap:9px;margin-bottom:14px;}
+  .card li{font-size:12.5px;color:rgba(255,255,255,.82);line-height:1.4;display:flex;gap:9px;align-items:flex-start;}
+  .card li svg{width:14px;height:14px;color:var(--ok);flex-shrink:0;margin-top:2px;}
+  .impact{margin-top:auto;background:rgba(255,210,63,.08);border:1px solid rgba(255,210,63,.25);
+    border-radius:10px;padding:12px 14px;}
+  .impact .lbl{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--yellow);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
+  .impact .lbl svg{width:12px;height:12px;}
+  .impact p{font-size:11.5px;color:rgba(255,255,255,.78);line-height:1.45;}
+
+  /* ════ PAGE 3 — VALUE / CLOSE ════ */
+  .close{padding:54px 60px;display:flex;flex-direction:column;}
+  .close .glow-1{width:500px;height:500px;background:rgba(37,99,235,.22);top:-180px;right:-120px;}
+  .close .glow-2{width:420px;height:420px;background:rgba(255,91,31,.20);bottom:-160px;left:-80px;}
+  .close-head{position:relative;z-index:2;}
+  .close h2{font-size:34px;font-weight:700;margin-top:14px;line-height:1.1;}
+  .close h2 .it{font-style:italic;font-weight:500;color:var(--accent-2);}
+
+  .value-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:26px 0;position:relative;z-index:2;}
+  .vrow{background:rgba(255,255,255,.045);border:1px solid var(--line);border-radius:13px;
+    padding:18px 20px;display:flex;gap:15px;align-items:center;}
+  .vrow .vico{width:44px;height:44px;border-radius:11px;background:rgba(255,91,31,.14);
+    border:1px solid rgba(255,91,31,.3);display:grid;place-items:center;flex-shrink:0;}
+  .vrow .vico svg{width:21px;height:21px;color:var(--accent-2);}
+  .vrow h4{font-size:15px;margin-bottom:2px;}
+  .vrow p{font-size:12px;color:var(--muted);line-height:1.4;}
+
+  .position{position:relative;z-index:2;background:linear-gradient(135deg,var(--accent),var(--accent-2));
+    border-radius:16px;padding:26px 32px;margin-top:4px;display:flex;align-items:center;gap:22px;}
+  .position .qmark{font-family:'Space Grotesk';font-size:70px;font-weight:700;line-height:.7;color:rgba(255,255,255,.4);}
+  .position p{font-family:'Space Grotesk';font-size:19px;font-weight:600;line-height:1.35;color:#fff;}
+
+  .contact-strip{position:relative;z-index:2;display:flex;justify-content:space-between;align-items:center;
+    margin-top:22px;padding-top:20px;border-top:1px solid var(--line);}
+  .contact-strip .c-item{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--muted);}
+  .contact-strip .c-item svg{width:15px;height:15px;color:var(--accent-2);}
+
+  /* print */
+  @media print{
+    body{background:#fff;}
+    .page{margin:0;box-shadow:none;}
+    @page{size:A4 landscape;margin:0;}
+  }
+  /* screen helper banner */
+  .screen-note{max-width:297mm;margin:20px auto 0;padding:14px 20px;background:rgba(255,255,255,.08);
+    border:1px solid rgba(255,255,255,.16);border-radius:10px;font-size:13px;color:#dfe6ee;text-align:center;}
+  .screen-note b{color:#fff;}
+  @media print{.screen-note{display:none;}}
+</style>
+</head>
+<body>
+
+<div class="screen-note">
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;vertical-align:-2px;margin-right:5px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg><b>3-page sales one-pager.</b> To save as PDF: press <b>Ctrl/Cmd&nbsp;+&nbsp;P</b> → Destination <b>Save as PDF</b> → Layout <b>Landscape</b> → Margins <b>None</b> → Background graphics <b>ON</b>.
+</div>
+
+<!-- ══════════ PAGE 1 — COVER ══════════ -->
+<section class="page cover">
+  <div class="grid-bg"></div>
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+  <div class="specks" id="specks"></div>
+
+  <div class="brand-row" style="position:relative;z-index:2;">
+    <div class="brand-mark">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h6M9 13h6M9 17h6"/></svg>
+    </div>
+    <div>
+      <div class="brand-name">ESE Solution</div>
+      <div class="brand-sub">Sponge Blasting Systems</div>
+    </div>
+  </div>
+
+  <div class="cover-mid">
+    <span class="pill">Clean · Dry · Low-Dust · Reusable</span>
+    <h1>Eliminating variability<br/>in <span class="hl">sponge blasting</span> operations</h1>
+    <p class="sub">Stable, reusable sponge media engineered for predictable surface preparation — consistent performance, lower cost per m², and reliable execution in the most demanding offshore and industrial environments.</p>
+
+    <div class="cover-tags">
+      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>No clumping — ready from the bag</span>
+      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>Up to 10× reuse, ~5% loss</span>
+      <span class="tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Consistent Sa3 / SP5</span>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>ESE Solution — Key Value Proposition</span>
+    <span class="url">esesolutions.no</span>
+  </div>
+</section>
+
+<!-- ══════════ PAGE 2 — DIFFERENTIATORS ══════════ -->
+<section class="page diff">
+  <div class="grid-bg"></div>
+  <div class="glow glow-1"></div>
+
+  <div class="diff-head">
+    <span class="pill">Where ESE Differentiates vs Competitors</span>
+    <h2>Three advantages competitors <span class="it">can't match</span></h2>
+  </div>
+
+  <div class="cards">
+    <!-- Card 1 -->
+    <div class="card">
+      <div class="card-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>
+      </div>
+      <h3>Media Stability</h3>
+      <div class="tagline">Critical operational advantage</div>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>No clumping during storage and transport</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Free-flowing media in real site conditions</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Ready-to-use from the bag — no conditioning</li>
+      </ul>
+      <div class="impact">
+        <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Impact</div>
+        <p>Eliminates start-up delays, prevents feed interruptions, enables continuous operations.</p>
+      </div>
+    </div>
+
+    <!-- Card 2 -->
+    <div class="card">
+      <div class="card-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+      </div>
+      <h3>Reusability &amp; Efficiency</h3>
+      <div class="tagline">Lower cost per m²</div>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Reusable up to 10 times</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Low material loss per cycle (~5%)</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Stable media quality across reuse cycles</li>
+      </ul>
+      <div class="impact">
+        <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Impact</div>
+        <p>Lower total media consumption, reduced logistics &amp; disposal cost, predictable budgeting.</p>
+      </div>
+    </div>
+
+    <!-- Card 3 -->
+    <div class="card">
+      <div class="card-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <h3>Consistent Performance</h3>
+      <div class="tagline">Specification you can trust</div>
+      <ul>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Maintains Sa3 / SP5 cleanliness across cycles</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Consistent surface profile through reuse</li>
+        <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Stable blasting characteristics over time</li>
+      </ul>
+      <div class="impact">
+        <div class="lbl"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>Impact</div>
+        <p>Reliable coating performance, reduced rework and inspection risk, multi-cycle confidence.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Operational Reliability — stable media means a stable process</span>
+    <span class="url">esesolutions.no</span>
+  </div>
+</section>
+
+<!-- ══════════ PAGE 3 — VALUE & CLOSE ══════════ -->
+<section class="page close">
+  <div class="grid-bg"></div>
+  <div class="glow glow-1"></div>
+  <div class="glow glow-2"></div>
+
+  <div class="close-head">
+    <span class="pill">Business Value — Why ESE</span>
+    <h2>The bottom line for <span class="it">decision-makers</span></h2>
+  </div>
+
+  <div class="value-grid">
+    <div class="vrow">
+      <div class="vico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+      <div><h4>Lower total cost</h4><p>Reduced consumable, logistics and disposal cost per project.</p></div>
+    </div>
+    <div class="vrow">
+      <div class="vico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+      <div><h4>Better planning</h4><p>Predictable consumption improves scheduling and execution reliability.</p></div>
+    </div>
+    <div class="vrow">
+      <div class="vico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+      <div><h4>Reduced risk</h4><p>Stable flow lowers downtime risk offshore and in live-plant operations.</p></div>
+    </div>
+    <div class="vrow">
+      <div class="vico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+      <div><h4>Consistent results</h4><p>Repeatable surface quality across projects and environments.</p></div>
+    </div>
+  </div>
+
+  <div class="position">
+    <span class="qmark">&ldquo;</span>
+    <p>ESE delivers stable, reusable sponge media with consistent results — eliminating variability and ensuring predictable, cost-efficient surface preparation.</p>
+  </div>
+
+  <div class="contact-strip">
+    <span class="c-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Mathias Folkestad · Sales &amp; Service Manager</span>
+    <span class="c-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>+47 413 51 030</span>
+    <span class="c-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>post@esesolutions.no</span>
+    <span class="c-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Stavanger</span>
+  </div>
+</section>
+
+<script>
+  // scatter media specks on cover
+  const s = document.getElementById('specks');
+  for(let i=0;i<26;i++){
+    const d=document.createElement('span');
+    d.className='speck';
+    const sz=2+Math.random()*5;
+    d.style.width=d.style.height=sz+'px';
+    d.style.left=Math.random()*100+'%';
+    d.style.top=Math.random()*100+'%';
+    d.style.opacity=(0.15+Math.random()*0.4).toFixed(2);
+    d.style.background = Math.random()>0.5 ? '#ff5b1f' : '#ffd23f';
+    s.appendChild(d);
+  }
+</script>
+</body>
+</html>
