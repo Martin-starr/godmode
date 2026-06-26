@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Wholesale — NORD Coffee</title>
+<meta name="description" content="We supply cafés, restaurants, offices, and retailers across Norway with coffee roasted fresh each week.">
+<link rel="stylesheet" href="css/nord.css">
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap site-head__inner">
+    <a href="index.html" class="brand">NORD</a>
+    <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <nav class="nav">
+      <a href="shop.html">Shop</a>
+      <a href="our-craft.html">Our Craft</a>
+      <a href="wholesale.html" aria-current="page">Wholesale</a>
+      <a href="journal.html">Journal</a>
+      <a href="contact.html">Contact</a>
+      <a href="shop.html" class="nav__cart">CART <sup>0</sup></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <!-- HERO -->
+  <section class="hero wrap">
+    <span class="mono eyebrow reveal">FOR CAFÉS &amp; RETAILERS</span>
+    <h1 class="display reveal" data-d="1" style="max-width:14ch">Serve our coffee in your space.</h1>
+    <p class="lede reveal" data-d="2" style="margin-top:1.6rem;max-width:54ch">We supply cafés, restaurants, offices, and retailers across Norway with coffee roasted fresh each week.</p>
+    <div class="hero__meta reveal" data-d="3"><a href="#enquire" class="btn btn--solid">Enquire about wholesale ↓</a></div>
+    <div class="frame r-3x2 reveal" data-d="2" data-ph="WHOLESALE · 3:2" style="margin-top:clamp(40px,6vw,80px)">
+      <img src="assets/img/wholesale-counter.jpg" alt="NORD bags on a café counter" onerror="NORDph(this)">
+    </div>
+  </section>
+
+  <!-- WHAT YOU GET -->
+  <section class="section wrap hair-top">
+    <span class="mono eyebrow reveal">WHAT YOU GET</span>
+    <div class="numbered" style="margin-top:1rem">
+      <div class="item reveal"><span class="n">01</span><div><span class="mono" style="display:block;margin-bottom:0.5rem">WHOLESALE PRICING</span><p>Tiered pricing that scales with volume.</p></div></div>
+      <div class="item reveal"><span class="n">02</span><div><span class="mono" style="display:block;margin-bottom:0.5rem">WEEKLY FRESH DELIVERY</span><p>Roasted and shipped on a schedule that suits you.</p></div></div>
+      <div class="item reveal"><span class="n">03</span><div><span class="mono" style="display:block;margin-bottom:0.5rem">BARISTA SUPPORT</span><p>Dialling-in guidance and recipe sheets for your team.</p></div></div>
+      <div class="item reveal"><span class="n">04</span><div><span class="mono" style="display:block;margin-bottom:0.5rem">EQUIPMENT ADVICE</span><p>Honest guidance on grinders and brewers, no pressure.</p></div></div>
+    </div>
+  </section>
+
+  <!-- WHO WE WORK WITH -->
+  <section class="section--tight wrap two-col">
+    <div class="reveal"><span class="mono eyebrow">WHO WE WORK WITH</span><div class="tag-list" style="margin-top:0.6rem"><span>Specialty cafés</span><span>Restaurants</span><span>Offices</span><span>Independent retailers</span></div></div>
+    <div class="frame r-4x5 reveal" data-d="1" data-ph="BULK · 4:5" style="max-width:420px"><img src="assets/img/wholesale-bulk.jpg" alt="Bulk packaging on a steel surface" onerror="NORDph(this)"></div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="section tint hair-top hair-bot">
+    <div class="wrap">
+      <span class="mono eyebrow reveal">HOW IT WORKS</span>
+      <div class="numbered" style="margin-top:1rem">
+        <div class="item reveal"><span class="n">1</span><div><span class="mono" style="display:block;margin-bottom:0.5rem">ENQUIRE</span><p>Tell us about your space and volume.</p></div></div>
+        <div class="item reveal"><span class="n">2</span><div><span class="mono" style="display:block;margin-bottom:0.5rem">SAMPLE</span><p>We send coffee to taste and dial in.</p></div></div>
+        <div class="item reveal"><span class="n">3</span><div><span class="mono" style="display:block;margin-bottom:0.5rem">ONBOARD</span><p>We set pricing, delivery, and your first order.</p></div></div>
+        <div class="item reveal"><span class="n">4</span><div><span class="mono" style="display:block;margin-bottom:0.5rem">DELIVER</span><p>Fresh coffee arrives weekly. Adjust any time.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ENQUIRY FORM -->
+  <section class="section wrap" id="enquire">
+    <div class="two-col">
+      <div class="reveal">
+        <span class="mono eyebrow">WHOLESALE ENQUIRY</span>
+        <h2>Let's talk about your space.</h2>
+        <p style="margin-top:1.2rem;max-width:42ch">Tell us a little about your business and we will be in touch within two working days.</p>
+      </div>
+      <form class="reveal" data-d="1" data-demo>
+        <div class="field-row">
+          <div class="field"><label>Business name</label><input type="text" name="business" required></div>
+          <div class="field"><label>Contact name</label><input type="text" name="contact" required></div>
+        </div>
+        <div class="field"><label>Email</label><input type="email" name="email" required></div>
+        <div class="field-row">
+          <div class="field"><label>Business type</label>
+            <select name="type"><option>Specialty café</option><option>Restaurant</option><option>Office</option><option>Independent retailer</option><option>Other</option></select>
+          </div>
+          <div class="field"><label>Estimated monthly volume</label><input type="text" name="volume" placeholder="e.g. 20 kg"></div>
+        </div>
+        <div class="field"><label>Message</label><textarea name="message"></textarea></div>
+        <button type="submit" class="btn btn--solid btn--block">Send enquiry</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <div class="site-foot__grid">
+      <div><span class="site-foot__brand">NORD</span><p>Small-batch specialty coffee, roasted fresh each week in Oslo.</p></div>
+      <div><h4>Shop</h4><ul><li><a href="shop.html">All coffee</a></li><li><a href="shop.html">Single origin</a></li><li><a href="shop.html">Blends</a></li><li><a href="shop.html">Subscriptions</a></li></ul></div>
+      <div><h4>Company</h4><ul><li><a href="our-craft.html">Our craft</a></li><li><a href="wholesale.html">Wholesale</a></li><li><a href="journal.html">Journal</a></li><li><a href="contact.html">Contact</a></li></ul></div>
+      <div><h4>Follow</h4><ul><li><a href="#">Instagram</a></li><li><a href="#">Newsletter</a></li><li><a href="contact.html">hello@nordcoffee.no</a></li></ul></div>
+    </div>
+    <div class="site-foot__base"><p>© 2026 NORD Coffee · Oslo</p><p>Roasted to order · Shipped within 48h</p></div>
+  </div>
+</footer>
+
+<script src="js/nord.js"></script>
+</body>
+</html>
