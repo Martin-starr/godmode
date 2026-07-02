@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Verminord — Instagram Carousel Editor</title>
+
+<!-- ============================================================
+     LIBRARIES (CDN)
+     ============================================================ -->
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<!-- ============================================================
+     GOOGLE FONTS
+     Inter        → heavy sans titles / UI
+     Playfair Display (italic) → emphasized serif subtitle
+     PT Serif     → slide body copy (matches the Verminord template)
+     ============================================================ -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+
+<style>
+  /* ==========================================================
+     EDITOR CHROME
+     ========================================================== */
+  :root {
+    --gold: #c9b98a;
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #0d1014;
+    color: #e5e9ee;
+    overflow: hidden;
+  }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #2a323c; border-radius: 4px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3a4552; }
+
+  .panel-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #8b98a8;
+  }
+  .field-input {
+    width: 100%;
+    background: #171c22;
+    border: 1px solid #2a323c;
+    border-radius: 8px;
+    padding: 9px 12px;
+    font-size: 13px;
+    color: #e5e9ee;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .field-input:focus { border-color: #5e7ea3; }
+  textarea.field-input { resize: vertical; min-height: 84px; line-height: 1.55; }
+
+  .swatch {
+    width: 26px; height: 26px;
+    border-radius: 6px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: transform .12s, border-color .12s;
+  }
+  .swatch:hover { transform: scale(1.12); }
+  .swatch.active { border-color: #fff; }
+
+  .preset-thumb {
+    position: relative;
+    height: 52px;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: pointer;
+    border: 2px solid transparent;
+    background: #171c22;
+    transition: border-color .12s, transform .12s;
+  }
+  .preset-thumb:hover { transform: translateY(-1px); }
+  .preset-thumb.active { border-color: var(--gold); }
+  .preset-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .preset-thumb span {
+    position: absolute; inset: auto 0 0 0;
+    font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+    color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.75));
+    padding: 10px 6px 4px; text-align: center;
+  }
+
+  .template-card {
+    text-align: left;
+    width: 100%;
+    background: #14181e;
+    border: 1px solid #232b34;
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color .15s, background .15s;
+  }
+  .template-card:hover { border-color: #4a5a6d; background: #171d24; }
+  .template-card.active { border-color: var(--gold); }
+
+  .slide-tab {
+    width: 40px; height: 34px;
+    border-radius: 8px;
+    background: #171c22;
+    border: 1px solid #2a323c;
+    color: #9aa7b5;
+    font-size: 12px; font-weight: 700;
+    cursor: pointer;
+    transition: all .12s;
+  }
+  .slide-tab:hover { border-color: #4a5a6d; color: #dfe6ee; }
+  .slide-tab.active { background: #dfe6ee; color: #10141a; border-color: #dfe6ee; }
+
+  .seg-btn {
+    padding: 6px 12px;
+    font-size: 11.5px; font-weight: 700;
+    border-radius: 7px;
+    color: #9aa7b5;
+    cursor: pointer;
+    transition: all .12s;
+  }
+  .seg-btn.active { background: #2c3540; color: #fff; }
+
+  /* ==========================================================
+     CANVAS — THE VERMINORD TEMPLATE (locked brand layout)
+     All values are px on a 1080-wide artboard. Font sizes,
+     line heights and placements are intentionally NOT editable
+     to keep every exported slide on-brand.
+     ========================================================== */
+  #canvasViewport { transform-origin: top left; }
+
+  .ig-canvas {
+    position: relative;
+    width: 1080px;
+    background: #10181f;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+  .ig-canvas.ratio-45 { height: 1350px; }
+  .ig-canvas.ratio-11 { height: 1080px; }
+
+  .ig-bg {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  .ig-overlay { position: absolute; inset: 0; }
+
+  /* Logo — top-left */
+  .ig-logo {
+    position: absolute;
+    top: 92px; left: 78px;
+    display: flex; flex-direction: column;
+    gap: 6px;
+    color: #ffffff; /* toggled to charcoal via .theme-dark */
+  }
+  .ig-logo svg { width: 152px; height: auto; display: block; }
+  .ig-logo-name {
+    font-family: 'Inter', sans-serif;
+    font-size: 41px;
+    font-weight: 500;
+    letter-spacing: 0.015em;
+    line-height: 1;
+  }
+
+  /* Category tag — top-right */
+  .ig-tag {
+    position: absolute;
+    top: 158px; right: 78px;
+    font-family: 'Inter', sans-serif;
+    font-size: 23px;
+    font-weight: 600;
+    letter-spacing: 0.42em;
+    text-transform: uppercase;
+    color: var(--gold);
+    text-align: right;
+    max-width: 560px;
+    line-height: 1.6;
+  }
+
+  /* Centered text block */
+  .ig-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    padding: 0 92px 130px; /* bottom padding lifts the block slightly above true center, like the reference posts */
+    color: #ffffff;
+  }
+  .ig-title {
+    font-family: 'Inter', sans-serif;
+    font-size: 92px;
+    font-weight: 800;
+    line-height: 1.06;
+    letter-spacing: -0.015em;
+    text-shadow: 0 2px 26px rgba(0,0,0,0.25);
+  }
+  .ig-subtitle {
+    font-family: 'Playfair Display', serif;
+    font-style: italic;
+    font-weight: 500;
+    font-size: 84px;
+    line-height: 1.14;
+    margin-top: 4px;
+    text-shadow: 0 2px 26px rgba(0,0,0,0.25);
+  }
+  .ig-body {
+    font-family: 'PT Serif', serif;
+    font-size: 33px;
+    line-height: 1.72;
+    margin-top: 42px;
+    max-width: 780px;
+    color: rgba(255,255,255,0.95);
+    text-shadow: 0 1px 16px rgba(0,0,0,0.25);
+  }
+
+  /* Bottom asset — center */
+  .ig-site {
+    position: absolute;
+    bottom: 78px; left: 0; right: 0;
+    text-align: center;
+    font-family: 'Inter', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: 0.46em;
+    text-indent: 0.46em; /* re-centers wide-tracked text */
+    color: var(--gold);
+  }
+
+  /* Dark-on-light state (light photos): logo + text flip to charcoal */
+  .ig-canvas.theme-dark .ig-logo   { color: #22272d; }
+  .ig-canvas.theme-dark .ig-center { color: #22272d; }
+  .ig-canvas.theme-dark .ig-title,
+  .ig-canvas.theme-dark .ig-subtitle { text-shadow: none; }
+  .ig-canvas.theme-dark .ig-body  { color: rgba(34,39,45,0.93); text-shadow: none; }
+  .ig-canvas.theme-dark .ig-tag   { color: #8d7d4e; }
+  .ig-canvas.theme-dark .ig-site  { color: #8d7d4e; }
+</style>
+</head>
+
+<body>
+<div class="flex h-screen">
+
+  <!-- ============================================================
+       LEFT SIDEBAR — CONTENT GENERATOR (5-slide templates)
+       ============================================================ -->
+  <aside class="w-72 shrink-0 flex flex-col border-r border-[#1d242d] bg-[#10141a]">
+    <div class="px-5 pt-5 pb-4 border-b border-[#1d242d]">
+      <div class="flex items-center gap-2.5">
+        <!-- mini worm mark -->
+        <svg viewBox="0 0 140 48" class="w-9 text-[#c9b98a]" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round">
+          <path d="M8 33 q7 -7 14 -1" />
+          <circle cx="33" cy="29" r="10.5" />
+          <circle cx="30" cy="26.5" r="2" fill="currentColor" stroke="none" />
+          <path d="M44 34 C44 15, 60 15, 60 34 C60 17, 75 17, 75 34 C75 19, 89 19, 89 34 C89 21, 101 21, 101 34 C101 23, 111 23, 111 34 C111 26, 119 26, 119 34" />
+        </svg>
+        <div>
+          <div class="text-sm font-extrabold tracking-tight">Verminord</div>
+          <div class="text-[10px] text-[#8b98a8] font-medium tracking-wide">CAROUSEL STUDIO</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-5 pt-4 pb-2">
+      <div class="panel-label">Content Generator</div>
+      <p class="text-[11px] text-[#6c7886] mt-1 leading-relaxed">Pre-built 5-slide carousels. Click to load all slides into the editor.</p>
+    </div>
+
+    <div id="templateList" class="flex-1 overflow-y-auto px-5 pb-5 space-y-2.5"></div>
+  </aside>
+
+  <!-- ============================================================
+       CENTER — PREVIEW CANVAS
+       ============================================================ -->
+  <main class="flex-1 flex flex-col min-w-0">
+
+    <!-- Top bar -->
+    <header class="flex items-center justify-between gap-4 px-5 h-14 border-b border-[#1d242d] bg-[#10141a]">
+      <div class="flex items-center gap-3">
+        <span class="panel-label">Slide</span>
+        <div id="slideTabs" class="flex gap-1.5"></div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <div class="flex items-center bg-[#171c22] border border-[#2a323c] rounded-lg p-0.5">
+          <button id="ratio45" class="seg-btn active" title="1080 × 1350 — Instagram portrait">4:5</button>
+          <button id="ratio11" class="seg-btn" title="1080 × 1080 — square">1:1</button>
+        </div>
+        <button id="exportAllBtn" class="text-[11.5px] font-bold px-3.5 py-2 rounded-lg border border-[#2a323c] text-[#9aa7b5] hover:text-white hover:border-[#4a5a6d] transition-colors">
+          Export all 5
+        </button>
+        <button id="exportBtn" class="flex items-center gap-2 text-[12px] font-extrabold px-4 py-2 rounded-lg bg-[#c9b98a] text-[#171204] hover:bg-[#dbcb9c] transition-colors">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4"/></svg>
+          Export Current Slide as PNG
+        </button>
+      </div>
+    </header>
+
+    <!-- Canvas viewport -->
+    <div id="canvasStage" class="flex-1 overflow-hidden flex items-center justify-center p-6 bg-[#0d1014]" style="background-image: radial-gradient(#161c24 1px, transparent 1px); background-size: 22px 22px;">
+      <div id="canvasViewport">
+        <!-- ======= THE LOCKED VERMINORD SLIDE TEMPLATE ======= -->
+        <div id="igCanvas" class="ig-canvas ratio-45 shadow-2xl">
+          <img id="igBg" class="ig-bg" crossorigin="anonymous" alt="" />
+          <div id="igOverlay" class="ig-overlay"></div>
+
+          <!-- Logo: worm icon + wordmark, top-left -->
+          <div class="ig-logo">
+            <svg viewBox="0 0 140 48" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round">
+              <path d="M8 33 q7 -7 14 -1" />
+              <circle cx="33" cy="29" r="10.5" />
+              <circle cx="30" cy="26.5" r="2" fill="currentColor" stroke="none" />
+              <path d="M44 34 C44 15, 60 15, 60 34 C60 17, 75 17, 75 34 C75 19, 89 19, 89 34 C89 21, 101 21, 101 34 C101 23, 111 23, 111 34 C111 26, 119 26, 119 34" />
+            </svg>
+            <div class="ig-logo-name">Verminord</div>
+          </div>
+
+          <!-- Category tag, top-right -->
+          <div id="igTag" class="ig-tag">24 timer</div>
+
+          <!-- Centered copy -->
+          <div class="ig-center">
+            <div id="igTitle" class="ig-title">Lag kompost-te</div>
+            <div id="igSubtitle" class="ig-subtitle">levende vann.</div>
+            <div id="igBody" class="ig-body">Et oksygenrikt uttrekk av levende vermikompost.</div>
+          </div>
+
+          <!-- Bottom asset -->
+          <div class="ig-site">VERMINORD.COM</div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- ============================================================
+       RIGHT SIDEBAR — SLIDE CONTROLS
+       ============================================================ -->
+  <aside class="w-80 shrink-0 overflow-y-auto border-l border-[#1d242d] bg-[#10141a]">
+    <div class="p-5 space-y-6">
+
+      <!-- Text editors -->
+      <section class="space-y-3">
+        <div class="panel-label">Slide Text</div>
+        <div>
+          <label class="text-[11px] font-semibold text-[#9aa7b5] block mb-1.5">Top-Right Category Tag</label>
+          <input id="inTag" class="field-input" placeholder="e.g. LEVENDE BIOLOGI" />
+        </div>
+        <div>
+          <label class="text-[11px] font-semibold text-[#9aa7b5] block mb-1.5">Bold Main Title</label>
+          <input id="inTitle" class="field-input" placeholder="e.g. Ikke gjødsel." />
+        </div>
+        <div>
+          <label class="text-[11px] font-semibold text-[#9aa7b5] block mb-1.5">Italic Serif Subtitle</label>
+          <input id="inSubtitle" class="field-input" placeholder="e.g. Levende mikrober." />
+        </div>
+        <div>
+          <label class="text-[11px] font-semibold text-[#9aa7b5] block mb-1.5">Body Text <span class="text-[#5b6774] font-normal">(one line per row)</span></label>
+          <textarea id="inBody" class="field-input" rows="4" placeholder="Gjødsel mater planten.&#10;Kompost-te mater jorda."></textarea>
+        </div>
+        <p class="text-[10.5px] text-[#5b6774] leading-relaxed">Font sizes, line heights and placements are locked to the Verminord brand template.</p>
+      </section>
+
+      <hr class="border-[#1d242d]" />
+
+      <!-- Overlay controls -->
+      <section class="space-y-3">
+        <div class="panel-label">Overlay Tint</div>
+        <div class="flex items-center gap-3">
+          <input id="inOverlayColor" type="color" value="#1f3d4d" class="w-10 h-10 rounded-lg border border-[#2a323c] bg-transparent cursor-pointer p-0.5" />
+          <div class="flex-1">
+            <div class="flex justify-between text-[11px] font-semibold text-[#9aa7b5] mb-1">
+              <span>Opacity</span><span id="opacityVal">62%</span>
+            </div>
+            <input id="inOverlayOpacity" type="range" min="0" max="100" value="62" class="w-full accent-[#c9b98a]" />
+          </div>
+        </div>
+        <div class="flex gap-2" id="overlaySwatches">
+          <button class="swatch" data-color="#1f3d4d" style="background:#1f3d4d" title="Deep teal"></button>
+          <button class="swatch" data-color="#12333a" style="background:#12333a" title="Petrol"></button>
+          <button class="swatch" data-color="#1d3a2a" style="background:#1d3a2a" title="Forest green"></button>
+          <button class="swatch" data-color="#26292e" style="background:#26292e" title="Dark gray"></button>
+          <button class="swatch" data-color="#0e2233" style="background:#0e2233" title="Midnight navy"></button>
+          <button class="swatch" data-color="#3a3326" style="background:#3a3326" title="Peat brown"></button>
+        </div>
+      </section>
+
+      <hr class="border-[#1d242d]" />
+
+      <!-- Logo / text color state -->
+      <section class="space-y-3">
+        <div class="panel-label">Logo &amp; Text Color</div>
+        <div class="flex items-center bg-[#171c22] border border-[#2a323c] rounded-lg p-0.5 w-fit">
+          <button id="themeLight" class="seg-btn active">White (dark bg)</button>
+          <button id="themeDark" class="seg-btn">Charcoal (light bg)</button>
+        </div>
+      </section>
+
+      <hr class="border-[#1d242d]" />
+
+      <!-- Background image -->
+      <section class="space-y-3">
+        <div class="panel-label">Background Image</div>
+        <div>
+          <label class="text-[11px] font-semibold text-[#9aa7b5] block mb-1.5">Custom Image URL</label>
+          <div class="flex gap-2">
+            <input id="inImageUrl" class="field-input" placeholder="https://…" />
+            <button id="applyImageBtn" class="shrink-0 text-[11.5px] font-bold px-3 rounded-lg bg-[#2c3540] hover:bg-[#3a4552] transition-colors">Set</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2" id="imagePresets"></div>
+        <p class="text-[10.5px] text-[#5b6774] leading-relaxed">Tip: exporting needs images that allow cross-origin use (the presets do). If a custom URL fails to export, download it and use a local file path.</p>
+      </section>
+
+    </div>
+  </aside>
+</div>
+
+<script>
+/* ============================================================
+   DATA — IMAGE PRESETS
+   ============================================================ */
+const IMAGE_PRESETS = [
+  { name: 'Forest canopy', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1600&q=80' },
+  { name: 'Leaf macro',    url: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1600&q=80' },
+  { name: 'Seedling & soil', url: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=1600&q=80' },
+  { name: 'Mountain mist', url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1600&q=80' },
+  { name: 'Golden light',  url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1600&q=80' },
+];
+const P = i => IMAGE_PRESETS[i].url;
+
+/* ============================================================
+   DATA — PRE-LOADED 5-SLIDE CAROUSEL TEMPLATES
+   Slide shape: { tag, title, subtitle, body, image,
+                  overlayColor, overlayOpacity, theme }
+   ============================================================ */
+const TEMPLATES = [
+  {
+    name: 'Kompost-te — Levende vann',
+    desc: 'The original Verminord brew walkthrough (Norwegian) from the reference post.',
+    lang: 'NO',
+    slides: [
+      { tag: '24 timer', title: 'Lag kompost-te', subtitle: 'levende vann.',
+        body: 'Et oksygenrikt uttrekk av levende vermikompost.\nDu formerer mikrolivet og vanner det til plantene dine.\nSveip videre for detaljer →',
+        image: P(1), overlayColor: '#24455a', overlayOpacity: 62, theme: 'light' },
+      { tag: 'Levende biologi', title: 'Ikke gjødsel.', subtitle: 'Levende mikrober.',
+        body: 'Gjødsel mater planten.\nKompost-te mater jorda.',
+        image: P(3), overlayColor: '#2b4257', overlayOpacity: 68, theme: 'light' },
+      { tag: 'Enkelt og effektivt', title: 'Tre ting.', subtitle: 'Pluss luft.',
+        body: '· 10-20 L vann\n· En neve VermiCast\n· 30 ml melasse (ikke “et must” - men hjelper godt)',
+        image: P(2), overlayColor: '#1c3644', overlayOpacity: 62, theme: 'light' },
+      { tag: 'Bobler = bra', title: 'La det boble', subtitle: 'et døgn.',
+        body: 'VermiCast i en finmasket pose.\nLuftpumpe på i 24 timer.',
+        image: P(0), overlayColor: '#12333a', overlayOpacity: 62, theme: 'light' },
+      { tag: 'Spray på bladene', title: 'Bruk det', subtitle: 'ferskt.',
+        body: 'Spray på blader eller vann i jorda.\nBruk innen 4 timer.',
+        image: P(4), overlayColor: '#1d3a2a', overlayOpacity: 58, theme: 'light' },
+    ],
+  },
+  {
+    name: 'Soil Biology 101',
+    desc: 'Why living soil outperforms sterile mixes — premium soil biology explainer.',
+    lang: 'EN',
+    slides: [
+      { tag: 'Soil biology', title: 'Your soil', subtitle: 'is alive.',
+        body: 'One teaspoon of healthy soil holds more microbes\nthan there are people on Earth.\nSwipe to meet your underground workforce →',
+        image: P(2), overlayColor: '#1f3d4d', overlayOpacity: 62, theme: 'light' },
+      { tag: 'The workforce', title: 'Bacteria & fungi', subtitle: 'do the heavy lifting.',
+        body: 'Bacteria unlock nitrogen. Fungi extend your roots.\nTogether they trade nutrients for plant sugars —\na 400-million-year-old economy.',
+        image: P(1), overlayColor: '#12333a', overlayOpacity: 66, theme: 'light' },
+      { tag: 'The problem', title: 'Salts & tilling', subtitle: 'break the web.',
+        body: 'Synthetic salts dehydrate microbes.\nTilling shreds fungal networks.\nDead soil needs more inputs every single year.',
+        image: P(3), overlayColor: '#26292e', overlayOpacity: 64, theme: 'light' },
+      { tag: 'The fix', title: 'Feed the soil,', subtitle: 'not the plant.',
+        body: 'Add living vermicompost. Keep roots in the ground.\nMulch like a forest floor.\nBiology does the rest.',
+        image: P(0), overlayColor: '#1d3a2a', overlayOpacity: 60, theme: 'light' },
+      { tag: 'Start today', title: 'Living soil', subtitle: 'compounds.',
+        body: 'Every season the web grows stronger.\nStart with a handful of VermiCast.\nYour plants will tell the difference.',
+        image: P(4), overlayColor: '#1c3644', overlayOpacity: 58, theme: 'light' },
+    ],
+  },
+  {
+    name: 'Brew Guide — Microbial Tea',
+    desc: 'Step-by-step microbial brewing walkthrough for premium compost tea.',
+    lang: 'EN',
+    slides: [
+      { tag: 'Brew guide', title: 'Brew microbes', subtitle: 'like a pro.',
+        body: 'Compost tea multiplies your microbial life\nby the billions — overnight.\nThe full method, step by step →',
+        image: P(0), overlayColor: '#12333a', overlayOpacity: 64, theme: 'light' },
+      { tag: 'Step 1 — Water', title: 'Start clean.', subtitle: 'Dechlorinate.',
+        body: 'Fill 10-20 L with rain water,\nor bubble tap water for 1 hour first.\nChlorine kills the microbes you are trying to grow.',
+        image: P(3), overlayColor: '#1f3d4d', overlayOpacity: 62, theme: 'light' },
+      { tag: 'Step 2 — Inoculate', title: 'One handful', subtitle: 'of castings.',
+        body: 'Fresh VermiCast in a fine mesh bag.\nAdd 30 ml unsulphured molasses\nas microbe fuel.',
+        image: P(2), overlayColor: '#3a3326', overlayOpacity: 60, theme: 'light' },
+      { tag: 'Step 3 — Aerate', title: 'Let it bubble', subtitle: 'for 24 hours.',
+        body: 'Strong, rolling aeration keeps the brew aerobic.\nSweet, earthy smell = success.\nSour smell = start over.',
+        image: P(1), overlayColor: '#1c3644', overlayOpacity: 62, theme: 'light' },
+      { tag: 'Step 4 — Apply', title: 'Use it', subtitle: 'fresh.',
+        body: 'Spray on leaves or water into soil.\nUse within 4 hours —\nthe biology is most alive right after brewing.',
+        image: P(4), overlayColor: '#1d3a2a', overlayOpacity: 58, theme: 'light' },
+    ],
+  },
+  {
+    name: '5 Sustainable Growing Tips',
+    desc: 'High-saves listicle: regenerative habits for the home grower.',
+    lang: 'EN',
+    slides: [
+      { tag: 'Grow smarter', title: '5 habits of', subtitle: 'regenerative growers.',
+        body: 'Small changes. Compounding returns.\nSave this one for spring →',
+        image: P(4), overlayColor: '#1d3a2a', overlayOpacity: 62, theme: 'light' },
+      { tag: 'Tip 01', title: 'Never leave', subtitle: 'soil bare.',
+        body: 'Mulch, cover crop or plant densely.\nBare soil loses water, carbon\nand microbial life to the sun.',
+        image: P(1), overlayColor: '#1f3d4d', overlayOpacity: 62, theme: 'light' },
+      { tag: 'Tip 02', title: 'Compost', subtitle: 'everything.',
+        body: 'Kitchen scraps become worm castings.\nWorm castings become plant food.\nWaste leaves your house exactly once.',
+        image: P(2), overlayColor: '#3a3326', overlayOpacity: 60, theme: 'light' },
+      { tag: 'Tip 03', title: 'Water deep,', subtitle: 'not often.',
+        body: 'Deep, infrequent watering trains roots downward.\nStronger plants, less water,\nfewer fungus gnats.',
+        image: P(3), overlayColor: '#12333a', overlayOpacity: 64, theme: 'light' },
+      { tag: 'Tip 04 + 05', title: 'Skip salts.', subtitle: 'Trust biology.',
+        body: '04 — Replace synthetic feed with compost tea.\n05 — Observe before you intervene.\nNature has been growing longer than we have.',
+        image: P(0), overlayColor: '#1c3644', overlayOpacity: 62, theme: 'light' },
+    ],
+  },
+];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+const SLIDE_COUNT = 5;
+let slides = JSON.parse(JSON.stringify(TEMPLATES[0].slides)); // start on the reference template
+let current = 0;
+let ratio = '45'; // '45' → 1080×1350, '11' → 1080×1080
+let activeTemplate = 0;
+
+/* ============================================================
+   DOM REFS
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const igCanvas = $('igCanvas'), igBg = $('igBg'), igOverlay = $('igOverlay');
+const igTag = $('igTag'), igTitle = $('igTitle'), igSubtitle = $('igSubtitle'), igBody = $('igBody');
+const inTag = $('inTag'), inTitle = $('inTitle'), inSubtitle = $('inSubtitle'), inBody = $('inBody');
+const inOverlayColor = $('inOverlayColor'), inOverlayOpacity = $('inOverlayOpacity'), opacityVal = $('opacityVal');
+const inImageUrl = $('inImageUrl');
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+function renderCanvas() {
+  const s = slides[current];
+  igTag.textContent = s.tag;
+  igTitle.textContent = s.title;
+  igSubtitle.textContent = s.subtitle;
+  igBody.innerHTML = s.body.split('\n').map(l => esc(l) || '&nbsp;').join('<br>');
+  igOverlay.style.background = s.overlayColor;
+  igOverlay.style.opacity = s.overlayOpacity / 100;
+  if (igBg.getAttribute('src') !== s.image) igBg.src = s.image;
+  igCanvas.classList.toggle('theme-dark', s.theme === 'dark');
+}
+
+function renderControls() {
+  const s = slides[current];
+  inTag.value = s.tag;
+  inTitle.value = s.title;
+  inSubtitle.value = s.subtitle;
+  inBody.value = s.body;
+  inOverlayColor.value = s.overlayColor;
+  inOverlayOpacity.value = s.overlayOpacity;
+  opacityVal.textContent = s.overlayOpacity + '%';
+  inImageUrl.value = s.image;
+  document.querySelectorAll('#overlaySwatches .swatch').forEach(b =>
+    b.classList.toggle('active', b.dataset.color.toLowerCase() === s.overlayColor.toLowerCase()));
+  document.querySelectorAll('#imagePresets .preset-thumb').forEach(b =>
+    b.classList.toggle('active', b.dataset.url === s.image));
+  $('themeLight').classList.toggle('active', s.theme !== 'dark');
+  $('themeDark').classList.toggle('active', s.theme === 'dark');
+}
+
+function renderTabs() {
+  document.querySelectorAll('#slideTabs .slide-tab').forEach((b, i) =>
+    b.classList.toggle('active', i === current));
+}
+
+function renderAll() { renderCanvas(); renderControls(); renderTabs(); }
+
+/* ============================================================
+   VIEWPORT SCALING — canvas is a real 1080px artboard,
+   scaled down to fit the stage.
+   ============================================================ */
+function fitCanvas() {
+  const stage = $('canvasStage');
+  const w = 1080, h = ratio === '45' ? 1350 : 1080;
+  const scale = Math.min((stage.clientWidth - 48) / w, (stage.clientHeight - 48) / h, 1);
+  const vp = $('canvasViewport');
+  vp.style.transform = `scale(${scale})`;
+  vp.style.width = w * scale + 'px';
+  vp.style.height = h * scale + 'px';
+}
+window.addEventListener('resize', fitCanvas);
+
+/* ============================================================
+   UI WIRING
+   ============================================================ */
+// Slide tabs
+const tabsWrap = $('slideTabs');
+for (let i = 0; i < SLIDE_COUNT; i++) {
+  const b = document.createElement('button');
+  b.className = 'slide-tab';
+  b.textContent = i + 1;
+  b.onclick = () => { current = i; renderAll(); };
+  tabsWrap.appendChild(b);
+}
+
+// Text inputs → live update
+inTag.oninput      = () => { slides[current].tag = inTag.value; renderCanvas(); };
+inTitle.oninput    = () => { slides[current].title = inTitle.value; renderCanvas(); };
+inSubtitle.oninput = () => { slides[current].subtitle = inSubtitle.value; renderCanvas(); };
+inBody.oninput     = () => { slides[current].body = inBody.value; renderCanvas(); };
+
+// Overlay controls
+inOverlayColor.oninput = () => { slides[current].overlayColor = inOverlayColor.value; renderCanvas(); renderControls(); };
+inOverlayOpacity.oninput = () => {
+  slides[current].overlayOpacity = +inOverlayOpacity.value;
+  opacityVal.textContent = inOverlayOpacity.value + '%';
+  renderCanvas();
+};
+document.querySelectorAll('#overlaySwatches .swatch').forEach(b =>
+  b.onclick = () => { slides[current].overlayColor = b.dataset.color; renderCanvas(); renderControls(); });
+
+// Theme toggle (logo + text color state)
+$('themeLight').onclick = () => { slides[current].theme = 'light'; renderCanvas(); renderControls(); };
+$('themeDark').onclick  = () => { slides[current].theme = 'dark';  renderCanvas(); renderControls(); };
+
+// Background image — custom URL
+$('applyImageBtn').onclick = applyCustomUrl;
+inImageUrl.addEventListener('keydown', e => { if (e.key === 'Enter') applyCustomUrl(); });
+function applyCustomUrl() {
+  const url = inImageUrl.value.trim();
+  if (!url) return;
+  slides[current].image = url;
+  renderCanvas(); renderControls();
+}
+igBg.onerror = () => { igBg.removeAttribute('src'); }; // fall back to the canvas base color
+
+// Background image — presets
+const presetWrap = $('imagePresets');
+IMAGE_PRESETS.forEach(p => {
+  const b = document.createElement('button');
+  b.className = 'preset-thumb';
+  b.dataset.url = p.url;
+  b.innerHTML = `<img src="${p.url.replace('w=1600', 'w=300')}" alt="" loading="lazy"><span>${p.name}</span>`;
+  b.onclick = () => { slides[current].image = p.url; renderCanvas(); renderControls(); };
+  presetWrap.appendChild(b);
+});
+
+// Aspect ratio
+$('ratio45').onclick = () => setRatio('45');
+$('ratio11').onclick = () => setRatio('11');
+function setRatio(r) {
+  ratio = r;
+  igCanvas.classList.toggle('ratio-45', r === '45');
+  igCanvas.classList.toggle('ratio-11', r === '11');
+  $('ratio45').classList.toggle('active', r === '45');
+  $('ratio11').classList.toggle('active', r === '11');
+  fitCanvas();
+}
+
+// Template library
+const tplWrap = $('templateList');
+TEMPLATES.forEach((t, i) => {
+  const b = document.createElement('button');
+  b.className = 'template-card' + (i === 0 ? ' active' : '');
+  b.innerHTML = `
+    <div class="flex items-center justify-between gap-2">
+      <div class="text-[12.5px] font-bold text-[#e5e9ee] leading-snug">${t.name}</div>
+      <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#232b34] text-[#c9b98a]">${t.lang}</span>
+    </div>
+    <div class="text-[11px] text-[#8b98a8] mt-1 leading-relaxed">${t.desc}</div>
+    <div class="text-[10px] font-semibold text-[#5b6774] mt-1.5 tracking-wide">5 SLIDES</div>`;
+  b.onclick = () => {
+    slides = JSON.parse(JSON.stringify(t.slides));
+    current = 0;
+    activeTemplate = i;
+    document.querySelectorAll('.template-card').forEach((c, j) => c.classList.toggle('active', j === i));
+    renderAll();
+  };
+  tplWrap.appendChild(b);
+});
+
+/* ============================================================
+   EXPORT ENGINE — html2canvas
+   The live canvas sits inside a scaled viewport, so we clone it
+   into an off-screen holder at natural 1080px size and capture
+   the clone at 2× (2160px wide) for crisp, hi-res output.
+   ============================================================ */
+async function captureCurrentSlide() {
+  await document.fonts.ready;
+  if (igBg.getAttribute('src')) {
+    await new Promise(res => {
+      if (igBg.complete) return res();
+      igBg.onload = res; igBg.onerror = res;
+    });
+  }
+
+  const clone = igCanvas.cloneNode(true);
+  const holder = document.createElement('div');
+  holder.style.cssText = 'position:fixed; left:-20000px; top:0; z-index:-1;';
+  holder.appendChild(clone);
+  document.body.appendChild(holder);
+
+  try {
+    const cloneImg = clone.querySelector('img');
+    if (cloneImg && cloneImg.getAttribute('src')) {
+      await new Promise(res => {
+        if (cloneImg.complete) return res();
+        cloneImg.onload = res; cloneImg.onerror = res;
+      });
+    }
+    return await html2canvas(clone, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: '#10181f',
+      logging: false,
+    });
+  } finally {
+    holder.remove();
+  }
+}
+
+function downloadCanvas(cnv, filename) {
+  const a = document.createElement('a');
+  a.download = filename;
+  a.href = cnv.toDataURL('image/png');
+  a.click();
+}
+
+function setExporting(on, label) {
+  const btn = $('exportBtn');
+  btn.disabled = on;
+  btn.style.opacity = on ? .6 : 1;
+  btn.lastChild.textContent = on ? ` ${label}` : ' Export Current Slide as PNG';
+}
+
+$('exportBtn').onclick = async () => {
+  setExporting(true, 'Rendering…');
+  try {
+    const cnv = await captureCurrentSlide();
+    downloadCanvas(cnv, `verminord-slide-${current + 1}.png`);
+  } catch (err) {
+    alert('Export failed: ' + err.message + '\n\nIf you are using a custom image URL, its server may block cross-origin use. Try one of the built-in presets or a local file.');
+  } finally {
+    setExporting(false);
+  }
+};
+
+$('exportAllBtn').onclick = async () => {
+  const startSlide = current;
+  const btn = $('exportAllBtn');
+  btn.disabled = true;
+  try {
+    for (let i = 0; i < SLIDE_COUNT; i++) {
+      current = i;
+      renderAll();
+      btn.textContent = `Exporting ${i + 1}/5…`;
+      // give the browser a beat to load the slide's background image
+      await new Promise(r => setTimeout(r, 350));
+      const cnv = await captureCurrentSlide();
+      downloadCanvas(cnv, `verminord-slide-${i + 1}.png`);
+    }
+  } catch (err) {
+    alert('Export failed on slide ' + (current + 1) + ': ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Export all 5';
+    current = startSlide;
+    renderAll();
+  }
+};
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+renderAll();
+fitCanvas();
+</script>
+</body>
+</html>
