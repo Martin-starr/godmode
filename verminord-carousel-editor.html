@@ -3,793 +3,1113 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Verminord — Instagram Carousel Editor</title>
+<title>Verminord · Carousel Studio</title>
 
 <!-- ============================================================
-     LIBRARIES (CDN)
+     LIBRARIES
      ============================================================ -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <!-- ============================================================
-     GOOGLE FONTS
-     Inter        → heavy sans titles / UI
-     Playfair Display (italic) → emphasized serif subtitle
-     PT Serif     → slide body copy (matches the Verminord template)
+     BRAND TYPOGRAPHY  —  IBM Plex family
+       · IBM Plex Sans  700  → bold main title
+       · IBM Plex Serif italic → serif subtitle line
+       · IBM Plex Serif 400  → body text
+       · IBM Plex Mono  300/400 → tag + VERMINORD.COM (ALL CAPS, tracked)
      ============================================================ -->
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=IBM+Plex+Serif:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500&display=swap" rel="stylesheet" />
 
 <style>
   /* ==========================================================
-     EDITOR CHROME
+     BRAND TOKENS  (from the Verminord brand guide)
      ========================================================== */
   :root {
-    --gold: #c9b98a;
-  }
-  html, body { height: 100%; }
-  body {
-    font-family: 'Inter', sans-serif;
-    background: #0d1014;
-    color: #e5e9ee;
-    overflow: hidden;
-  }
-  ::-webkit-scrollbar { width: 8px; height: 8px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: #2a323c; border-radius: 4px; }
-  ::-webkit-scrollbar-thumb:hover { background: #3a4552; }
+    --navy:  #1C3A5C;   /* Primær — headers, cover      */
+    --gold:  #B8993A;   /* Aksent — linjer, labels       */
+    --cream: #F6F2EA;   /* Flate — bakgrunn, bokser      */
+    --white: #FFFFFF;   /* Innholdsflate                 */
+    --ink:   #1A1A1A;   /* Brødtekst på lys bg           */
+    --muted: #5A6270;   /* Sekundær — footer             */
 
-  .panel-label {
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: #8b98a8;
+    /* editor chrome (dark studio UI — not part of the exported art) */
+    --ui-bg:     #0e1116;
+    --ui-panel:  #141922;
+    --ui-panel2: #10151d;
+    --ui-line:   #212836;
+    --ui-line2:  #2c3444;
+    --ui-text:   #e6ebf2;
+    --ui-dim:    #8b97a8;
+    --ui-faint:  #5d6879;
   }
-  .field-input {
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    font-family: 'IBM Plex Sans', system-ui, sans-serif;
+    background: var(--ui-bg);
+    color: var(--ui-text);
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::-webkit-scrollbar { width: 9px; height: 9px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #263042; border-radius: 5px; }
+  ::-webkit-scrollbar-thumb:hover { background: #33415a; }
+
+  /* ---------- editor primitives ---------- */
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 500;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ui-faint);
+  }
+  .lbl { font-size: 11.5px; font-weight: 500; color: var(--ui-dim); display:block; margin-bottom: 6px; }
+  .inp {
     width: 100%;
-    background: #171c22;
-    border: 1px solid #2a323c;
-    border-radius: 8px;
+    background: var(--ui-panel2);
+    border: 1px solid var(--ui-line);
+    border-radius: 9px;
     padding: 9px 12px;
     font-size: 13px;
-    color: #e5e9ee;
+    font-family: 'IBM Plex Sans', sans-serif;
+    color: var(--ui-text);
     outline: none;
-    transition: border-color .15s;
-  }
-  .field-input:focus { border-color: #5e7ea3; }
-  textarea.field-input { resize: vertical; min-height: 84px; line-height: 1.55; }
-
-  .swatch {
-    width: 26px; height: 26px;
-    border-radius: 6px;
-    border: 2px solid transparent;
-    cursor: pointer;
-    transition: transform .12s, border-color .12s;
-  }
-  .swatch:hover { transform: scale(1.12); }
-  .swatch.active { border-color: #fff; }
-
-  .preset-thumb {
-    position: relative;
-    height: 52px;
-    border-radius: 8px;
-    overflow: hidden;
-    cursor: pointer;
-    border: 2px solid transparent;
-    background: #171c22;
-    transition: border-color .12s, transform .12s;
-  }
-  .preset-thumb:hover { transform: translateY(-1px); }
-  .preset-thumb.active { border-color: var(--gold); }
-  .preset-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-  .preset-thumb span {
-    position: absolute; inset: auto 0 0 0;
-    font-size: 9px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
-    color: #fff; background: linear-gradient(transparent, rgba(0,0,0,.75));
-    padding: 10px 6px 4px; text-align: center;
-  }
-
-  .template-card {
-    text-align: left;
-    width: 100%;
-    background: #14181e;
-    border: 1px solid #232b34;
-    border-radius: 10px;
-    padding: 12px 14px;
-    cursor: pointer;
     transition: border-color .15s, background .15s;
   }
-  .template-card:hover { border-color: #4a5a6d; background: #171d24; }
-  .template-card.active { border-color: var(--gold); }
+  .inp:focus { border-color: #4d6ea0; background: #121824; }
+  textarea.inp { resize: vertical; min-height: 92px; line-height: 1.55; }
 
-  .slide-tab {
-    width: 40px; height: 34px;
-    border-radius: 8px;
-    background: #171c22;
-    border: 1px solid #2a323c;
-    color: #9aa7b5;
-    font-size: 12px; font-weight: 700;
+  .btn {
+    font-size: 12px; font-weight: 600;
+    border-radius: 9px;
+    padding: 8px 13px;
+    border: 1px solid var(--ui-line2);
+    color: var(--ui-dim);
+    background: var(--ui-panel2);
     cursor: pointer;
+    transition: all .13s;
+    white-space: nowrap;
+  }
+  .btn:hover { color: var(--ui-text); border-color: #3d4c66; }
+  .btn-primary {
+    background: var(--gold); color: #1a1403; border-color: var(--gold);
+    font-weight: 700;
+  }
+  .btn-primary:hover { background: #cbab48; border-color: #cbab48; color:#1a1403; }
+  .btn-icon { padding: 7px; display:inline-flex; align-items:center; justify-content:center; }
+
+  /* segmented control */
+  .seg { display:inline-flex; background: var(--ui-panel2); border:1px solid var(--ui-line); border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg > button {
+    font-size: 11.5px; font-weight: 600;
+    padding: 6px 12px; border-radius: 7px;
+    color: var(--ui-dim); cursor: pointer; border: none; background: transparent;
     transition: all .12s;
   }
-  .slide-tab:hover { border-color: #4a5a6d; color: #dfe6ee; }
-  .slide-tab.active { background: #dfe6ee; color: #10141a; border-color: #dfe6ee; }
+  .seg > button.on { background: #263149; color: #fff; }
+  .seg.light > button.on { background: var(--gold); color:#1a1403; }
 
-  .seg-btn {
-    padding: 6px 12px;
-    font-size: 11.5px; font-weight: 700;
-    border-radius: 7px;
-    color: #9aa7b5;
-    cursor: pointer;
-    transition: all .12s;
+  /* swatches */
+  .sw { width: 26px; height: 26px; border-radius: 7px; border: 2px solid transparent; cursor: pointer; transition: transform .1s, border-color .1s; }
+  .sw:hover { transform: scale(1.1); }
+  .sw.on { border-color: #fff; }
+
+  .chip {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 999px;
+    border: 1px solid var(--ui-line2); color: var(--ui-dim);
+    cursor: pointer; white-space: nowrap; transition: all .12s;
   }
-  .seg-btn.active { background: #2c3540; color: #fff; }
+  .chip:hover { color: var(--ui-text); border-color:#3d4c66; }
+  .chip.on { background: var(--ui-text); color: var(--ui-bg); border-color: var(--ui-text); }
+
+  /* template cards */
+  .tpl { text-align:left; width:100%; background: var(--ui-panel2); border:1px solid var(--ui-line); border-radius: 11px; padding: 11px 13px; cursor:pointer; transition: all .14s; }
+  .tpl:hover { border-color:#3d4c66; background:#131a26; }
+  .tpl.on { border-color: var(--gold); }
+
+  hr.div { border:none; border-top:1px solid var(--ui-line); margin: 0; }
+
+  input[type=range] { -webkit-appearance:none; appearance:none; height: 4px; border-radius: 3px; background: var(--ui-line2); outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background: var(--gold); cursor:pointer; border: 2px solid #1a1f2b; }
+  input[type=range]::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background: var(--gold); cursor:pointer; border: 2px solid #1a1f2b; }
+
+  input[type=color] { -webkit-appearance:none; appearance:none; border:1px solid var(--ui-line); border-radius:8px; background:transparent; cursor:pointer; padding:2px; }
+  input[type=color]::-webkit-color-swatch-wrapper { padding:0; }
+  input[type=color]::-webkit-color-swatch { border:none; border-radius:6px; }
+
+  .toast {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #1a2330; border:1px solid var(--ui-line2); color: var(--ui-text);
+    padding: 10px 16px; border-radius: 10px; font-size: 12.5px; font-weight:500;
+    opacity:0; pointer-events:none; transition: all .25s; z-index: 100;
+    box-shadow: 0 12px 40px rgba(0,0,0,.5);
+  }
+  .toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
 
   /* ==========================================================
-     CANVAS — THE VERMINORD TEMPLATE (locked brand layout)
-     All values are px on a 1080-wide artboard. Font sizes,
-     line heights and placements are intentionally NOT editable
-     to keep every exported slide on-brand.
+     THE SLIDE ARTBOARD  —  1080-based, brand-locked layout
+     No gradients. No shadows on the art (brand rule).
      ========================================================== */
-  #canvasViewport { transform-origin: top left; }
-
-  .ig-canvas {
+  .ig {
     position: relative;
     width: 1080px;
-    background: #10181f;
     overflow: hidden;
     flex-shrink: 0;
+    background: var(--navy);
+    font-family: 'IBM Plex Sans', sans-serif;
   }
-  .ig-canvas.ratio-45 { height: 1350px; }
-  .ig-canvas.ratio-11 { height: 1080px; }
+  .ig.r45 { height: 1350px; }
+  .ig.r11 { height: 1080px; }
+  .ig.r916 { height: 1920px; }
 
-  .ig-bg {
-    position: absolute; inset: 0;
-    width: 100%; height: 100%;
-    object-fit: cover;
-  }
-  .ig-overlay { position: absolute; inset: 0; }
+  .ig-photo { position:absolute; inset:0; width:100%; height:100%; object-fit: cover; }
+  .ig-tint  { position:absolute; inset:0; }
 
-  /* Logo — top-left */
-  .ig-logo {
-    position: absolute;
-    top: 92px; left: 78px;
-    display: flex; flex-direction: column;
-    gap: 6px;
-    color: #ffffff; /* toggled to charcoal via .theme-dark */
-  }
-  .ig-logo svg { width: 152px; height: auto; display: block; }
-  .ig-logo-name {
-    font-family: 'Inter', sans-serif;
-    font-size: 41px;
-    font-weight: 500;
-    letter-spacing: 0.015em;
-    line-height: 1;
-  }
+  .ig-logo { position:absolute; top: 84px; left: 84px; display:flex; flex-direction:column; gap: 8px; }
+  .ig-logo svg { height: 42px; width: auto; display:block; }
+  .ig-logo .wm { font-family:'IBM Plex Sans',sans-serif; font-weight:500; font-size: 40px; line-height:1; letter-spacing: .005em; }
 
-  /* Category tag — top-right */
   .ig-tag {
-    position: absolute;
-    top: 158px; right: 78px;
-    font-family: 'Inter', sans-serif;
-    font-size: 23px;
-    font-weight: 600;
-    letter-spacing: 0.42em;
-    text-transform: uppercase;
-    color: var(--gold);
-    text-align: right;
-    max-width: 560px;
-    line-height: 1.6;
+    position:absolute; top: 96px; right: 84px;
+    font-family:'IBM Plex Mono', monospace; font-weight: 400;
+    font-size: 21px; letter-spacing: 0.34em; text-transform: uppercase;
+    text-align: right; max-width: 520px; line-height: 1.7;
   }
 
-  /* Centered text block */
   .ig-center {
-    position: absolute; inset: 0;
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center;
-    padding: 0 92px 130px; /* bottom padding lifts the block slightly above true center, like the reference posts */
-    color: #ffffff;
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; padding: 120px 110px 150px;
+    --ts: 1;
   }
-  .ig-title {
-    font-family: 'Inter', sans-serif;
-    font-size: 92px;
-    font-weight: 800;
-    line-height: 1.06;
-    letter-spacing: -0.015em;
-    text-shadow: 0 2px 26px rgba(0,0,0,0.25);
-  }
-  .ig-subtitle {
-    font-family: 'Playfair Display', serif;
-    font-style: italic;
-    font-weight: 500;
-    font-size: 84px;
-    line-height: 1.14;
-    margin-top: 4px;
-    text-shadow: 0 2px 26px rgba(0,0,0,0.25);
-  }
-  .ig-body {
-    font-family: 'PT Serif', serif;
-    font-size: 33px;
-    line-height: 1.72;
-    margin-top: 42px;
-    max-width: 780px;
-    color: rgba(255,255,255,0.95);
-    text-shadow: 0 1px 16px rgba(0,0,0,0.25);
-  }
+  .ig-title    { font-family:'IBM Plex Sans',sans-serif; font-weight:700; font-size: calc(88px * var(--ts)); line-height: 1.04; letter-spacing: -0.012em; }
+  .ig-subtitle { font-family:'IBM Plex Serif',serif; font-style: italic; font-weight:500; font-size: calc(76px * var(--ts)); line-height: 1.1; margin-top: 2px; }
+  .ig-body     { font-family:'IBM Plex Serif',serif; font-weight:400; font-size: calc(30px * var(--ts)); line-height: 1.66; margin-top: 40px; max-width: 780px; }
 
-  /* Bottom asset — center */
   .ig-site {
-    position: absolute;
-    bottom: 78px; left: 0; right: 0;
-    text-align: center;
-    font-family: 'Inter', sans-serif;
-    font-size: 22px;
-    font-weight: 600;
-    letter-spacing: 0.46em;
-    text-indent: 0.46em; /* re-centers wide-tracked text */
-    color: var(--gold);
+    position:absolute; bottom: 74px; left:0; right:0; text-align:center;
+    font-family:'IBM Plex Mono', monospace; font-weight: 400;
+    font-size: 20px; letter-spacing: 0.4em; text-transform: uppercase;
+    text-indent: 0.4em;
   }
-
-  /* Dark-on-light state (light photos): logo + text flip to charcoal */
-  .ig-canvas.theme-dark .ig-logo   { color: #22272d; }
-  .ig-canvas.theme-dark .ig-center { color: #22272d; }
-  .ig-canvas.theme-dark .ig-title,
-  .ig-canvas.theme-dark .ig-subtitle { text-shadow: none; }
-  .ig-canvas.theme-dark .ig-body  { color: rgba(34,39,45,0.93); text-shadow: none; }
-  .ig-canvas.theme-dark .ig-tag   { color: #8d7d4e; }
-  .ig-canvas.theme-dark .ig-site  { color: #8d7d4e; }
 </style>
 </head>
 
 <body>
 <div class="flex h-screen">
 
-  <!-- ============================================================
-       LEFT SIDEBAR — CONTENT GENERATOR (5-slide templates)
-       ============================================================ -->
-  <aside class="w-72 shrink-0 flex flex-col border-r border-[#1d242d] bg-[#10141a]">
-    <div class="px-5 pt-5 pb-4 border-b border-[#1d242d]">
+  <!-- ================= LEFT · CONTENT LIBRARY ================= -->
+  <aside class="w-[288px] shrink-0 flex flex-col border-r" style="border-color:var(--ui-line); background:var(--ui-panel)">
+    <div class="px-5 pt-5 pb-4 border-b" style="border-color:var(--ui-line)">
       <div class="flex items-center gap-2.5">
-        <!-- mini worm mark -->
-        <svg viewBox="0 0 140 48" class="w-9 text-[#c9b98a]" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round">
-          <path d="M8 33 q7 -7 14 -1" />
-          <circle cx="33" cy="29" r="10.5" />
-          <circle cx="30" cy="26.5" r="2" fill="currentColor" stroke="none" />
-          <path d="M44 34 C44 15, 60 15, 60 34 C60 17, 75 17, 75 34 C75 19, 89 19, 89 34 C89 21, 101 21, 101 34 C101 23, 111 23, 111 34 C111 26, 119 26, 119 34" />
+        <svg viewBox="0 0 200 60" class="h-6 w-auto" fill="none" stroke="#B8993A" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="19" cy="35" r="10"/><circle cx="16" cy="32" r="2.4" fill="#B8993A" stroke="none"/>
+          <path d="M31 44 C44 16 66 16 78 44 C90 18 110 18 120 42 C130 22 146 22 154 40 C161 26 173 26 181 40"/>
         </svg>
         <div>
-          <div class="text-sm font-extrabold tracking-tight">Verminord</div>
-          <div class="text-[10px] text-[#8b98a8] font-medium tracking-wide">CAROUSEL STUDIO</div>
+          <div class="text-[15px] font-bold tracking-tight leading-none">Verminord</div>
+          <div class="eyebrow mt-1">Carousel Studio</div>
         </div>
       </div>
     </div>
 
-    <div class="px-5 pt-4 pb-2">
-      <div class="panel-label">Content Generator</div>
-      <p class="text-[11px] text-[#6c7886] mt-1 leading-relaxed">Pre-built 5-slide carousels. Click to load all slides into the editor.</p>
+    <div class="px-5 pt-4 pb-3 space-y-3 border-b" style="border-color:var(--ui-line)">
+      <input id="tplSearch" class="inp" placeholder="Search carousels…" />
+      <div id="catChips" class="flex flex-wrap gap-1.5"></div>
     </div>
 
-    <div id="templateList" class="flex-1 overflow-y-auto px-5 pb-5 space-y-2.5"></div>
+    <div class="px-5 pt-2 pb-1 flex items-center justify-between">
+      <span class="eyebrow">Templates</span>
+      <span id="tplCount" class="eyebrow"></span>
+    </div>
+    <div id="tplList" class="flex-1 overflow-y-auto px-5 pb-5 pt-1 space-y-2"></div>
   </aside>
 
-  <!-- ============================================================
-       CENTER — PREVIEW CANVAS
-       ============================================================ -->
+  <!-- ================= CENTER · CANVAS ================= -->
   <main class="flex-1 flex flex-col min-w-0">
-
-    <!-- Top bar -->
-    <header class="flex items-center justify-between gap-4 px-5 h-14 border-b border-[#1d242d] bg-[#10141a]">
-      <div class="flex items-center gap-3">
-        <span class="panel-label">Slide</span>
-        <div id="slideTabs" class="flex gap-1.5"></div>
+    <!-- top bar -->
+    <header class="flex items-center justify-between gap-3 px-5 h-14 border-b shrink-0" style="border-color:var(--ui-line); background:var(--ui-panel)">
+      <div class="flex items-center gap-2.5 min-w-0">
+        <span id="projName" class="text-[13px] font-semibold truncate max-w-[260px]">Kompost-te — Levende vann</span>
+        <span id="projTheme" class="eyebrow shrink-0"></span>
       </div>
-
-      <div class="flex items-center gap-3">
-        <div class="flex items-center bg-[#171c22] border border-[#2a323c] rounded-lg p-0.5">
-          <button id="ratio45" class="seg-btn active" title="1080 × 1350 — Instagram portrait">4:5</button>
-          <button id="ratio11" class="seg-btn" title="1080 × 1080 — square">1:1</button>
+      <div class="flex items-center gap-2.5 shrink-0">
+        <div class="seg" id="ratioSeg">
+          <button data-r="45" class="on">4:5</button>
+          <button data-r="11">1:1</button>
+          <button data-r="916">9:16</button>
         </div>
-        <button id="exportAllBtn" class="text-[11.5px] font-bold px-3.5 py-2 rounded-lg border border-[#2a323c] text-[#9aa7b5] hover:text-white hover:border-[#4a5a6d] transition-colors">
-          Export all 5
-        </button>
-        <button id="exportBtn" class="flex items-center gap-2 text-[12px] font-extrabold px-4 py-2 rounded-lg bg-[#c9b98a] text-[#171204] hover:bg-[#dbcb9c] transition-colors">
+        <button id="btnExportAll" class="btn">Export all</button>
+        <button id="btnExport" class="btn btn-primary flex items-center gap-2">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4"/></svg>
-          Export Current Slide as PNG
+          Export slide PNG
         </button>
       </div>
     </header>
 
-    <!-- Canvas viewport -->
-    <div id="canvasStage" class="flex-1 overflow-hidden flex items-center justify-center p-6 bg-[#0d1014]" style="background-image: radial-gradient(#161c24 1px, transparent 1px); background-size: 22px 22px;">
-      <div id="canvasViewport">
-        <!-- ======= THE LOCKED VERMINORD SLIDE TEMPLATE ======= -->
-        <div id="igCanvas" class="ig-canvas ratio-45 shadow-2xl">
-          <img id="igBg" class="ig-bg" crossorigin="anonymous" alt="" />
-          <div id="igOverlay" class="ig-overlay"></div>
+    <!-- stage -->
+    <div id="stage" class="flex-1 overflow-hidden flex items-center justify-center p-6" style="background:var(--ui-bg); background-image: radial-gradient(#171d28 1px, transparent 1px); background-size: 22px 22px;">
+      <div id="viewport" style="transform-origin:top left">
+        <div id="artWrap" style="width:max-content; border-radius:6px; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,.55)">
+          <!-- built slide injected here -->
+        </div>
+      </div>
+    </div>
 
-          <!-- Logo: worm icon + wordmark, top-left -->
-          <div class="ig-logo">
-            <svg viewBox="0 0 140 48" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round">
-              <path d="M8 33 q7 -7 14 -1" />
-              <circle cx="33" cy="29" r="10.5" />
-              <circle cx="30" cy="26.5" r="2" fill="currentColor" stroke="none" />
-              <path d="M44 34 C44 15, 60 15, 60 34 C60 17, 75 17, 75 34 C75 19, 89 19, 89 34 C89 21, 101 21, 101 34 C101 23, 111 23, 111 34 C111 26, 119 26, 119 34" />
-            </svg>
-            <div class="ig-logo-name">Verminord</div>
-          </div>
-
-          <!-- Category tag, top-right -->
-          <div id="igTag" class="ig-tag">24 timer</div>
-
-          <!-- Centered copy -->
-          <div class="ig-center">
-            <div id="igTitle" class="ig-title">Lag kompost-te</div>
-            <div id="igSubtitle" class="ig-subtitle">levende vann.</div>
-            <div id="igBody" class="ig-body">Et oksygenrikt uttrekk av levende vermikompost.</div>
-          </div>
-
-          <!-- Bottom asset -->
-          <div class="ig-site">VERMINORD.COM</div>
+    <!-- filmstrip -->
+    <div class="border-t shrink-0" style="border-color:var(--ui-line); background:var(--ui-panel)">
+      <div class="flex items-center gap-3 px-5 py-3">
+        <div class="flex items-center gap-2 shrink-0">
+          <span class="eyebrow">Slides</span>
+        </div>
+        <div id="filmstrip" class="flex items-center gap-2.5 overflow-x-auto flex-1 py-1"></div>
+        <div class="flex items-center gap-1.5 shrink-0 pl-2 border-l" style="border-color:var(--ui-line)">
+          <button id="btnDup"  class="btn btn-icon" title="Duplicate slide">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
+          </button>
+          <button id="btnDel"  class="btn btn-icon" title="Delete slide">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0l1 13a1 1 0 001 1h6a1 1 0 001-1l1-13"/></svg>
+          </button>
+          <button id="btnAdd"  class="btn btn-icon" title="Add blank slide">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
+          </button>
         </div>
       </div>
     </div>
   </main>
 
-  <!-- ============================================================
-       RIGHT SIDEBAR — SLIDE CONTROLS
-       ============================================================ -->
-  <aside class="w-80 shrink-0 overflow-y-auto border-l border-[#1d242d] bg-[#10141a]">
+  <!-- ================= RIGHT · INSPECTOR ================= -->
+  <aside class="w-[320px] shrink-0 overflow-y-auto border-l" style="border-color:var(--ui-line); background:var(--ui-panel)">
     <div class="p-5 space-y-6">
 
-      <!-- Text editors -->
+      <!-- Background -->
       <section class="space-y-3">
-        <div class="panel-label">Slide Text</div>
-        <div>
-          <label class="text-[11px] font-semibold text-[#9aa7b5] block mb-1.5">Top-Right Category Tag</label>
-          <input id="inTag" class="field-input" placeholder="e.g. LEVENDE BIOLOGI" />
+        <span class="eyebrow">Background</span>
+        <div class="seg w-full" id="bgSeg" style="display:grid; grid-template-columns:repeat(4,1fr)">
+          <button data-bg="photo">Photo</button>
+          <button data-bg="navy">Navy</button>
+          <button data-bg="cream">Cream</button>
+          <button data-bg="white">White</button>
         </div>
-        <div>
-          <label class="text-[11px] font-semibold text-[#9aa7b5] block mb-1.5">Bold Main Title</label>
-          <input id="inTitle" class="field-input" placeholder="e.g. Ikke gjødsel." />
-        </div>
-        <div>
-          <label class="text-[11px] font-semibold text-[#9aa7b5] block mb-1.5">Italic Serif Subtitle</label>
-          <input id="inSubtitle" class="field-input" placeholder="e.g. Levende mikrober." />
-        </div>
-        <div>
-          <label class="text-[11px] font-semibold text-[#9aa7b5] block mb-1.5">Body Text <span class="text-[#5b6774] font-normal">(one line per row)</span></label>
-          <textarea id="inBody" class="field-input" rows="4" placeholder="Gjødsel mater planten.&#10;Kompost-te mater jorda."></textarea>
-        </div>
-        <p class="text-[10.5px] text-[#5b6774] leading-relaxed">Font sizes, line heights and placements are locked to the Verminord brand template.</p>
-      </section>
 
-      <hr class="border-[#1d242d]" />
-
-      <!-- Overlay controls -->
-      <section class="space-y-3">
-        <div class="panel-label">Overlay Tint</div>
-        <div class="flex items-center gap-3">
-          <input id="inOverlayColor" type="color" value="#1f3d4d" class="w-10 h-10 rounded-lg border border-[#2a323c] bg-transparent cursor-pointer p-0.5" />
-          <div class="flex-1">
-            <div class="flex justify-between text-[11px] font-semibold text-[#9aa7b5] mb-1">
-              <span>Opacity</span><span id="opacityVal">62%</span>
-            </div>
-            <input id="inOverlayOpacity" type="range" min="0" max="100" value="62" class="w-full accent-[#c9b98a]" />
+        <div id="photoControls" class="space-y-3 pt-1">
+          <div class="grid grid-cols-2 gap-2">
+            <button id="btnUpload" class="btn flex items-center justify-center gap-2">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 16V4m0 0L8 8m4-4l4 4"/></svg>
+              Upload
+            </button>
+            <button id="btnClearImg" class="btn">Remove image</button>
           </div>
-        </div>
-        <div class="flex gap-2" id="overlaySwatches">
-          <button class="swatch" data-color="#1f3d4d" style="background:#1f3d4d" title="Deep teal"></button>
-          <button class="swatch" data-color="#12333a" style="background:#12333a" title="Petrol"></button>
-          <button class="swatch" data-color="#1d3a2a" style="background:#1d3a2a" title="Forest green"></button>
-          <button class="swatch" data-color="#26292e" style="background:#26292e" title="Dark gray"></button>
-          <button class="swatch" data-color="#0e2233" style="background:#0e2233" title="Midnight navy"></button>
-          <button class="swatch" data-color="#3a3326" style="background:#3a3326" title="Peat brown"></button>
-        </div>
-      </section>
-
-      <hr class="border-[#1d242d]" />
-
-      <!-- Logo / text color state -->
-      <section class="space-y-3">
-        <div class="panel-label">Logo &amp; Text Color</div>
-        <div class="flex items-center bg-[#171c22] border border-[#2a323c] rounded-lg p-0.5 w-fit">
-          <button id="themeLight" class="seg-btn active">White (dark bg)</button>
-          <button id="themeDark" class="seg-btn">Charcoal (light bg)</button>
-        </div>
-      </section>
-
-      <hr class="border-[#1d242d]" />
-
-      <!-- Background image -->
-      <section class="space-y-3">
-        <div class="panel-label">Background Image</div>
-        <div>
-          <label class="text-[11px] font-semibold text-[#9aa7b5] block mb-1.5">Custom Image URL</label>
+          <input type="file" id="fileImg" accept="image/*" class="hidden" />
           <div class="flex gap-2">
-            <input id="inImageUrl" class="field-input" placeholder="https://…" />
-            <button id="applyImageBtn" class="shrink-0 text-[11.5px] font-bold px-3 rounded-lg bg-[#2c3540] hover:bg-[#3a4552] transition-colors">Set</button>
+            <input id="imgUrl" class="inp" placeholder="or paste image URL…" />
+            <button id="btnSetUrl" class="btn shrink-0">Set</button>
+          </div>
+          <div id="presets" class="grid grid-cols-5 gap-1.5"></div>
+
+          <div class="pt-1 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="lbl" style="margin:0">Tint overlay</span>
+              <span id="tintPct" class="eyebrow">58%</span>
+            </div>
+            <div class="flex items-center gap-2.5">
+              <div class="flex gap-1.5" id="tintSw">
+                <button class="sw" data-c="#1C3A5C" style="background:#1C3A5C" title="Navy"></button>
+                <button class="sw" data-c="#1A1A1A" style="background:#1A1A1A" title="Ink"></button>
+                <button class="sw" data-c="#5A6270" style="background:#5A6270" title="Muted"></button>
+              </div>
+              <input id="tintColor" type="color" value="#1C3A5C" class="w-8 h-8" />
+              <input id="tintOp" type="range" min="0" max="90" value="58" class="flex-1" />
+            </div>
+            <div class="flex items-center justify-between pt-1">
+              <span class="lbl" style="margin:0">Text on photo</span>
+              <div class="seg" id="photoTextSeg">
+                <button data-t="light" class="on">Light</button>
+                <button data-t="dark">Dark</button>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-2" id="imagePresets"></div>
-        <p class="text-[10.5px] text-[#5b6774] leading-relaxed">Tip: exporting needs images that allow cross-origin use (the presets do). If a custom URL fails to export, download it and use a local file path.</p>
+        <p id="solidNote" class="text-[11px] leading-relaxed hidden" style="color:var(--ui-faint)"></p>
+      </section>
+
+      <hr class="div" />
+
+      <!-- Text content -->
+      <section class="space-y-3">
+        <span class="eyebrow">Text</span>
+        <div>
+          <label class="lbl">Category tag <span style="color:var(--ui-faint)">· top-right, mono caps</span></label>
+          <input id="fTag" class="inp" />
+        </div>
+        <div>
+          <label class="lbl">Title <span style="color:var(--ui-faint)">· Plex Sans Bold</span></label>
+          <input id="fTitle" class="inp" />
+        </div>
+        <div>
+          <label class="lbl">Subtitle <span style="color:var(--ui-faint)">· Plex Serif Italic</span></label>
+          <input id="fSub" class="inp" />
+        </div>
+        <div>
+          <label class="lbl">Body <span style="color:var(--ui-faint)">· Plex Serif · one line per row</span></label>
+          <textarea id="fBody" class="inp" rows="3"></textarea>
+        </div>
+      </section>
+
+      <hr class="div" />
+
+      <!-- Text size -->
+      <section class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="eyebrow">Text size</span>
+          <span id="tsPct" class="eyebrow">100%</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-[10px]" style="color:var(--ui-faint)">A</span>
+          <input id="fScale" type="range" min="82" max="118" value="100" class="flex-1" />
+          <span class="text-[15px]" style="color:var(--ui-faint)">A</span>
+        </div>
+        <p class="text-[11px] leading-relaxed" style="color:var(--ui-faint)">Scales title, subtitle and body together. Placement stays locked to the brand template.</p>
+      </section>
+
+      <hr class="div" />
+
+      <!-- Logo -->
+      <section class="space-y-3">
+        <span class="eyebrow">Logo</span>
+        <div class="flex items-center justify-between">
+          <span class="lbl" style="margin:0">Variant</span>
+          <div class="seg" id="logoSeg">
+            <button data-v="white" class="on">White</button>
+            <button data-v="dark">Charcoal</button>
+          </div>
+        </div>
+        <label class="flex items-center gap-2 text-[12px] cursor-pointer" style="color:var(--ui-dim)">
+          <input type="checkbox" id="wmChk" checked class="accent-[color:var(--gold)]" /> Show “Verminord” wordmark
+        </label>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btnLogoWhite" class="btn">Upload white SVG</button>
+          <button id="btnLogoDark" class="btn">Upload dark SVG</button>
+        </div>
+        <input type="file" id="fileLogoWhite" accept=".svg,image/svg+xml" class="hidden" />
+        <input type="file" id="fileLogoDark" accept=".svg,image/svg+xml" class="hidden" />
+        <div class="flex items-center justify-between">
+          <p id="logoNote" class="text-[11px]" style="color:var(--ui-faint)">Using built-in mark.</p>
+          <button id="btnLogoReset" class="text-[11px] underline" style="color:var(--ui-faint)">Reset</button>
+        </div>
       </section>
 
     </div>
   </aside>
 </div>
 
+<div id="toast" class="toast"></div>
+
 <script>
-/* ============================================================
-   DATA — IMAGE PRESETS
-   ============================================================ */
-const IMAGE_PRESETS = [
-  { name: 'Forest canopy', url: 'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1600&q=80' },
-  { name: 'Leaf macro',    url: 'https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1600&q=80' },
-  { name: 'Seedling & soil', url: 'https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=1600&q=80' },
-  { name: 'Mountain mist', url: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1600&q=80' },
-  { name: 'Golden light',  url: 'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=1600&q=80' },
-];
-const P = i => IMAGE_PRESETS[i].url;
+"use strict";
 
 /* ============================================================
-   DATA — PRE-LOADED 5-SLIDE CAROUSEL TEMPLATES
-   Slide shape: { tag, title, subtitle, body, image,
-                  overlayColor, overlayOpacity, theme }
+   IMAGE PRESETS (nature / soil textures, CORS-enabled)
    ============================================================ */
-const TEMPLATES = [
-  {
-    name: 'Kompost-te — Levende vann',
-    desc: 'The original Verminord brew walkthrough (Norwegian) from the reference post.',
-    lang: 'NO',
-    slides: [
-      { tag: '24 timer', title: 'Lag kompost-te', subtitle: 'levende vann.',
-        body: 'Et oksygenrikt uttrekk av levende vermikompost.\nDu formerer mikrolivet og vanner det til plantene dine.\nSveip videre for detaljer →',
-        image: P(1), overlayColor: '#24455a', overlayOpacity: 62, theme: 'light' },
-      { tag: 'Levende biologi', title: 'Ikke gjødsel.', subtitle: 'Levende mikrober.',
-        body: 'Gjødsel mater planten.\nKompost-te mater jorda.',
-        image: P(3), overlayColor: '#2b4257', overlayOpacity: 68, theme: 'light' },
-      { tag: 'Enkelt og effektivt', title: 'Tre ting.', subtitle: 'Pluss luft.',
-        body: '· 10-20 L vann\n· En neve VermiCast\n· 30 ml melasse (ikke “et must” - men hjelper godt)',
-        image: P(2), overlayColor: '#1c3644', overlayOpacity: 62, theme: 'light' },
-      { tag: 'Bobler = bra', title: 'La det boble', subtitle: 'et døgn.',
-        body: 'VermiCast i en finmasket pose.\nLuftpumpe på i 24 timer.',
-        image: P(0), overlayColor: '#12333a', overlayOpacity: 62, theme: 'light' },
-      { tag: 'Spray på bladene', title: 'Bruk det', subtitle: 'ferskt.',
-        body: 'Spray på blader eller vann i jorda.\nBruk innen 4 timer.',
-        image: P(4), overlayColor: '#1d3a2a', overlayOpacity: 58, theme: 'light' },
-    ],
-  },
-  {
-    name: 'Soil Biology 101',
-    desc: 'Why living soil outperforms sterile mixes — premium soil biology explainer.',
-    lang: 'EN',
-    slides: [
-      { tag: 'Soil biology', title: 'Your soil', subtitle: 'is alive.',
-        body: 'One teaspoon of healthy soil holds more microbes\nthan there are people on Earth.\nSwipe to meet your underground workforce →',
-        image: P(2), overlayColor: '#1f3d4d', overlayOpacity: 62, theme: 'light' },
-      { tag: 'The workforce', title: 'Bacteria & fungi', subtitle: 'do the heavy lifting.',
-        body: 'Bacteria unlock nitrogen. Fungi extend your roots.\nTogether they trade nutrients for plant sugars —\na 400-million-year-old economy.',
-        image: P(1), overlayColor: '#12333a', overlayOpacity: 66, theme: 'light' },
-      { tag: 'The problem', title: 'Salts & tilling', subtitle: 'break the web.',
-        body: 'Synthetic salts dehydrate microbes.\nTilling shreds fungal networks.\nDead soil needs more inputs every single year.',
-        image: P(3), overlayColor: '#26292e', overlayOpacity: 64, theme: 'light' },
-      { tag: 'The fix', title: 'Feed the soil,', subtitle: 'not the plant.',
-        body: 'Add living vermicompost. Keep roots in the ground.\nMulch like a forest floor.\nBiology does the rest.',
-        image: P(0), overlayColor: '#1d3a2a', overlayOpacity: 60, theme: 'light' },
-      { tag: 'Start today', title: 'Living soil', subtitle: 'compounds.',
-        body: 'Every season the web grows stronger.\nStart with a handful of VermiCast.\nYour plants will tell the difference.',
-        image: P(4), overlayColor: '#1c3644', overlayOpacity: 58, theme: 'light' },
-    ],
-  },
-  {
-    name: 'Brew Guide — Microbial Tea',
-    desc: 'Step-by-step microbial brewing walkthrough for premium compost tea.',
-    lang: 'EN',
-    slides: [
-      { tag: 'Brew guide', title: 'Brew microbes', subtitle: 'like a pro.',
-        body: 'Compost tea multiplies your microbial life\nby the billions — overnight.\nThe full method, step by step →',
-        image: P(0), overlayColor: '#12333a', overlayOpacity: 64, theme: 'light' },
-      { tag: 'Step 1 — Water', title: 'Start clean.', subtitle: 'Dechlorinate.',
-        body: 'Fill 10-20 L with rain water,\nor bubble tap water for 1 hour first.\nChlorine kills the microbes you are trying to grow.',
-        image: P(3), overlayColor: '#1f3d4d', overlayOpacity: 62, theme: 'light' },
-      { tag: 'Step 2 — Inoculate', title: 'One handful', subtitle: 'of castings.',
-        body: 'Fresh VermiCast in a fine mesh bag.\nAdd 30 ml unsulphured molasses\nas microbe fuel.',
-        image: P(2), overlayColor: '#3a3326', overlayOpacity: 60, theme: 'light' },
-      { tag: 'Step 3 — Aerate', title: 'Let it bubble', subtitle: 'for 24 hours.',
-        body: 'Strong, rolling aeration keeps the brew aerobic.\nSweet, earthy smell = success.\nSour smell = start over.',
-        image: P(1), overlayColor: '#1c3644', overlayOpacity: 62, theme: 'light' },
-      { tag: 'Step 4 — Apply', title: 'Use it', subtitle: 'fresh.',
-        body: 'Spray on leaves or water into soil.\nUse within 4 hours —\nthe biology is most alive right after brewing.',
-        image: P(4), overlayColor: '#1d3a2a', overlayOpacity: 58, theme: 'light' },
-    ],
-  },
-  {
-    name: '5 Sustainable Growing Tips',
-    desc: 'High-saves listicle: regenerative habits for the home grower.',
-    lang: 'EN',
-    slides: [
-      { tag: 'Grow smarter', title: '5 habits of', subtitle: 'regenerative growers.',
-        body: 'Small changes. Compounding returns.\nSave this one for spring →',
-        image: P(4), overlayColor: '#1d3a2a', overlayOpacity: 62, theme: 'light' },
-      { tag: 'Tip 01', title: 'Never leave', subtitle: 'soil bare.',
-        body: 'Mulch, cover crop or plant densely.\nBare soil loses water, carbon\nand microbial life to the sun.',
-        image: P(1), overlayColor: '#1f3d4d', overlayOpacity: 62, theme: 'light' },
-      { tag: 'Tip 02', title: 'Compost', subtitle: 'everything.',
-        body: 'Kitchen scraps become worm castings.\nWorm castings become plant food.\nWaste leaves your house exactly once.',
-        image: P(2), overlayColor: '#3a3326', overlayOpacity: 60, theme: 'light' },
-      { tag: 'Tip 03', title: 'Water deep,', subtitle: 'not often.',
-        body: 'Deep, infrequent watering trains roots downward.\nStronger plants, less water,\nfewer fungus gnats.',
-        image: P(3), overlayColor: '#12333a', overlayOpacity: 64, theme: 'light' },
-      { tag: 'Tip 04 + 05', title: 'Skip salts.', subtitle: 'Trust biology.',
-        body: '04 — Replace synthetic feed with compost tea.\n05 — Observe before you intervene.\nNature has been growing longer than we have.',
-        image: P(0), overlayColor: '#1c3644', overlayOpacity: 62, theme: 'light' },
-    ],
-  },
+const PRESETS = [
+  "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1400&q=80",
+  "https://images.unsplash.com/photo-1416879595882-3373a0480b5b?auto=format&fit=crop&w=1400&q=80",
+  "https://images.unsplash.com/photo-1523348837708-15d4a09cfac2?auto=format&fit=crop&w=1400&q=80",
+  "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?auto=format&fit=crop&w=1400&q=80",
+  "https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1400&q=80",
 ];
+
+/* ============================================================
+   THEME → visual mapping (brand-locked, max 3 colours each)
+   photo : navy tint + white text + gold accent  (strongest triad)
+   navy  : navy bg + cream text + gold accent     (strongest triad)
+   cream : cream bg + navy text + ink body        (NO gold text — brand rule)
+   white : white bg + navy text + gold accent     (strongest triad)
+   ============================================================ */
+const C = { navy:'#1C3A5C', gold:'#B8993A', cream:'#F6F2EA', white:'#FFFFFF', ink:'#1A1A1A', muted:'#5A6270' };
+
+function themeStyle(slide){
+  const t = slide.bgType;
+  if (t === 'photo'){
+    const light = slide.photoText !== 'dark';
+    return {
+      solid: null,
+      title: light ? C.white : C.ink,
+      body:  light ? 'rgba(255,255,255,0.95)' : C.ink,
+      accent: light ? C.gold : C.navy,   // tag + site
+      logo: light ? 'white' : 'dark',
+    };
+  }
+  if (t === 'navy')  return { solid:C.navy,  title:C.cream, body:'rgba(246,242,234,0.9)', accent:C.gold,  logo:'white' };
+  if (t === 'cream') return { solid:C.cream, title:C.navy,  body:C.ink,                   accent:C.navy,  logo:'dark'  };
+  return               { solid:C.white, title:C.navy,  body:C.navy,                  accent:C.gold,  logo:'dark'  }; // white
+}
+
+/* ============================================================
+   DEFAULT LOGO MARK  (faithful worm; swappable via upload)
+   ============================================================ */
+function defaultMark(color){
+  return `<svg viewBox="0 0 200 60" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="19" cy="35" r="10"/><circle cx="16" cy="32" r="2.4" fill="${color}" stroke="none"/>
+    <path d="M31 44 C44 16 66 16 78 44 C90 18 110 18 120 42 C130 22 146 22 154 40 C161 26 173 26 181 40"/>
+  </svg>`;
+}
+
+/* ============================================================
+   CONTENT LIBRARY  —  Verminord's real carousels
+   Compact form → expanded into full slide objects on load.
+   theme: photo|navy|cream|white applied to the whole carousel.
+   slide: [tag, title, subtitle, body(\n-separated)]
+   ============================================================ */
+const clean = s => s.replace(/\s*verminord\.com\s*/ig,'').trim();
+function body2(a,b){ return [a,b].map(x=>x||'').filter(x=>clean(x)).map(clean).join('\n'); }
+
+const LIB = [];
+
+/* 1 · THE REFERENCE PHOTO CAROUSEL ------------------------------------ */
+LIB.push({ name:'Kompost-te — Levende vann', cat:'PHOTO', theme:'photo', slides:[
+  { tag:'24 timer', title:'Lag kompost-te', sub:'levende vann.', body:'Et oksygenrikt uttrekk av levende vermikompost.\nDu formerer mikrolivet og vanner det til plantene dine.\nSveip videre for detaljer →', img:PRESETS[0], tint:'#1C3A5C', op:60 },
+  { tag:'Levende biologi', title:'Ikke gjødsel.', sub:'Levende mikrober.', body:'Gjødsel mater planten.\nKompost-te mater jorda.', img:PRESETS[1], tint:'#1C3A5C', op:64 },
+  { tag:'Enkelt og effektivt', title:'Tre ting.', sub:'Pluss luft.', body:'· 10–20 L vann\n· En neve VermiCast\n· 30 ml melasse (hjelper, ikke et must)', img:PRESETS[2], tint:'#1A1A1A', op:58 },
+  { tag:'Bobler er bra', title:'La det boble', sub:'et døgn.', body:'VermiCast i en finmasket pose.\nLuftpumpe på i 24 timer.', img:PRESETS[3], tint:'#1C3A5C', op:60 },
+  { tag:'Spray på bladene', title:'Bruk det', sub:'ferskt.', body:'Spray på blader eller vann i jorda.\nBruk innen fire timer.', img:PRESETS[4], tint:'#1C3A5C', op:56 },
+]});
+
+/* helper for solid (theme) carousels: slide = [tag,title,sub,b1,b2] */
+function solidCarousel(name, cat, theme, rows){
+  return { name, cat, theme, slides: rows.map(r => ({ tag:r[0], title:r[1], sub:r[2], body:body2(r[3], r[4]) })) };
+}
+
+/* 2 · 10 THEME CAROUSELS (from Verminord_karuseller_10_nye_vinkler) --- */
+LIB.push(solidCarousel('Den brenner ikke','PRODUKT','cream',[
+  ['Mild kraft','Den brenner','ikke.','Kunstgjødsel kan svi røttene.','Vermikompost gjør ikke det.'],
+  ['Hvorfor','Moden.','Rottegrad V.','Fullt nedbrutt, ferdig modnet.','Derfor er den så mild.'],
+  ['Bruk','Bland inn','5–10 %.','I pottejord, eller toppdress i bed.','Vanskelig å overdosere.'],
+  ['Trygt','Mild kraft,','ikke sjokk.','VermiCast, 5 L — 389 kr.',''],
+]));
+LIB.push(solidCarousel('Vi viser deg tallene','LAB','navy',[
+  ['Åpenhet','Vi viser deg','tallene.','De fleste komposter har ingen.','Sveip for rapporten.'],
+  ['Analysert','ALS Norge.','NO2604972.','Uavhengig laboratorium.','Ikke våre egne påstander.'],
+  ['Rent','Salmonella:','ikke påvist.','Tungmetallklasse 0.','Rottegrad V.'],
+  ['Balansert','Lavt.','Balansert.','N 1.16 %. P 0.48 %. K 0.51 %.','Med vilje — ikke kunstgjødsel.'],
+  ['Spør','Vil du se','hele PDF-en?','Send oss en melding.','Vi sender den.'],
+]));
+LIB.push(solidCarousel('Møt arbeiderne','BIOLOGI','navy',[
+  ['Arbeiderne','Møt dem som','gjør jobben.','De er ikke maskiner.','De er mark.'],
+  ['Arten','Eisenia','fetida.','Kompostmarken. Bygd for dette.','Ikke meitemarken fra hagen.'],
+  ['Jobben','De spiser.','Vi høster.','Råvarer inn. Vermikompost ut.','Ingen snarveier.'],
+  ['Tålmodig','Måneder,','ikke dager.','God jord kan ikke forhastes.',''],
+]));
+LIB.push(solidCarousel('Det lukter skog','PRODUKT','cream',[
+  ['Test selv','Det lukter','skog.','Ikke søppel. Ikke ammoniakk.','Slik kjenner du moden kompost.'],
+  ['Tegn 1','Mørk og','smuldrete.','Som fuktig skogbunn.','Aldri slimete eller klissete.'],
+  ['Tegn 2','Jevn','tekstur.','Ingen gjenkjennelige biter.','Alt er brutt ned.'],
+  ['Modent','Dette er','rottegrad V.','Fullt nedbrutt og stabilt.','Lab-bekreftet, ikke gjettet.'],
+]));
+LIB.push(solidCarousel('Lavt er meningen','PRODUKT','white',[
+  ['Misforstått','Lave tall.','Med vilje.','Vermikompost er ikke kunstgjødsel.','Og skal ikke være det.'],
+  ['Tallene','N 1.16 %.','Lavt.','Kunstgjødsel ligger mye høyere.','Det er ikke poenget her.'],
+  ['Poenget','Biologi,','ikke bare NPK.','Levende jord gjør jobben over tid.','Tall forteller ikke alt.'],
+  ['Balansen','Lavt, jevnt,','trygt.','pH 7.1. Balansert.','Bygger jord, brenner ikke.'],
+]));
+LIB.push(solidCarousel('Laget av Jæren','ANLEGG','navy',[
+  ['Opphav','Laget av','Jæren.','Råvarene kommer herfra.','Bokstavelig talt.'],
+  ['Råvare','Lamamøkk','fra nabolaget.','Fra en gård like ved.','Ikke fra en sekk i utlandet.'],
+  ['Råvare','Øl-mask fra','Rogaland.','Brukt korn fra lokale bryggerier.','Avfall for dem. Mat for marken.'],
+  ['Sirkulært','Sirkulært','i praksis.','Ikke i markedsføringen.','Lokale råvarer, ekte kretsløp.'],
+  ['Herfra','Klepp','Stasjon.','Produsert på Jæren.',''],
+]));
+LIB.push(solidCarousel('Vi selger ikke mirakler','ERFARING','cream',[
+  ['Ærlig','Vi selger','ikke mirakler.','Ingen «boost». Ingen magi.','Bare moden vermikompost.'],
+  ['Sannheten','God jord','tar tid.','Den bygges, den kjøpes ikke ferdig.','Vermikompost er en start.'],
+  ['Hva den gjør','Den nærer','livet i jorda.','Mikrobiologi, struktur, stabilitet.','Sakte. Varig.'],
+  ['Tålmodig','Ekte','tar tid.','Vi har holdt på siden 2024.',''],
+]));
+LIB.push(solidCarousel('Trygg for maten','LAB','white',[
+  ['Trygghet','Trygg nok','for maten din.','Til grønnsakene du faktisk spiser.','Sveip for hvorfor.'],
+  ['Rent','Tungmetall-','klasse 0.','Den reneste klassen som finnes.','Lab-bekreftet.'],
+  ['Trygt','Salmonella:','ikke påvist.','Etter analyse hos ALS Norge.','Ikke noe du vil ha i bedet.'],
+  ['Dokumentert','Ikke','gjettet.','Rapport NO2604972, ALS Norge.','Spør, så sender vi PDF-en.'],
+]));
+LIB.push(solidCarousel('Tre par hender','OM OSS','cream',[
+  ['Hvem','Tre par','hender.','Det er hele produksjonen.','Et familieselskap på Jæren.'],
+  ['Martin','Snart 20 år','med mark.','Først chili. Så tomater og urter.','Dyrker, ikke forretningsmann.'],
+  ['Familien','Bror i','produksjon.','Far som juridisk eier.','Liten drift. Tett på.'],
+  ['Derfor','Vi er','bønder først.','Bygd av folk som faktisk dyrker.',''],
+]));
+LIB.push(solidCarousel('Hvert merke betyr noe','SIRKULÆRT','navy',[
+  ['Stemplet','Hvert merke','betyr noe.','Ikke pynt. Ikke logoer for syns skyld.','Sveip videre.'],
+  ['Debio','Debio-','registrert.','Under norsk økologisk tilsyn.','Ikke noe vi har funnet på selv.'],
+  ['Mattilsynet','Mattilsynet-','registrert.','Registrert virksomhet, sporbar.','Som det skal være.'],
+  ['Batch','Hver sekk','er stemplet.','For hånd. Eget batchnummer på hver.','Sporbar tilbake til produksjonen.'],
+  ['Tillit','Dokumentert,','ikke lovet.','VermiCast, 5 L — 389 kr.',''],
+]));
+
+/* 3 · 20 TOPICAL CAROUSELS (from Verminord_20_Carousels) -------------- */
+function md(name, cat, theme, rows){ // rows: [tag,title,sub,body]
+  return { name, cat, theme, slides: rows.map(r => ({ tag:r[0], title:r[1], sub:r[2], body:clean(r[3]) })) };
+}
+LIB.push(md('Sopp, bakterier, protozoer','BIOLOGI','navy',[
+  ['Biologi','Sopp, bakterier,','protozoer.','De bryter ned og bygger opp.'],
+  ['Biologi','Jord er ikke','dødt stoff.','Det er et levende nettverk under føttene dine.'],
+  ['Biologi','Planten','samarbeider.','Røttene mater mikrobene. Mikrobene mater røttene.'],
+  ['Biologi','Vermikompost','tilfører liv.','Ikke bare næring — biologi.'],
+]));
+LIB.push(md('Rottegrad V','BIOLOGI','cream',[
+  ['Biologi','Rottegrad','V.','Fullt moden vermikompost.'],
+  ['Biologi','Umoden kompost','stjeler.','Den trekker nitrogen fra jorda mens den modnes.'],
+  ['Biologi','Moden kompost','gir.','Stabil, ferdig nedbrutt, klar for røttene.'],
+  ['Biologi','Derfor venter','vi.','Til marken er ferdig. Ikke før.'],
+]));
+LIB.push(md('Mikrobiologi > NPK','BIOLOGI','navy',[
+  ['Biologi','Alle snakker','om NPK.','Få snakker om det som gjør NPK tilgjengelig.'],
+  ['Biologi','Tall på sekken','er ikke alt.','Planten tar ikke opp næring uten biologi.'],
+  ['Biologi','N 1.16 %,','lav og balansert.','Nok til å mate, lite nok til å ikke brenne.'],
+  ['Biologi','Biologien gjør','resten.','Mikrobene gjør næringen plantetilgjengelig.'],
+]));
+LIB.push(md('Mark som økosystemingeniør','BIOLOGI','cream',[
+  ['Biologi','Mark er en','ingeniør.','Den bygger om jorda mens den spiser.'],
+  ['Biologi','Inn går','avfall.','Organisk materiale som ellers ville råtnet.'],
+  ['Biologi','Ut kommer','struktur.','Luftig, drenert jord full av mikroliv.'],
+  ['Biologi','Eisenia','fetida.','Arten som gjør jobben i bedene våre.'],
+]));
+LIB.push(md('Vermikompost vs. kompost','BIOLOGI','white',[
+  ['Biologi','Ikke all kompost','er lik.','Forskjellen ligger i hvem som lager den.'],
+  ['Biologi','Vanlig kompost:','varme.','Mikrobene brytes ned av høy temperatur.'],
+  ['Biologi','Vermikompost:','mark.','Lav temperatur. Biologien overlever.'],
+  ['Biologi','Derfor er den','levende.','Mer mikroliv per gram, intakt og aktivt.'],
+]));
+LIB.push(md('Lab-rapporten','LAB','navy',[
+  ['Lab','Vi gjettet','ikke.','Vi sendte den til lab.'],
+  ['Lab','ALS Norge','analyserte.','Rapport NO2604972. Hele profilen.'],
+  ['Lab','pH 7.1,','C:N 21:1.','Balansert. Stabil. Klar for bruk.'],
+  ['Lab','Dokumentert,','ikke påstått.','Spør, så sender vi PDF-en.'],
+]));
+LIB.push(md('Tungmetallklasse I','LAB','white',[
+  ['Lab','Det du ikke','vil ha.','Tungmetaller hører ikke hjemme i maten.'],
+  ['Lab','Derfor måler','vi.','Hver batch dokumenteres mot grenseverdier.'],
+  ['Lab','Tungmetall-','klasse I.','Innenfor de strengeste kravene.'],
+  ['Lab','Trygt for','spiselig.','Også til grønnsaker og krydderurter.'],
+]));
+LIB.push(md('Salmonella ikke påvist','LAB','navy',[
+  ['Lab','Hygiene er','ikke valgfritt.','Ikke når råvaren er organisk.'],
+  ['Lab','Prosessen','hygieniserer.','Kontrollert nedbrytning, dokumentert resultat.'],
+  ['Lab','Salmonella','ikke påvist.','Bekreftet ved analyse.'],
+  ['Lab','Levende jord,','trygg jord.','Begge deler — ikke det ene på bekostning av det andre.'],
+]));
+LIB.push(md('20 år med chili og mark','ERFARING','cream',[
+  ['Erfaring','Det begynte','med chili.','Og noen mark i en plastkasse.'],
+  ['Erfaring','Snart','20 år.','Chili, tomat, krydderurter — alt med vermikompost.'],
+  ['Erfaring','Jeg lærte','av jorda.','Ikke av en pitch. Av plantene som svarte.'],
+  ['Erfaring','Nå deler','jeg den.','VermiCast er 20 år i en sekk.'],
+]));
+LIB.push(md('Familieselskap på tre','OM OSS','cream',[
+  ['Om oss','Tre personer.','Én familie.','Verminord er et familieselskap.'],
+  ['Om oss','Strategi','og drift.','Martin holder retningen.'],
+  ['Om oss','Daglig','produksjon.','Broren steller bedene.'],
+  ['Om oss','Bønder','først.','Bygget av folk som faktisk dyrker.'],
+]));
+LIB.push(md('En dag på CFT-anlegget','ANLEGG','navy',[
+  ['Anlegg','En dag','i bedet.','Slik lages VermiCast.'],
+  ['Anlegg','Continuous','Flow-Through.','Mark spiser på toppen, høster fra bunnen.'],
+  ['Anlegg','Klima-','kontrollert.','Jevn temperatur, hele året, på Jæren.'],
+  ['Anlegg','Tålmodighet','i system.','Ingen snarveier. Bare tid og biologi.'],
+]));
+LIB.push(md('Hvorfor jeg startet','ERFARING','cream',[
+  ['Erfaring','To mark,','én plastkasse.','Sånn begynte det.'],
+  ['Erfaring','Plantene','svarte.','Bedre vekst, friskere blad, mer smak.'],
+  ['Erfaring','Jeg ville','forstå hvorfor.','Så jeg fortsatte. I nesten 20 år.'],
+  ['Erfaring','Det er fortsatt','det samme.','Levende jord gir levende planter.'],
+]));
+LIB.push(md('Liv fra dag én','FRØSTART','white',[
+  ['Frøstart','Liv fra','dag én.','Slik gir du spirene en god start.'],
+  ['Frøstart','Frø trenger','lite.','Mild næring, ikke kraftig gjødsel.'],
+  ['Frøstart','Bland inn','litt.','En liten andel vermikompost i såjorda.'],
+  ['Frøstart','Enkelt','og trygt.','Mark brenner ikke spirene.'],
+]));
+LIB.push(md('Hvor mye er nok','STELL','white',[
+  ['Stell','Mer er','ikke bedre.','Vermikompost er konsentrert biologi.'],
+  ['Stell','I pottejord:','5–10 %.','Bland godt inn. Det holder.'],
+  ['Stell','I bed:','toppdress.','Et tynt lag rundt planten.'],
+  ['Stell','Det er','nok.','Spar resten til neste sesong.'],
+]));
+LIB.push(md('Pottejord for tomat','STELL','cream',[
+  ['Stell','Tomat vil','ha struktur.','Luft til røttene, jevn fukt.'],
+  ['Stell','Start med','god jord.','En lett, drenerende pottejord.'],
+  ['Stell','Bland inn','vermikompost.','10 % gir biologi og mild næring.'],
+  ['Stell','Resten','er stell.','Vann jevnt, gi lys, vær tålmodig.'],
+]));
+LIB.push(md('Toppdressing i bed','STELL','navy',[
+  ['Stell','Jorda di','lever.','Den vil mates på overflaten.'],
+  ['Stell','Legg et','tynt lag.','Vermikompost rundt planten, ikke nedgravd.'],
+  ['Stell','Vann','inn.','Biologien følger vannet ned til røttene.'],
+  ['Stell','Gjenta','ved behov.','Midt i sesongen, når veksten er på topp.'],
+]));
+LIB.push(md('Vermikompost-te (AACT)','TE','navy',[
+  ['Te','Fra fast','til flytende.','Vermikompost-te, hjemmelaget.'],
+  ['Te','Vann,','luft, tid.','En luftpumpe og en bøtte holder.'],
+  ['Te','Biologien','formerer seg.','Mikrobene våkner og mangedobles.'],
+  ['Te','Vann ut','samme dag.','Fersk te, rett på jorda eller bladene.'],
+]));
+LIB.push(md('Vår-stell før planting','SESONG','cream',[
+  ['Sesong','Våren','starter i jorda.','Før det første frøet går i bakken.'],
+  ['Sesong','Vekk','biologien.','Bland vermikompost inn i bedet tidlig.'],
+  ['Sesong','Gi mikrobene','et forsprang.','De jobber mens du venter på varmen.'],
+  ['Sesong','Klar når','du er det.','Levende jord møter de første røttene.'],
+]));
+LIB.push(md('Høst — tilbake til jorda','SESONG','navy',[
+  ['Sesong','Sesongen','er over.','Men jorda skal leve videre.'],
+  ['Sesong','Ikke la bedet','ligge nakent.','Bar jord taper struktur og liv.'],
+  ['Sesong','Topp med','vermikompost.','Mat biologien gjennom vinteren.'],
+  ['Sesong','Til våren','er den klar.','Du takker deg selv i mars.'],
+]));
+LIB.push(md('Sirkulært — uten navn','SIRKULÆRT','navy',[
+  ['Sirkulært','Mark spiser','det andre kaster.','Sirkulært i praksis.'],
+  ['Sirkulært','Avfall','er en råvare.','For den som vet hva mark trenger.'],
+  ['Sirkulært','Lokalt','inn.','Kortreist, ikke markedsføring.'],
+  ['Sirkulært','Levende jord','ut.','Det er hele poenget.'],
+]));
 
 /* ============================================================
    STATE
    ============================================================ */
-const SLIDE_COUNT = 5;
-let slides = JSON.parse(JSON.stringify(TEMPLATES[0].slides)); // start on the reference template
-let current = 0;
-let ratio = '45'; // '45' → 1080×1350, '11' → 1080×1080
-let activeTemplate = 0;
+const project = {
+  ratio: '45',
+  logo: { customWhite: null, customDark: null, wordmark: true },
+  slides: [],
+  current: 0,
+  activeTpl: 0,
+};
+
+function expandTemplate(tpl){
+  return tpl.slides.map(s => {
+    const isPhoto = tpl.theme === 'photo';
+    return {
+      bgType: tpl.theme,                       // photo|navy|cream|white
+      img: isPhoto ? (s.img || '') : '',
+      tint: s.tint || '#1C3A5C',
+      op: (s.op != null ? s.op : 58),
+      photoText: 'light',
+      tag: s.tag || '',
+      title: s.title || '',
+      sub: s.sub || '',
+      body: s.body || '',
+      scale: 100,
+      logoVariant: null,                       // null → auto from theme
+    };
+  });
+}
 
 /* ============================================================
-   DOM REFS
+   DOM SHORTCUTS
    ============================================================ */
 const $ = id => document.getElementById(id);
-const igCanvas = $('igCanvas'), igBg = $('igBg'), igOverlay = $('igOverlay');
-const igTag = $('igTag'), igTitle = $('igTitle'), igSubtitle = $('igSubtitle'), igBody = $('igBody');
-const inTag = $('inTag'), inTitle = $('inTitle'), inSubtitle = $('inSubtitle'), inBody = $('inBody');
-const inOverlayColor = $('inOverlayColor'), inOverlayOpacity = $('inOverlayOpacity'), opacityVal = $('opacityVal');
-const inImageUrl = $('inImageUrl');
+const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 /* ============================================================
-   RENDER
+   BUILD A SLIDE  (single source of truth for preview / thumb / export)
    ============================================================ */
-const esc = s => s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+function buildSlide(slide, ratio){
+  const st = themeStyle(slide);
+  const el = document.createElement('div');
+  el.className = 'ig r' + ratio;
+  if (st.solid) el.style.background = st.solid;
 
-function renderCanvas() {
-  const s = slides[current];
-  igTag.textContent = s.tag;
-  igTitle.textContent = s.title;
-  igSubtitle.textContent = s.subtitle;
-  igBody.innerHTML = s.body.split('\n').map(l => esc(l) || '&nbsp;').join('<br>');
-  igOverlay.style.background = s.overlayColor;
-  igOverlay.style.opacity = s.overlayOpacity / 100;
-  if (igBg.getAttribute('src') !== s.image) igBg.src = s.image;
-  igCanvas.classList.toggle('theme-dark', s.theme === 'dark');
+  // photo + tint
+  if (slide.bgType === 'photo'){
+    if (slide.img){
+      const img = document.createElement('img');
+      img.className = 'ig-photo';
+      img.crossOrigin = 'anonymous';
+      img.src = slide.img;
+      el.appendChild(img);
+    } else {
+      el.style.background = C.navy;
+    }
+    const tint = document.createElement('div');
+    tint.className = 'ig-tint';
+    tint.style.background = slide.tint;
+    tint.style.opacity = slide.op/100;
+    el.appendChild(tint);
+  }
+
+  // logo
+  const lv = slide.logoVariant || st.logo;
+  const logo = document.createElement('div');
+  logo.className = 'ig-logo';
+  const color = lv === 'white' ? C.white : C.ink;
+  const custom = lv === 'white' ? project.logo.customWhite : project.logo.customDark;
+  if (custom){
+    logo.innerHTML = custom;
+    const svg = logo.querySelector('svg');
+    if (svg){ svg.style.height='42px'; svg.style.width='auto'; }
+  } else {
+    logo.innerHTML = defaultMark(color);
+    if (project.logo.wordmark){
+      const wm = document.createElement('div');
+      wm.className = 'wm'; wm.style.color = color; wm.textContent = 'Verminord';
+      logo.appendChild(wm);
+    }
+  }
+  el.appendChild(logo);
+
+  // tag
+  if (slide.tag){
+    const tag = document.createElement('div');
+    tag.className = 'ig-tag'; tag.style.color = st.accent; tag.textContent = slide.tag;
+    el.appendChild(tag);
+  }
+
+  // center block
+  const center = document.createElement('div');
+  center.className = 'ig-center';
+  center.style.setProperty('--ts', slide.scale/100);
+  if (slide.title){
+    const h = document.createElement('div'); h.className='ig-title'; h.style.color=st.title; h.textContent=slide.title; center.appendChild(h);
+  }
+  if (slide.sub){
+    const s = document.createElement('div'); s.className='ig-subtitle'; s.style.color=st.title; s.textContent=slide.sub; center.appendChild(s);
+  }
+  if (slide.body){
+    const b = document.createElement('div'); b.className='ig-body'; b.style.color=st.body;
+    b.innerHTML = slide.body.split('\n').map(l => esc(l) || '&nbsp;').join('<br>');
+    center.appendChild(b);
+  }
+  el.appendChild(center);
+
+  // site
+  const site = document.createElement('div');
+  site.className = 'ig-site'; site.style.color = st.accent; site.textContent = 'VERMINORD.COM';
+  el.appendChild(site);
+
+  return el;
 }
-
-function renderControls() {
-  const s = slides[current];
-  inTag.value = s.tag;
-  inTitle.value = s.title;
-  inSubtitle.value = s.subtitle;
-  inBody.value = s.body;
-  inOverlayColor.value = s.overlayColor;
-  inOverlayOpacity.value = s.overlayOpacity;
-  opacityVal.textContent = s.overlayOpacity + '%';
-  inImageUrl.value = s.image;
-  document.querySelectorAll('#overlaySwatches .swatch').forEach(b =>
-    b.classList.toggle('active', b.dataset.color.toLowerCase() === s.overlayColor.toLowerCase()));
-  document.querySelectorAll('#imagePresets .preset-thumb').forEach(b =>
-    b.classList.toggle('active', b.dataset.url === s.image));
-  $('themeLight').classList.toggle('active', s.theme !== 'dark');
-  $('themeDark').classList.toggle('active', s.theme === 'dark');
-}
-
-function renderTabs() {
-  document.querySelectorAll('#slideTabs .slide-tab').forEach((b, i) =>
-    b.classList.toggle('active', i === current));
-}
-
-function renderAll() { renderCanvas(); renderControls(); renderTabs(); }
 
 /* ============================================================
-   VIEWPORT SCALING — canvas is a real 1080px artboard,
-   scaled down to fit the stage.
+   RENDER — main preview
    ============================================================ */
-function fitCanvas() {
-  const stage = $('canvasStage');
-  const w = 1080, h = ratio === '45' ? 1350 : 1080;
-  const scale = Math.min((stage.clientWidth - 48) / w, (stage.clientHeight - 48) / h, 1);
-  const vp = $('canvasViewport');
+function renderPreview(){
+  const wrap = $('artWrap');
+  wrap.innerHTML = '';
+  wrap.appendChild(buildSlide(project.slides[project.current], project.ratio));
+  fit();
+}
+function fit(){
+  const stage = $('stage');
+  const w = 1080, h = project.ratio==='45'?1350 : project.ratio==='11'?1080 : 1920;
+  const scale = Math.min((stage.clientWidth-56)/w, (stage.clientHeight-56)/h, 0.9);
+  const vp = $('viewport');
   vp.style.transform = `scale(${scale})`;
-  vp.style.width = w * scale + 'px';
-  vp.style.height = h * scale + 'px';
+  vp.style.width = w*scale+'px';
+  vp.style.height = h*scale+'px';
 }
-window.addEventListener('resize', fitCanvas);
+window.addEventListener('resize', fit);
 
 /* ============================================================
-   UI WIRING
+   RENDER — filmstrip thumbnails (live mini-renders)
    ============================================================ */
-// Slide tabs
-const tabsWrap = $('slideTabs');
-for (let i = 0; i < SLIDE_COUNT; i++) {
-  const b = document.createElement('button');
-  b.className = 'slide-tab';
-  b.textContent = i + 1;
-  b.onclick = () => { current = i; renderAll(); };
-  tabsWrap.appendChild(b);
+function renderFilmstrip(){
+  const fs = $('filmstrip'); fs.innerHTML = '';
+  const th = 92; // thumb height px
+  const w = 1080, h = project.ratio==='45'?1350 : project.ratio==='11'?1080 : 1920;
+  const scale = th / h;
+  project.slides.forEach((slide, i) => {
+    const box = document.createElement('button');
+    box.style.cssText = `position:relative; flex:0 0 auto; width:${Math.round(w*scale)}px; height:${th}px; border-radius:7px; overflow:hidden; border:2px solid ${i===project.current?'var(--gold)':'var(--ui-line2)'}; background:#000; cursor:pointer`;
+    const inner = document.createElement('div');
+    inner.style.cssText = `position:absolute; top:0; left:0; width:${w}px; height:${h}px; transform:scale(${scale}); transform-origin:top left`;
+    inner.appendChild(buildSlide(slide, project.ratio));
+    box.appendChild(inner);
+    const num = document.createElement('div');
+    num.textContent = i+1;
+    num.style.cssText = 'position:absolute; top:3px; left:4px; font-size:9px; font-weight:700; color:#fff; background:rgba(0,0,0,.55); border-radius:4px; padding:0 4px; font-family:IBM Plex Mono,monospace';
+    box.appendChild(num);
+    box.onclick = () => { project.current = i; renderAll(); };
+    fs.appendChild(box);
+  });
 }
 
-// Text inputs → live update
-inTag.oninput      = () => { slides[current].tag = inTag.value; renderCanvas(); };
-inTitle.oninput    = () => { slides[current].title = inTitle.value; renderCanvas(); };
-inSubtitle.oninput = () => { slides[current].subtitle = inSubtitle.value; renderCanvas(); };
-inBody.oninput     = () => { slides[current].body = inBody.value; renderCanvas(); };
+/* ============================================================
+   RENDER — inspector controls (reflect current slide)
+   ============================================================ */
+function renderControls(){
+  const s = project.slides[project.current];
+  // background segmented
+  document.querySelectorAll('#bgSeg button').forEach(b => b.classList.toggle('on', b.dataset.bg === s.bgType));
+  const isPhoto = s.bgType === 'photo';
+  $('photoControls').classList.toggle('hidden', !isPhoto);
+  $('solidNote').classList.toggle('hidden', isPhoto);
+  if (!isPhoto){
+    const notes = {
+      navy:'Navy + Cream + Gold — the strongest brand triad. White logo.',
+      cream:'Cream + Navy + Ink. No gold text on cream (brand rule). Charcoal logo.',
+      white:'White + Navy + Gold triad. Charcoal logo.',
+    };
+    $('solidNote').textContent = notes[s.bgType] || '';
+  }
+  // photo controls
+  $('imgUrl').value = (isPhoto && /^https?:/.test(s.img)) ? s.img : '';
+  $('tintColor').value = s.tint;
+  $('tintOp').value = s.op; $('tintPct').textContent = s.op + '%';
+  document.querySelectorAll('#tintSw .sw').forEach(b => b.classList.toggle('on', b.dataset.c.toLowerCase()===s.tint.toLowerCase()));
+  document.querySelectorAll('#photoTextSeg button').forEach(b => b.classList.toggle('on', b.dataset.t === s.photoText));
+  document.querySelectorAll('#presets .sw2').forEach(b => b.classList.toggle('on', b.dataset.u === s.img));
+  // text
+  $('fTag').value = s.tag; $('fTitle').value = s.title; $('fSub').value = s.sub; $('fBody').value = s.body;
+  // scale
+  $('fScale').value = s.scale; $('tsPct').textContent = s.scale + '%';
+  // logo
+  const st = themeStyle(s);
+  const lv = s.logoVariant || st.logo;
+  document.querySelectorAll('#logoSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === lv));
+  $('wmChk').checked = project.logo.wordmark;
+  const has = project.logo.customWhite || project.logo.customDark;
+  $('logoNote').textContent = has ? 'Using uploaded logo.' : 'Using built-in mark.';
+}
 
-// Overlay controls
-inOverlayColor.oninput = () => { slides[current].overlayColor = inOverlayColor.value; renderCanvas(); renderControls(); };
-inOverlayOpacity.oninput = () => {
-  slides[current].overlayOpacity = +inOverlayOpacity.value;
-  opacityVal.textContent = inOverlayOpacity.value + '%';
-  renderCanvas();
+function renderHeader(){
+  const tpl = LIB[project.activeTpl];
+  $('projName').textContent = tpl ? tpl.name : 'Custom';
+  $('projTheme').textContent = (project.slides[project.current]||{}).bgType || '';
+}
+
+function renderAll(){ renderPreview(); renderFilmstrip(); renderControls(); renderHeader(); }
+
+/* ============================================================
+   TEMPLATE LIBRARY (left)
+   ============================================================ */
+const CATS = ['ALL', ...Array.from(new Set(LIB.map(t=>t.cat)))];
+let activeCat = 'ALL', searchQ = '';
+
+function renderChips(){
+  const wrap = $('catChips'); wrap.innerHTML='';
+  CATS.forEach(c => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (c===activeCat?' on':'');
+    b.textContent = c;
+    b.onclick = () => { activeCat = c; renderTplList(); };
+    wrap.appendChild(b);
+  });
+}
+function renderTplList(){
+  renderChips();
+  const list = $('tplList'); list.innerHTML='';
+  const q = searchQ.toLowerCase();
+  const items = LIB.map((t,i)=>({t,i})).filter(({t}) =>
+    (activeCat==='ALL' || t.cat===activeCat) &&
+    (!q || t.name.toLowerCase().includes(q) || t.slides.some(s => (s.title+s.sub+s.body).toLowerCase().includes(q)))
+  );
+  $('tplCount').textContent = items.length + (items.length===1?' set':' sets');
+  items.forEach(({t,i}) => {
+    const b = document.createElement('button');
+    b.className = 'tpl' + (i===project.activeTpl?' on':'');
+    const dot = t.theme==='photo' ? '#7d8794' : t.theme==='navy' ? C.navy : t.theme==='cream' ? C.cream : '#fff';
+    b.innerHTML = `
+      <div class="flex items-center justify-between gap-2">
+        <div class="text-[12.5px] font-semibold leading-snug pr-1">${esc(t.name)}</div>
+        <span style="width:12px;height:12px;border-radius:50%;flex:0 0 auto;background:${dot};border:1px solid rgba(255,255,255,.18)"></span>
+      </div>
+      <div class="flex items-center gap-2 mt-1.5">
+        <span class="eyebrow">${esc(t.cat)}</span>
+        <span class="eyebrow" style="color:var(--ui-faint)">· ${t.slides.length} slides · ${t.theme}</span>
+      </div>`;
+    b.onclick = () => loadTemplate(i);
+    list.appendChild(b);
+  });
+}
+function loadTemplate(i){
+  project.slides = expandTemplate(LIB[i]);
+  project.current = 0;
+  project.activeTpl = i;
+  renderTplList();
+  renderAll();
+  toast('Loaded “' + LIB[i].name + '”');
+}
+
+/* ============================================================
+   INSPECTOR WIRING
+   ============================================================ */
+const cur = () => project.slides[project.current];
+
+// background type
+document.querySelectorAll('#bgSeg button').forEach(b => b.onclick = () => {
+  const s = cur();
+  s.bgType = b.dataset.bg;
+  s.logoVariant = null;         // reset to theme-auto on bg change
+  if (s.bgType==='photo' && !s.img){ s.img = PRESETS[0]; }
+  renderAll();
+});
+
+// image upload (local disk)
+$('btnUpload').onclick = () => $('fileImg').click();
+$('fileImg').onchange = e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rd = new FileReader();
+  rd.onload = () => { const s=cur(); s.bgType='photo'; s.img = rd.result; renderAll(); toast('Image added'); };
+  rd.readAsDataURL(f);
+  e.target.value='';
 };
-document.querySelectorAll('#overlaySwatches .swatch').forEach(b =>
-  b.onclick = () => { slides[current].overlayColor = b.dataset.color; renderCanvas(); renderControls(); });
+$('btnClearImg').onclick = () => { const s=cur(); s.img=''; renderAll(); };
+$('btnSetUrl').onclick = setUrl;
+$('imgUrl').addEventListener('keydown', e => { if (e.key==='Enter') setUrl(); });
+function setUrl(){ const u=$('imgUrl').value.trim(); if(!u) return; const s=cur(); s.bgType='photo'; s.img=u; renderAll(); }
 
-// Theme toggle (logo + text color state)
-$('themeLight').onclick = () => { slides[current].theme = 'light'; renderCanvas(); renderControls(); };
-$('themeDark').onclick  = () => { slides[current].theme = 'dark';  renderCanvas(); renderControls(); };
-
-// Background image — custom URL
-$('applyImageBtn').onclick = applyCustomUrl;
-inImageUrl.addEventListener('keydown', e => { if (e.key === 'Enter') applyCustomUrl(); });
-function applyCustomUrl() {
-  const url = inImageUrl.value.trim();
-  if (!url) return;
-  slides[current].image = url;
-  renderCanvas(); renderControls();
-}
-igBg.onerror = () => { igBg.removeAttribute('src'); }; // fall back to the canvas base color
-
-// Background image — presets
-const presetWrap = $('imagePresets');
-IMAGE_PRESETS.forEach(p => {
+// presets
+const pr = $('presets');
+PRESETS.forEach(u => {
   const b = document.createElement('button');
-  b.className = 'preset-thumb';
-  b.dataset.url = p.url;
-  b.innerHTML = `<img src="${p.url.replace('w=1600', 'w=300')}" alt="" loading="lazy"><span>${p.name}</span>`;
-  b.onclick = () => { slides[current].image = p.url; renderCanvas(); renderControls(); };
-  presetWrap.appendChild(b);
+  b.className='sw2';
+  b.dataset.u=u;
+  b.style.cssText='height:34px;border-radius:6px;overflow:hidden;border:2px solid transparent;cursor:pointer;background:#0b0f16';
+  b.innerHTML = `<img src="${u.replace('w=1400','w=200')}" style="width:100%;height:100%;object-fit:cover" loading="lazy">`;
+  b.onclick = () => { const s=cur(); s.bgType='photo'; s.img=u; renderAll(); };
+  pr.appendChild(b);
+});
+// mark active preset border via CSS class handling in renderControls
+const style2 = document.createElement('style');
+style2.textContent = '.sw2.on{border-color:var(--gold)!important}';
+document.head.appendChild(style2);
+
+// tint
+document.querySelectorAll('#tintSw .sw').forEach(b => b.onclick = () => { cur().tint=b.dataset.c; renderPreview(); renderFilmstrip(); renderControls(); });
+$('tintColor').oninput = () => { cur().tint=$('tintColor').value; renderPreview(); renderFilmstrip(); renderControls(); };
+$('tintOp').oninput = () => { cur().op=+$('tintOp').value; $('tintPct').textContent=$('tintOp').value+'%'; renderPreview(); renderFilmstrip(); };
+document.querySelectorAll('#photoTextSeg button').forEach(b => b.onclick = () => { cur().photoText=b.dataset.t; renderAll(); });
+
+// text fields
+$('fTag').oninput   = () => { cur().tag=$('fTag').value; renderPreview(); renderFilmstrip(); };
+$('fTitle').oninput = () => { cur().title=$('fTitle').value; renderPreview(); renderFilmstrip(); };
+$('fSub').oninput   = () => { cur().sub=$('fSub').value; renderPreview(); renderFilmstrip(); };
+$('fBody').oninput  = () => { cur().body=$('fBody').value; renderPreview(); renderFilmstrip(); };
+
+// text scale
+$('fScale').oninput = () => { cur().scale=+$('fScale').value; $('tsPct').textContent=$('fScale').value+'%'; renderPreview(); renderFilmstrip(); };
+
+// logo variant + wordmark
+document.querySelectorAll('#logoSeg button').forEach(b => b.onclick = () => { cur().logoVariant=b.dataset.v; renderAll(); });
+$('wmChk').onchange = () => { project.logo.wordmark=$('wmChk').checked; renderPreview(); renderFilmstrip(); };
+$('btnLogoWhite').onclick = () => $('fileLogoWhite').click();
+$('btnLogoDark').onclick  = () => $('fileLogoDark').click();
+$('fileLogoWhite').onchange = e => readSvg(e, 'customWhite', 'White');
+$('fileLogoDark').onchange  = e => readSvg(e, 'customDark', 'Charcoal');
+function readSvg(e, key, label){
+  const f=e.target.files[0]; if(!f) return;
+  const rd=new FileReader();
+  rd.onload=()=>{ project.logo[key]=sanitizeSvg(rd.result); renderAll(); toast(label+' logo uploaded'); };
+  rd.readAsText(f);
+  e.target.value='';
+}
+function sanitizeSvg(str){
+  // keep only the <svg>…</svg>, strip scripts/handlers (local tool, light guard)
+  const m = str.match(/<svg[\s\S]*<\/svg>/i);
+  let svg = m ? m[0] : str;
+  svg = svg.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/on\w+="[^"]*"/gi,'');
+  return svg;
+}
+$('btnLogoReset').onclick = () => { project.logo.customWhite=null; project.logo.customDark=null; renderAll(); toast('Logo reset'); };
+
+// ratio
+document.querySelectorAll('#ratioSeg button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#ratioSeg button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');
+  project.ratio = b.dataset.r;
+  renderAll();
 });
 
-// Aspect ratio
-$('ratio45').onclick = () => setRatio('45');
-$('ratio11').onclick = () => setRatio('11');
-function setRatio(r) {
-  ratio = r;
-  igCanvas.classList.toggle('ratio-45', r === '45');
-  igCanvas.classList.toggle('ratio-11', r === '11');
-  $('ratio45').classList.toggle('active', r === '45');
-  $('ratio11').classList.toggle('active', r === '11');
-  fitCanvas();
-}
+// slide management
+$('btnAdd').onclick = () => {
+  const base = cur();
+  project.slides.splice(project.current+1, 0, { ...JSON.parse(JSON.stringify(base)), tag:base.tag, title:'New title', sub:'ny linje.', body:'Rediger teksten her.' });
+  project.current++; renderAll();
+};
+$('btnDup').onclick = () => {
+  project.slides.splice(project.current+1, 0, JSON.parse(JSON.stringify(cur())));
+  project.current++; renderAll(); toast('Slide duplicated');
+};
+$('btnDel').onclick = () => {
+  if (project.slides.length<=1){ toast('Keep at least one slide'); return; }
+  project.slides.splice(project.current,1);
+  project.current = Math.max(0, project.current-1);
+  renderAll();
+};
 
-// Template library
-const tplWrap = $('templateList');
-TEMPLATES.forEach((t, i) => {
-  const b = document.createElement('button');
-  b.className = 'template-card' + (i === 0 ? ' active' : '');
-  b.innerHTML = `
-    <div class="flex items-center justify-between gap-2">
-      <div class="text-[12.5px] font-bold text-[#e5e9ee] leading-snug">${t.name}</div>
-      <span class="text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#232b34] text-[#c9b98a]">${t.lang}</span>
-    </div>
-    <div class="text-[11px] text-[#8b98a8] mt-1 leading-relaxed">${t.desc}</div>
-    <div class="text-[10px] font-semibold text-[#5b6774] mt-1.5 tracking-wide">5 SLIDES</div>`;
-  b.onclick = () => {
-    slides = JSON.parse(JSON.stringify(t.slides));
-    current = 0;
-    activeTemplate = i;
-    document.querySelectorAll('.template-card').forEach((c, j) => c.classList.toggle('active', j === i));
-    renderAll();
-  };
-  tplWrap.appendChild(b);
+// keyboard nav
+document.addEventListener('keydown', e => {
+  if (/input|textarea/i.test(document.activeElement.tagName)) return;
+  if (e.key==='ArrowRight' && project.current<project.slides.length-1){ project.current++; renderAll(); }
+  if (e.key==='ArrowLeft'  && project.current>0){ project.current--; renderAll(); }
 });
 
 /* ============================================================
-   EXPORT ENGINE — html2canvas
-   The live canvas sits inside a scaled viewport, so we clone it
-   into an off-screen holder at natural 1080px size and capture
-   the clone at 2× (2160px wide) for crisp, hi-res output.
+   EXPORT ENGINE  (html2canvas, 2× hi-res)
    ============================================================ */
-async function captureCurrentSlide() {
+async function waitImg(el){
+  const img = el.querySelector('img.ig-photo');
+  if (!img || !img.getAttribute('src')) return;
+  if (img.complete && img.naturalWidth) return;
+  await new Promise(res => { img.onload=res; img.onerror=res; });
+}
+async function capture(slide){
   await document.fonts.ready;
-  if (igBg.getAttribute('src')) {
-    await new Promise(res => {
-      if (igBg.complete) return res();
-      igBg.onload = res; igBg.onerror = res;
-    });
-  }
-
-  const clone = igCanvas.cloneNode(true);
+  const node = buildSlide(slide, project.ratio);
   const holder = document.createElement('div');
-  holder.style.cssText = 'position:fixed; left:-20000px; top:0; z-index:-1;';
-  holder.appendChild(clone);
+  holder.style.cssText = 'position:fixed;left:-20000px;top:0;';
+  holder.appendChild(node);
   document.body.appendChild(holder);
-
   try {
-    const cloneImg = clone.querySelector('img');
-    if (cloneImg && cloneImg.getAttribute('src')) {
-      await new Promise(res => {
-        if (cloneImg.complete) return res();
-        cloneImg.onload = res; cloneImg.onerror = res;
-      });
+    await waitImg(node);
+    await new Promise(r => setTimeout(r, 60));
+    return await html2canvas(node, { scale:2, useCORS:true, backgroundColor:'#1C3A5C', logging:false, width:1080, height: project.ratio==='45'?1350:project.ratio==='11'?1080:1920 });
+  } finally { holder.remove(); }
+}
+function download(canvas, name){
+  const a=document.createElement('a'); a.download=name; a.href=canvas.toDataURL('image/png'); a.click();
+}
+$('btnExport').onclick = async () => {
+  const btn=$('btnExport'); const label=btn.innerHTML; btn.style.opacity=.6; btn.disabled=true;
+  try {
+    const cnv = await capture(cur());
+    download(cnv, `verminord-slide-${project.current+1}.png`);
+    toast('Exported slide ' + (project.current+1));
+  } catch(err){ toast('Export failed — try a preset image'); console.error(err); }
+  finally { btn.style.opacity=1; btn.disabled=false; btn.innerHTML=label; }
+};
+$('btnExportAll').onclick = async () => {
+  const btn=$('btnExportAll'); btn.disabled=true;
+  const name = (LIB[project.activeTpl]?LIB[project.activeTpl].name:'verminord').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+  try {
+    for (let i=0;i<project.slides.length;i++){
+      btn.textContent = `Exporting ${i+1}/${project.slides.length}…`;
+      const cnv = await capture(project.slides[i]);
+      download(cnv, `${name}-${String(i+1).padStart(2,'0')}.png`);
+      await new Promise(r=>setTimeout(r,250));
     }
-    return await html2canvas(clone, {
-      scale: 2,
-      useCORS: true,
-      backgroundColor: '#10181f',
-      logging: false,
-    });
-  } finally {
-    holder.remove();
-  }
-}
-
-function downloadCanvas(cnv, filename) {
-  const a = document.createElement('a');
-  a.download = filename;
-  a.href = cnv.toDataURL('image/png');
-  a.click();
-}
-
-function setExporting(on, label) {
-  const btn = $('exportBtn');
-  btn.disabled = on;
-  btn.style.opacity = on ? .6 : 1;
-  btn.lastChild.textContent = on ? ` ${label}` : ' Export Current Slide as PNG';
-}
-
-$('exportBtn').onclick = async () => {
-  setExporting(true, 'Rendering…');
-  try {
-    const cnv = await captureCurrentSlide();
-    downloadCanvas(cnv, `verminord-slide-${current + 1}.png`);
-  } catch (err) {
-    alert('Export failed: ' + err.message + '\n\nIf you are using a custom image URL, its server may block cross-origin use. Try one of the built-in presets or a local file.');
-  } finally {
-    setExporting(false);
-  }
+    toast('Exported all slides');
+  } catch(err){ toast('Export failed'); console.error(err); }
+  finally { btn.disabled=false; btn.textContent='Export all'; }
 };
 
-$('exportAllBtn').onclick = async () => {
-  const startSlide = current;
-  const btn = $('exportAllBtn');
-  btn.disabled = true;
-  try {
-    for (let i = 0; i < SLIDE_COUNT; i++) {
-      current = i;
-      renderAll();
-      btn.textContent = `Exporting ${i + 1}/5…`;
-      // give the browser a beat to load the slide's background image
-      await new Promise(r => setTimeout(r, 350));
-      const cnv = await captureCurrentSlide();
-      downloadCanvas(cnv, `verminord-slide-${i + 1}.png`);
-    }
-  } catch (err) {
-    alert('Export failed on slide ' + (current + 1) + ': ' + err.message);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Export all 5';
-    current = startSlide;
-    renderAll();
-  }
-};
+/* ============================================================
+   TOAST
+   ============================================================ */
+let toastT;
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1900); }
+
+// search
+$('tplSearch').oninput = e => { searchQ = e.target.value; renderTplList(); };
 
 /* ============================================================
    BOOT
    ============================================================ */
+project.slides = expandTemplate(LIB[0]);
+renderTplList();
 renderAll();
-fitCanvas();
+document.fonts.ready.then(renderAll);
 </script>
 </body>
 </html>
