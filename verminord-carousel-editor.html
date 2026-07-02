@@ -187,6 +187,11 @@
           <button data-r="11">1:1</button>
           <button data-r="916">9:16</button>
         </div>
+        <div class="seg" id="fmtSeg" title="Export format — Auto uses JPG for photos, PNG for solids">
+          <button data-f="auto" class="on">Auto</button>
+          <button data-f="png">PNG</button>
+          <button data-f="jpg">JPG</button>
+        </div>
         <button id="btnExportAll" class="btn">Export ZIP</button>
         <button id="btnExport" class="btn btn-primary flex items-center gap-2">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4"/></svg>
@@ -303,6 +308,10 @@
         <div>
           <label class="lbl">Body <span style="color:var(--ui-faint)">· Plex Serif · one line per row</span></label>
           <textarea id="fBody" class="inp" rows="3"></textarea>
+        </div>
+        <div>
+          <label class="lbl">Alt text <span style="color:var(--ui-faint)">· accessibility · per slide</span></label>
+          <textarea id="fAlt" class="inp" rows="2" style="min-height:56px" placeholder="Describe this slide for screen readers…"></textarea>
         </div>
       </section>
 
@@ -637,7 +646,7 @@ function expandTemplate(tpl){
     op: (s.op!=null ? s.op : 58),
     photoText: 'light',
     tag: s.tag||'', title: s.title||'', sub: s.sub||'', body: s.body||'',
-    scale: 100, logoVariant: 'auto',
+    scale: 100, logoVariant: 'auto', alt: '',
   }));
 }
 
@@ -664,7 +673,7 @@ let saveT;
 function saveLocal(){
   clearTimeout(saveT);
   saveT = setTimeout(() => {
-    try { localStorage.setItem(LS_KEY, JSON.stringify({ ratio:project.ratio, logo:project.logo, slides:project.slides, current:project.current, activeTpl:project.activeTpl, name:project.name, caption:project.caption })); }
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ ratio:project.ratio, logo:project.logo, slides:project.slides, current:project.current, activeTpl:project.activeTpl, name:project.name, caption:project.caption, exportFormat })); }
     catch(e){ toast('Autosave paused — project too large for browser storage'); }
   }, 400);
 }
@@ -676,6 +685,7 @@ function loadLocal(){
     project.ratio=s.ratio||'45'; project.logo=s.logo||project.logo; project.slides=s.slides;
     project.current=Math.min(s.current||0, s.slides.length-1); project.activeTpl=s.activeTpl; project.name=s.name||''; project.caption=s.caption||'';
     document.querySelectorAll('#ratioSeg button').forEach(b=>b.classList.toggle('on', b.dataset.r===project.ratio));
+    if(s.exportFormat){ exportFormat=s.exportFormat; document.querySelectorAll('#fmtSeg button').forEach(b=>b.classList.toggle('on', b.dataset.f===exportFormat)); }
     return true;
   } catch(e){ return false; }
 }
@@ -750,7 +760,7 @@ function fit(){
 window.addEventListener('resize', fit);
 
 /* filmstrip (debounced full rebuild) */
-let filmT;
+let filmT, dragFrom=null;
 function renderFilmstrip(){
   clearTimeout(filmT);
   filmT = setTimeout(_renderFilmstrip, 60);
@@ -769,6 +779,13 @@ function _renderFilmstrip(){
     num.style.cssText='position:absolute; top:3px; left:4px; font-size:9px; font-weight:700; color:#fff; background:rgba(0,0,0,.55); border-radius:4px; padding:0 4px; font-family:IBM Plex Mono,monospace';
     box.appendChild(num);
     box.onclick=()=>{ project.current=i; renderAll(); };
+    // drag-to-reorder
+    box.draggable=true;
+    box.addEventListener('dragstart', e=>{ dragFrom=i; e.dataTransfer.effectAllowed='move'; try{ e.dataTransfer.setData('text/plain', String(i)); }catch(_){} box.style.opacity='.35'; });
+    box.addEventListener('dragend', ()=>{ box.style.opacity='1'; document.querySelectorAll('#filmstrip button').forEach(x=>x.style.boxShadow=''); });
+    box.addEventListener('dragover', e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; if(dragFrom!==i) box.style.boxShadow='inset 0 0 0 2px var(--gold)'; });
+    box.addEventListener('dragleave', ()=>{ box.style.boxShadow=''; });
+    box.addEventListener('drop', e=>{ e.preventDefault(); box.style.boxShadow=''; if(dragFrom==null||dragFrom===i){ dragFrom=null; return; } pushHistory(); const a=project.slides; const [moved]=a.splice(dragFrom,1); a.splice(i,0,moved); project.current=i; dragFrom=null; renderAll(); });
     fs.appendChild(box);
   });
   $('slideCount').textContent = (project.current+1)+' / '+project.slides.length;
@@ -786,7 +803,7 @@ function renderControls(){
   document.querySelectorAll('#tintSw .sw').forEach(b=>b.classList.toggle('on', b.dataset.c.toLowerCase()===s.tint.toLowerCase()));
   document.querySelectorAll('#photoTextSeg button').forEach(b=>b.classList.toggle('on', b.dataset.t===s.photoText));
   document.querySelectorAll('#presets .sw2').forEach(b=>b.classList.toggle('on', b.dataset.u===s.img));
-  $('fTag').value=s.tag; $('fTitle').value=s.title; $('fSub').value=s.sub; $('fBody').value=s.body;
+  $('fTag').value=s.tag; $('fTitle').value=s.title; $('fSub').value=s.sub; $('fBody').value=s.body; $('fAlt').value=s.alt||'';
   $('fScale').value=s.scale; $('tsPct').textContent=s.scale+'%';
   document.querySelectorAll('#logoSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===(s.logoVariant||'auto')));
   $('wmChk').checked=project.logo.wordmark;
@@ -864,6 +881,8 @@ document.querySelectorAll('#photoTextSeg button').forEach(b=>b.onclick=()=>{ pus
 // text — commit history on change (blur), live-update on input
 function liveText(id, key){ const el=$(id); el.oninput=()=>{ cur()[key]=el.value; renderPreview(); renderFilmstrip(); markDirty(); saveLocal(); }; el.onfocus=()=>{ el._pre=snapshot(); }; el.onblur=()=>{ if(el._pre && el._pre!==snapshot()){ undoStack.push(el._pre); if(undoStack.length>60)undoStack.shift(); redoStack=[]; updateHistoryButtons(); } }; }
 liveText('fTag','tag'); liveText('fTitle','title'); liveText('fSub','sub'); liveText('fBody','body');
+// alt text — no canvas re-render needed, but history + autosave
+(function(){ const el=$('fAlt'); el.oninput=()=>{ cur().alt=el.value; markDirty(); saveLocal(); }; el.onfocus=()=>{ el._pre=snapshot(); }; el.onblur=()=>{ if(el._pre&&el._pre!==snapshot()){ undoStack.push(el._pre); if(undoStack.length>60)undoStack.shift(); redoStack=[]; updateHistoryButtons(); } }; })();
 
 $('fScale').oninput=()=>{ cur().scale=+$('fScale').value; $('tsPct').textContent=$('fScale').value+'%'; renderPreview(); renderFilmstrip(); markDirty(); saveLocal(); };
 $('fScale').onchange=()=>pushHistory();
@@ -932,7 +951,13 @@ async function capture(slide){
   finally{ holder.remove(); }
 }
 const slug=s=>(s||'verminord').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'verminord';
-function toBlob(canvas){ return new Promise(res=>canvas.toBlob(res,'image/png')); }
+
+/* export format — 'auto' = JPG for photos, PNG for solids */
+let exportFormat='auto';
+document.querySelectorAll('#fmtSeg button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#fmtSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); exportFormat=b.dataset.f; saveLocal(); });
+function fmtFor(slide){ if(exportFormat==='png') return 'png'; if(exportFormat==='jpg') return 'jpeg'; return slide.bgType==='photo' ? 'jpeg' : 'png'; }
+const extOf=f=>f==='jpeg'?'jpg':'png';
+function toBlob(canvas, f){ return new Promise(res=>canvas.toBlob(res, 'image/'+(f||'png'), f==='jpeg'?0.92:undefined)); }
 
 $('btnExport').onclick=async()=>{
   const btn=$('btnExport'); const html=btn.innerHTML; btn.disabled=true;
@@ -940,7 +965,8 @@ $('btnExport').onclick=async()=>{
     const missing=await ensureFonts();
     if(missing.length){ toastWarn('Fonts not ready ('+missing.join(', ')+') — export cancelled to avoid off-brand type. Check your connection.'); return; }
     const cnv=await capture(cur());
-    const a=document.createElement('a'); a.download=`${slug(project.name)}-${String(project.current+1).padStart(2,'0')}-${project.ratio}.png`; a.href=cnv.toDataURL('image/png'); a.click();
+    const f=fmtFor(cur());
+    const a=document.createElement('a'); a.download=`${slug(project.name)}-${String(project.current+1).padStart(2,'0')}-${project.ratio}.${extOf(f)}`; a.href=cnv.toDataURL('image/'+f, f==='jpeg'?0.92:undefined); a.click();
     toast('Exported slide '+(project.current+1));
   }catch(err){ toastWarn('Export failed — if you used a custom URL, upload the image instead'); console.error(err); }
   finally{ btn.disabled=false; btn.innerHTML=html; }
@@ -957,16 +983,17 @@ $('btnExportAll').onclick=async()=>{
       const zip=new JSZip();
       for(let i=0;i<project.slides.length;i++){
         btn.textContent=`Rendering ${i+1}/${project.slides.length}…`;
-        try{ const cnv=await capture(project.slides[i]); const blob=await toBlob(cnv); zip.file(`${name}-${String(i+1).padStart(2,'0')}-${project.ratio}.png`, blob); }
+        try{ const cnv=await capture(project.slides[i]); const f=fmtFor(project.slides[i]); const blob=await toBlob(cnv,f); zip.file(`${name}-${String(i+1).padStart(2,'0')}-${project.ratio}.${extOf(f)}`, blob); }
         catch(err){ failed.push(i+1); console.error('slide',i+1,err); }
       }
       if(project.caption) zip.file('caption.txt', project.caption);
+      if(project.slides.some(s=>s.alt&&s.alt.trim())) zip.file('alt-text.txt', project.slides.map((s,i)=>`Slide ${String(i+1).padStart(2,'0')}: ${(s.alt||'').trim()}`).join('\n')+'\n');
       btn.textContent='Zipping…';
       const out=await zip.generateAsync({type:'blob'});
       const a=document.createElement('a'); a.download=`${name}.zip`; a.href=URL.createObjectURL(out); a.click();
     } else {
       // fallback: sequential downloads
-      for(let i=0;i<project.slides.length;i++){ try{ const cnv=await capture(project.slides[i]); const a=document.createElement('a'); a.download=`${name}-${String(i+1).padStart(2,'0')}-${project.ratio}.png`; a.href=cnv.toDataURL('image/png'); a.click(); await new Promise(r=>setTimeout(r,300)); }catch(err){ failed.push(i+1); } }
+      for(let i=0;i<project.slides.length;i++){ try{ const cnv=await capture(project.slides[i]); const f=fmtFor(project.slides[i]); const a=document.createElement('a'); a.download=`${name}-${String(i+1).padStart(2,'0')}-${project.ratio}.${extOf(f)}`; a.href=cnv.toDataURL('image/'+f, f==='jpeg'?0.92:undefined); a.click(); await new Promise(r=>setTimeout(r,300)); }catch(err){ failed.push(i+1); } }
     }
     toast(failed.length ? `Exported ${project.slides.length-failed.length} of ${project.slides.length} — slide(s) ${failed.join(', ')} failed` : `Exported all ${project.slides.length} slides`);
   }catch(err){ toastWarn('Export failed'); console.error(err); }
