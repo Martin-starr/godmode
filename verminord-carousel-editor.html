@@ -10,6 +10,7 @@
      ============================================================ -->
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
 <!-- ============================================================
      BRAND TYPOGRAPHY  —  IBM Plex family
@@ -27,14 +28,14 @@
      BRAND TOKENS  (from the Verminord brand guide)
      ========================================================== */
   :root {
-    --navy:  #1C3A5C;   /* Primær — headers, cover      */
-    --gold:  #B8993A;   /* Aksent — linjer, labels       */
-    --cream: #F6F2EA;   /* Flate — bakgrunn, bokser      */
-    --white: #FFFFFF;   /* Innholdsflate                 */
-    --ink:   #1A1A1A;   /* Brødtekst på lys bg           */
-    --muted: #5A6270;   /* Sekundær — footer             */
+    --navy:  #1C3A5C;   /* Primær — headers, cover */
+    --gold:  #B8993A;   /* Aksent — linjer, labels */
+    --cream: #F6F2EA;   /* Flate — bakgrunn, bokser */
+    --white: #FFFFFF;   /* Innholdsflate */
+    --ink:   #1A1A1A;   /* Brødtekst på lys bg */
+    --muted: #5A6270;   /* Sekundær — footer */
 
-    /* editor chrome (dark studio UI — not part of the exported art) */
+    /* editor chrome (dark studio UI — not part of exported art) */
     --ui-bg:     #0e1116;
     --ui-panel:  #141922;
     --ui-panel2: #10151d;
@@ -44,7 +45,6 @@
     --ui-dim:    #8b97a8;
     --ui-faint:  #5d6879;
   }
-
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
@@ -59,144 +59,75 @@
   ::-webkit-scrollbar-thumb { background: #263042; border-radius: 5px; }
   ::-webkit-scrollbar-thumb:hover { background: #33415a; }
 
-  /* ---------- editor primitives ---------- */
-  .eyebrow {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; font-weight: 500;
-    letter-spacing: 0.18em; text-transform: uppercase;
-    color: var(--ui-faint);
-  }
-  .lbl { font-size: 11.5px; font-weight: 500; color: var(--ui-dim); display:block; margin-bottom: 6px; }
-  .inp {
-    width: 100%;
-    background: var(--ui-panel2);
-    border: 1px solid var(--ui-line);
-    border-radius: 9px;
-    padding: 9px 12px;
-    font-size: 13px;
-    font-family: 'IBM Plex Sans', sans-serif;
-    color: var(--ui-text);
-    outline: none;
-    transition: border-color .15s, background .15s;
-  }
-  .inp:focus { border-color: #4d6ea0; background: #121824; }
-  textarea.inp { resize: vertical; min-height: 92px; line-height: 1.55; }
+  .eyebrow { font-family:'IBM Plex Mono',monospace; font-size:10px; font-weight:500; letter-spacing:.18em; text-transform:uppercase; color:var(--ui-faint); }
+  .lbl { font-size:11.5px; font-weight:500; color:var(--ui-dim); display:block; margin-bottom:6px; }
+  .inp { width:100%; background:var(--ui-panel2); border:1px solid var(--ui-line); border-radius:9px; padding:9px 12px; font-size:13px; font-family:'IBM Plex Sans',sans-serif; color:var(--ui-text); outline:none; transition:border-color .15s, background .15s; }
+  .inp:focus { border-color:#4d6ea0; background:#121824; }
+  textarea.inp { resize:vertical; min-height:92px; line-height:1.55; }
 
-  .btn {
-    font-size: 12px; font-weight: 600;
-    border-radius: 9px;
-    padding: 8px 13px;
-    border: 1px solid var(--ui-line2);
-    color: var(--ui-dim);
-    background: var(--ui-panel2);
-    cursor: pointer;
-    transition: all .13s;
-    white-space: nowrap;
-  }
-  .btn:hover { color: var(--ui-text); border-color: #3d4c66; }
-  .btn-primary {
-    background: var(--gold); color: #1a1403; border-color: var(--gold);
-    font-weight: 700;
-  }
-  .btn-primary:hover { background: #cbab48; border-color: #cbab48; color:#1a1403; }
-  .btn-icon { padding: 7px; display:inline-flex; align-items:center; justify-content:center; }
+  .btn { font-size:12px; font-weight:600; border-radius:9px; padding:8px 13px; border:1px solid var(--ui-line2); color:var(--ui-dim); background:var(--ui-panel2); cursor:pointer; transition:all .13s; white-space:nowrap; }
+  .btn:hover:not(:disabled) { color:var(--ui-text); border-color:#3d4c66; }
+  .btn:disabled { opacity:.4; cursor:not-allowed; }
+  .btn-primary { background:var(--gold); color:#1a1403; border-color:var(--gold); font-weight:700; }
+  .btn-primary:hover:not(:disabled) { background:#cbab48; border-color:#cbab48; color:#1a1403; }
+  .btn-icon { padding:7px; display:inline-flex; align-items:center; justify-content:center; }
 
-  /* segmented control */
-  .seg { display:inline-flex; background: var(--ui-panel2); border:1px solid var(--ui-line); border-radius: 10px; padding: 3px; gap: 2px; }
-  .seg > button {
-    font-size: 11.5px; font-weight: 600;
-    padding: 6px 12px; border-radius: 7px;
-    color: var(--ui-dim); cursor: pointer; border: none; background: transparent;
-    transition: all .12s;
-  }
-  .seg > button.on { background: #263149; color: #fff; }
-  .seg.light > button.on { background: var(--gold); color:#1a1403; }
+  .seg { display:inline-flex; background:var(--ui-panel2); border:1px solid var(--ui-line); border-radius:10px; padding:3px; gap:2px; }
+  .seg > button { font-size:11.5px; font-weight:600; padding:6px 12px; border-radius:7px; color:var(--ui-dim); cursor:pointer; border:none; background:transparent; transition:all .12s; }
+  .seg > button.on { background:#263149; color:#fff; }
 
-  /* swatches */
-  .sw { width: 26px; height: 26px; border-radius: 7px; border: 2px solid transparent; cursor: pointer; transition: transform .1s, border-color .1s; }
-  .sw:hover { transform: scale(1.1); }
-  .sw.on { border-color: #fff; }
+  .sw { width:26px; height:26px; border-radius:7px; border:2px solid transparent; cursor:pointer; transition:transform .1s,border-color .1s; }
+  .sw:hover { transform:scale(1.1); }
+  .sw.on { border-color:#fff; }
 
-  .chip {
-    font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
-    padding: 5px 10px; border-radius: 999px;
-    border: 1px solid var(--ui-line2); color: var(--ui-dim);
-    cursor: pointer; white-space: nowrap; transition: all .12s;
-  }
-  .chip:hover { color: var(--ui-text); border-color:#3d4c66; }
-  .chip.on { background: var(--ui-text); color: var(--ui-bg); border-color: var(--ui-text); }
+  .chip { font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase; padding:5px 10px; border-radius:999px; border:1px solid var(--ui-line2); color:var(--ui-dim); cursor:pointer; white-space:nowrap; transition:all .12s; }
+  .chip:hover { color:var(--ui-text); border-color:#3d4c66; }
+  .chip.on { background:var(--ui-text); color:var(--ui-bg); border-color:var(--ui-text); }
 
-  /* template cards */
-  .tpl { text-align:left; width:100%; background: var(--ui-panel2); border:1px solid var(--ui-line); border-radius: 11px; padding: 11px 13px; cursor:pointer; transition: all .14s; }
+  .tpl { text-align:left; width:100%; background:var(--ui-panel2); border:1px solid var(--ui-line); border-radius:11px; padding:11px 13px; cursor:pointer; transition:all .14s; }
   .tpl:hover { border-color:#3d4c66; background:#131a26; }
-  .tpl.on { border-color: var(--gold); }
+  .tpl.on { border-color:var(--gold); }
 
-  hr.div { border:none; border-top:1px solid var(--ui-line); margin: 0; }
+  hr.div { border:none; border-top:1px solid var(--ui-line); margin:0; }
 
-  input[type=range] { -webkit-appearance:none; appearance:none; height: 4px; border-radius: 3px; background: var(--ui-line2); outline:none; }
-  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background: var(--gold); cursor:pointer; border: 2px solid #1a1f2b; }
-  input[type=range]::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background: var(--gold); cursor:pointer; border: 2px solid #1a1f2b; }
-
+  input[type=range] { -webkit-appearance:none; appearance:none; height:4px; border-radius:3px; background:var(--ui-line2); outline:none; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance:none; width:16px; height:16px; border-radius:50%; background:var(--gold); cursor:pointer; border:2px solid #1a1f2b; }
+  input[type=range]::-moz-range-thumb { width:16px; height:16px; border-radius:50%; background:var(--gold); cursor:pointer; border:2px solid #1a1f2b; }
   input[type=color] { -webkit-appearance:none; appearance:none; border:1px solid var(--ui-line); border-radius:8px; background:transparent; cursor:pointer; padding:2px; }
   input[type=color]::-webkit-color-swatch-wrapper { padding:0; }
   input[type=color]::-webkit-color-swatch { border:none; border-radius:6px; }
 
-  .toast {
-    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(20px);
-    background: #1a2330; border:1px solid var(--ui-line2); color: var(--ui-text);
-    padding: 10px 16px; border-radius: 10px; font-size: 12.5px; font-weight:500;
-    opacity:0; pointer-events:none; transition: all .25s; z-index: 100;
-    box-shadow: 0 12px 40px rgba(0,0,0,.5);
-  }
-  .toast.show { opacity:1; transform: translateX(-50%) translateY(0); }
+  .toast { position:fixed; bottom:20px; left:50%; transform:translateX(-50%) translateY(20px); background:#1a2330; border:1px solid var(--ui-line2); color:var(--ui-text); padding:10px 16px; border-radius:10px; font-size:12.5px; font-weight:500; opacity:0; pointer-events:none; transition:all .25s; z-index:100; box-shadow:0 12px 40px rgba(0,0,0,.5); max-width:420px; text-align:center; }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.warn { border-color:#7a5a1f; }
 
   /* ==========================================================
-     THE SLIDE ARTBOARD  —  1080-based, brand-locked layout
+     THE SLIDE ARTBOARD — 1080-based, brand-locked
      No gradients. No shadows on the art (brand rule).
      ========================================================== */
-  .ig {
-    position: relative;
-    width: 1080px;
-    overflow: hidden;
-    flex-shrink: 0;
-    background: var(--navy);
-    font-family: 'IBM Plex Sans', sans-serif;
-  }
-  .ig.r45 { height: 1350px; }
-  .ig.r11 { height: 1080px; }
-  .ig.r916 { height: 1920px; }
+  .ig { position:relative; width:1080px; overflow:hidden; flex-shrink:0; background:var(--navy); font-family:'IBM Plex Sans',sans-serif; }
+  .ig.r45 { height:1350px; }
+  .ig.r11 { height:1080px; }
+  .ig.r916 { height:1920px; }
+  .ig.overflowing { outline:3px solid #d9534f; outline-offset:-3px; }
 
-  .ig-photo { position:absolute; inset:0; width:100%; height:100%; object-fit: cover; }
+  .ig-photo { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .ig-tint  { position:absolute; inset:0; }
 
-  .ig-logo { position:absolute; top: 84px; left: 84px; display:flex; flex-direction:column; gap: 8px; }
-  .ig-logo svg { height: 42px; width: auto; display:block; }
-  .ig-logo .wm { font-family:'IBM Plex Sans',sans-serif; font-weight:500; font-size: 40px; line-height:1; letter-spacing: .005em; }
+  .ig-logo { position:absolute; top:84px; left:84px; display:flex; flex-direction:column; gap:8px; }
+  .ig-logo svg { height:42px; width:auto; display:block; }
+  .ig-logo .wm { font-family:'IBM Plex Sans',sans-serif; font-weight:500; font-size:40px; line-height:1; letter-spacing:.005em; }
 
-  .ig-tag {
-    position:absolute; top: 96px; right: 84px;
-    font-family:'IBM Plex Mono', monospace; font-weight: 400;
-    font-size: 21px; letter-spacing: 0.34em; text-transform: uppercase;
-    text-align: right; max-width: 520px; line-height: 1.7;
-  }
+  .ig-tag { position:absolute; top:96px; right:84px; font-family:'IBM Plex Mono',monospace; font-weight:400; font-size:21px; letter-spacing:0.34em; text-transform:uppercase; text-align:right; max-width:520px; line-height:1.7; }
 
-  .ig-center {
-    position:absolute; inset:0;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    text-align:center; padding: 120px 110px 150px;
-    --ts: 1;
-  }
-  .ig-title    { font-family:'IBM Plex Sans',sans-serif; font-weight:700; font-size: calc(88px * var(--ts)); line-height: 1.04; letter-spacing: -0.012em; }
-  .ig-subtitle { font-family:'IBM Plex Serif',serif; font-style: italic; font-weight:500; font-size: calc(76px * var(--ts)); line-height: 1.1; margin-top: 2px; }
-  .ig-body     { font-family:'IBM Plex Serif',serif; font-weight:400; font-size: calc(30px * var(--ts)); line-height: 1.66; margin-top: 40px; max-width: 780px; }
+  /* Optically-centred content, biased just below the true middle
+     (top padding > bottom), guarded against the logo/footer bands. */
+  .ig-center { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:186px 112px 150px; --ts:1; }
+  .ig-title    { font-family:'IBM Plex Sans',sans-serif; font-weight:700; font-size:calc(92px * var(--ts)); line-height:1.0; letter-spacing:-0.014em; }
+  .ig-subtitle { font-family:'IBM Plex Serif',serif; font-style:italic; font-weight:500; font-size:calc(64px * var(--ts)); line-height:1.08; margin-top:14px; }
+  .ig-body     { font-family:'IBM Plex Serif',serif; font-weight:400; font-size:calc(30px * var(--ts)); line-height:1.5; margin-top:38px; max-width:820px; }
 
-  .ig-site {
-    position:absolute; bottom: 74px; left:0; right:0; text-align:center;
-    font-family:'IBM Plex Mono', monospace; font-weight: 400;
-    font-size: 20px; letter-spacing: 0.4em; text-transform: uppercase;
-    text-indent: 0.4em;
-  }
+  .ig-site { position:absolute; bottom:74px; left:0; right:0; text-align:center; font-family:'IBM Plex Mono',monospace; font-weight:400; font-size:20px; letter-spacing:0.4em; text-transform:uppercase; text-indent:0.4em; }
 </style>
 </head>
 
@@ -228,54 +159,70 @@
       <span id="tplCount" class="eyebrow"></span>
     </div>
     <div id="tplList" class="flex-1 overflow-y-auto px-5 pb-5 pt-1 space-y-2"></div>
+
+    <div class="px-5 py-3 border-t grid grid-cols-2 gap-2" style="border-color:var(--ui-line)">
+      <button id="btnSave" class="btn">Save .json</button>
+      <button id="btnLoad" class="btn">Load .json</button>
+      <input type="file" id="fileProject" accept="application/json,.json" class="hidden" />
+    </div>
   </aside>
 
   <!-- ================= CENTER · CANVAS ================= -->
   <main class="flex-1 flex flex-col min-w-0">
-    <!-- top bar -->
     <header class="flex items-center justify-between gap-3 px-5 h-14 border-b shrink-0" style="border-color:var(--ui-line); background:var(--ui-panel)">
       <div class="flex items-center gap-2.5 min-w-0">
-        <span id="projName" class="text-[13px] font-semibold truncate max-w-[260px]">Kompost-te — Levende vann</span>
+        <span id="projName" class="text-[13px] font-semibold truncate max-w-[220px]">Kompost-te — Levende vann</span>
         <span id="projTheme" class="eyebrow shrink-0"></span>
+        <span id="dirtyDot" class="w-1.5 h-1.5 rounded-full shrink-0 hidden" style="background:var(--gold)" title="Unsaved edits"></span>
       </div>
-      <div class="flex items-center gap-2.5 shrink-0">
+      <div class="flex items-center gap-2 shrink-0">
+        <button id="btnUndo" class="btn btn-icon" title="Undo (Ctrl/Cmd+Z)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14L4 9l5-5M4 9h11a5 5 0 010 10h-3"/></svg>
+        </button>
+        <button id="btnRedo" class="btn btn-icon" title="Redo (Ctrl/Cmd+Shift+Z)">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 14l5-5-5-5M20 9H9a5 5 0 000 10h3"/></svg>
+        </button>
         <div class="seg" id="ratioSeg">
           <button data-r="45" class="on">4:5</button>
           <button data-r="11">1:1</button>
           <button data-r="916">9:16</button>
         </div>
-        <button id="btnExportAll" class="btn">Export all</button>
+        <button id="btnExportAll" class="btn">Export ZIP</button>
         <button id="btnExport" class="btn btn-primary flex items-center gap-2">
           <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M12 4v12m0 0l-4-4m4 4l4-4"/></svg>
-          Export slide PNG
+          Export slide
         </button>
       </div>
     </header>
 
-    <!-- stage -->
-    <div id="stage" class="flex-1 overflow-hidden flex items-center justify-center p-6" style="background:var(--ui-bg); background-image: radial-gradient(#171d28 1px, transparent 1px); background-size: 22px 22px;">
+    <div id="stage" class="flex-1 overflow-hidden flex items-center justify-center p-6" style="background:var(--ui-bg); background-image:radial-gradient(#171d28 1px, transparent 1px); background-size:22px 22px;">
       <div id="viewport" style="transform-origin:top left">
-        <div id="artWrap" style="width:max-content; border-radius:6px; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,.55)">
-          <!-- built slide injected here -->
-        </div>
+        <div id="artWrap" style="width:max-content; border-radius:6px; overflow:hidden; box-shadow:0 24px 70px rgba(0,0,0,.55)"></div>
       </div>
     </div>
 
-    <!-- filmstrip -->
     <div class="border-t shrink-0" style="border-color:var(--ui-line); background:var(--ui-panel)">
       <div class="flex items-center gap-3 px-5 py-3">
         <div class="flex items-center gap-2 shrink-0">
           <span class="eyebrow">Slides</span>
+          <span id="slideCount" class="eyebrow" style="color:var(--ui-faint)"></span>
         </div>
         <div id="filmstrip" class="flex items-center gap-2.5 overflow-x-auto flex-1 py-1"></div>
         <div class="flex items-center gap-1.5 shrink-0 pl-2 border-l" style="border-color:var(--ui-line)">
-          <button id="btnDup"  class="btn btn-icon" title="Duplicate slide">
+          <button id="btnMoveL" class="btn btn-icon" title="Move slide left (Alt+←)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+          </button>
+          <button id="btnMoveR" class="btn btn-icon" title="Move slide right (Alt+→)">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+          </button>
+          <span class="w-px h-5" style="background:var(--ui-line)"></span>
+          <button id="btnDup" class="btn btn-icon" title="Duplicate slide (Ctrl/Cmd+D)">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 012-2h10"/></svg>
           </button>
-          <button id="btnDel"  class="btn btn-icon" title="Delete slide">
+          <button id="btnDel" class="btn btn-icon" title="Delete slide">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0l1 13a1 1 0 001 1h6a1 1 0 001-1l1-13"/></svg>
           </button>
-          <button id="btnAdd"  class="btn btn-icon" title="Add blank slide">
+          <button id="btnAdd" class="btn btn-icon" title="Add blank slide">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" d="M12 5v14M5 12h14"/></svg>
           </button>
         </div>
@@ -287,7 +234,6 @@
   <aside class="w-[320px] shrink-0 overflow-y-auto border-l" style="border-color:var(--ui-line); background:var(--ui-panel)">
     <div class="p-5 space-y-6">
 
-      <!-- Background -->
       <section class="space-y-3">
         <span class="eyebrow">Background</span>
         <div class="seg w-full" id="bgSeg" style="display:grid; grid-template-columns:repeat(4,1fr)">
@@ -323,7 +269,7 @@
                 <button class="sw" data-c="#1A1A1A" style="background:#1A1A1A" title="Ink"></button>
                 <button class="sw" data-c="#5A6270" style="background:#5A6270" title="Muted"></button>
               </div>
-              <input id="tintColor" type="color" value="#1C3A5C" class="w-8 h-8" />
+              <input id="tintColor" type="color" value="#1C3A5C" class="w-8 h-8" title="Custom tint" />
               <input id="tintOp" type="range" min="0" max="90" value="58" class="flex-1" />
             </div>
             <div class="flex items-center justify-between pt-1">
@@ -340,7 +286,6 @@
 
       <hr class="div" />
 
-      <!-- Text content -->
       <section class="space-y-3">
         <span class="eyebrow">Text</span>
         <div>
@@ -363,7 +308,6 @@
 
       <hr class="div" />
 
-      <!-- Text size -->
       <section class="space-y-2">
         <div class="flex items-center justify-between">
           <span class="eyebrow">Text size</span>
@@ -379,13 +323,13 @@
 
       <hr class="div" />
 
-      <!-- Logo -->
       <section class="space-y-3">
         <span class="eyebrow">Logo</span>
         <div class="flex items-center justify-between">
           <span class="lbl" style="margin:0">Variant</span>
           <div class="seg" id="logoSeg">
-            <button data-v="white" class="on">White</button>
+            <button data-v="auto" class="on">Auto</button>
+            <button data-v="white">White</button>
             <button data-v="dark">Charcoal</button>
           </div>
         </div>
@@ -404,6 +348,16 @@
         </div>
       </section>
 
+      <hr class="div" />
+
+      <section class="space-y-2">
+        <div class="flex items-center justify-between">
+          <span class="eyebrow">Caption</span>
+          <button id="btnCopyCaption" class="text-[11px] underline" style="color:var(--ui-faint)">Copy</button>
+        </div>
+        <textarea id="fCaption" class="inp" rows="4" placeholder="Post caption (bokmål) — included as caption.txt in the export ZIP."></textarea>
+      </section>
+
     </div>
   </aside>
 </div>
@@ -414,7 +368,7 @@
 "use strict";
 
 /* ============================================================
-   IMAGE PRESETS (nature / soil textures, CORS-enabled)
+   IMAGE PRESETS (CORS-enabled)
    ============================================================ */
 const PRESETS = [
   "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1400&q=80",
@@ -424,35 +378,28 @@ const PRESETS = [
   "https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1400&q=80",
 ];
 
-/* ============================================================
-   THEME → visual mapping (brand-locked, max 3 colours each)
-   photo : navy tint + white text + gold accent  (strongest triad)
-   navy  : navy bg + cream text + gold accent     (strongest triad)
-   cream : cream bg + navy text + ink body        (NO gold text — brand rule)
-   white : white bg + navy text + gold accent     (strongest triad)
-   ============================================================ */
 const C = { navy:'#1C3A5C', gold:'#B8993A', cream:'#F6F2EA', white:'#FFFFFF', ink:'#1A1A1A', muted:'#5A6270' };
 
+/* ============================================================
+   THEME → visual mapping (brand-locked, max 3 colours each,
+   LOGO folded into the triad so every slide is exactly 3 colours)
+   photo : navy tint + white text + gold accent   → logo white
+   navy  : navy bg + cream text + gold accent      → logo CREAM (not white)
+   cream : cream bg + navy text + ink body         → logo NAVY (no gold)
+   white : white bg + navy text + gold accent      → logo NAVY (not ink)
+   ============================================================ */
 function themeStyle(slide){
   const t = slide.bgType;
   if (t === 'photo'){
     const light = slide.photoText !== 'dark';
-    return {
-      solid: null,
-      title: light ? C.white : C.ink,
-      body:  light ? 'rgba(255,255,255,0.95)' : C.ink,
-      accent: light ? C.gold : C.navy,   // tag + site
-      logo: light ? 'white' : 'dark',
-    };
+    return { solid:null, title: light?C.white:C.ink, body: light?'rgba(255,255,255,0.95)':C.ink,
+             accent: light?C.gold:C.navy, logoVar: light?'white':'dark', logoColor: light?C.white:C.navy };
   }
-  if (t === 'navy')  return { solid:C.navy,  title:C.cream, body:'rgba(246,242,234,0.9)', accent:C.gold,  logo:'white' };
-  if (t === 'cream') return { solid:C.cream, title:C.navy,  body:C.ink,                   accent:C.navy,  logo:'dark'  };
-  return               { solid:C.white, title:C.navy,  body:C.navy,                  accent:C.gold,  logo:'dark'  }; // white
+  if (t === 'navy')  return { solid:C.navy,  title:C.cream, body:'rgba(246,242,234,0.9)', accent:C.gold, logoVar:'white', logoColor:C.cream };
+  if (t === 'cream') return { solid:C.cream, title:C.navy,  body:C.ink,                   accent:C.navy, logoVar:'dark',  logoColor:C.navy };
+  return               { solid:C.white, title:C.navy,  body:C.navy,                  accent:C.gold, logoVar:'dark',  logoColor:C.navy };
 }
 
-/* ============================================================
-   DEFAULT LOGO MARK  (faithful worm; swappable via upload)
-   ============================================================ */
 function defaultMark(color){
   return `<svg viewBox="0 0 200 60" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
     <circle cx="19" cy="35" r="10"/><circle cx="16" cy="32" r="2.4" fill="${color}" stroke="none"/>
@@ -461,88 +408,86 @@ function defaultMark(color){
 }
 
 /* ============================================================
-   CONTENT LIBRARY  —  Verminord's real carousels
-   Compact form → expanded into full slide objects on load.
-   theme: photo|navy|cream|white applied to the whole carousel.
-   slide: [tag, title, subtitle, body(\n-separated)]
+   CONTENT LIBRARY — Verminord's real carousels
    ============================================================ */
-const clean = s => s.replace(/\s*verminord\.com\s*/ig,'').trim();
-function body2(a,b){ return [a,b].map(x=>x||'').filter(x=>clean(x)).map(clean).join('\n'); }
-
+const clean = s => (s||'').replace(/\s*verminord\.com\s*/ig,'').trim();
+const body2 = (a,b) => [a,b].filter(x=>clean(x)).map(clean).join('\n');
 const LIB = [];
 
-/* 1 · THE REFERENCE PHOTO CAROUSEL ------------------------------------ */
-LIB.push({ name:'Kompost-te — Levende vann', cat:'PHOTO', theme:'photo', slides:[
-  { tag:'24 timer', title:'Lag kompost-te', sub:'levende vann.', body:'Et oksygenrikt uttrekk av levende vermikompost.\nDu formerer mikrolivet og vanner det til plantene dine.\nSveip videre for detaljer →', img:PRESETS[0], tint:'#1C3A5C', op:60 },
-  { tag:'Levende biologi', title:'Ikke gjødsel.', sub:'Levende mikrober.', body:'Gjødsel mater planten.\nKompost-te mater jorda.', img:PRESETS[1], tint:'#1C3A5C', op:64 },
-  { tag:'Enkelt og effektivt', title:'Tre ting.', sub:'Pluss luft.', body:'· 10–20 L vann\n· En neve VermiCast\n· 30 ml melasse (hjelper, ikke et must)', img:PRESETS[2], tint:'#1A1A1A', op:58 },
-  { tag:'Bobler er bra', title:'La det boble', sub:'et døgn.', body:'VermiCast i en finmasket pose.\nLuftpumpe på i 24 timer.', img:PRESETS[3], tint:'#1C3A5C', op:60 },
-  { tag:'Spray på bladene', title:'Bruk det', sub:'ferskt.', body:'Spray på blader eller vann i jorda.\nBruk innen fire timer.', img:PRESETS[4], tint:'#1C3A5C', op:56 },
-]});
+LIB.push({ name:'Kompost-te — Levende vann', cat:'PHOTO', theme:'photo',
+  caption:'Kompost-te er den enkleste måten å få mer ut av vermikomposten på. Et oksygenrikt uttrekk av levende mikroliv, brygget på et døgn og vannet rett til plantene dine. Sveip for hele oppskriften.',
+  slides:[
+    { tag:'24 timer', title:'Lag kompost-te', sub:'levende vann.', body:'Et oksygenrikt uttrekk av levende vermikompost.\nDu formerer mikrolivet og vanner det til plantene dine.\nSveip videre for detaljer →', img:PRESETS[0], tint:'#1C3A5C', op:60 },
+    { tag:'Levende biologi', title:'Ikke gjødsel.', sub:'Levende mikrober.', body:'Gjødsel mater planten.\nKompost-te mater jorda.', img:PRESETS[1], tint:'#1C3A5C', op:64 },
+    { tag:'Enkelt og effektivt', title:'Tre ting.', sub:'Pluss luft.', body:'· 10–20 L vann\n· En neve VermiCast\n· 30 ml melasse (hjelper, ikke et must)', img:PRESETS[2], tint:'#1A1A1A', op:58 },
+    { tag:'Bobler er bra', title:'La det boble', sub:'et døgn.', body:'VermiCast i en finmasket pose.\nLuftpumpe på i 24 timer.', img:PRESETS[3], tint:'#1C3A5C', op:60 },
+    { tag:'Spray på bladene', title:'Bruk det', sub:'ferskt.', body:'Spray på blader eller vann i jorda.\nBruk innen fire timer.', img:PRESETS[4], tint:'#1C3A5C', op:56 },
+  ]});
 
-/* helper for solid (theme) carousels: slide = [tag,title,sub,b1,b2] */
-function solidCarousel(name, cat, theme, rows){
-  return { name, cat, theme, slides: rows.map(r => ({ tag:r[0], title:r[1], sub:r[2], body:body2(r[3], r[4]) })) };
+function solidCarousel(name, cat, theme, caption, rows){
+  return { name, cat, theme, caption, slides: rows.map(r => ({ tag:r[0], title:r[1], sub:r[2], body:body2(r[3], r[4]) })) };
+}
+function md(name, cat, theme, caption, rows){
+  return { name, cat, theme, caption, slides: rows.map(r => ({ tag:r[0], title:r[1], sub:r[2], body:clean(r[3]) })) };
 }
 
-/* 2 · 10 THEME CAROUSELS (from Verminord_karuseller_10_nye_vinkler) --- */
-LIB.push(solidCarousel('Den brenner ikke','PRODUKT','cream',[
+LIB.push(solidCarousel('Den brenner ikke','PRODUKT','cream','Kunstgjødsel kan svi røttene. Moden vermikompost gjør ikke det — den er fullt nedbrutt, rottegrad V, og vanskelig å overdosere. Mild kraft, ikke sjokk.',[
   ['Mild kraft','Den brenner','ikke.','Kunstgjødsel kan svi røttene.','Vermikompost gjør ikke det.'],
   ['Hvorfor','Moden.','Rottegrad V.','Fullt nedbrutt, ferdig modnet.','Derfor er den så mild.'],
   ['Bruk','Bland inn','5–10 %.','I pottejord, eller toppdress i bed.','Vanskelig å overdosere.'],
   ['Trygt','Mild kraft,','ikke sjokk.','VermiCast, 5 L — 389 kr.',''],
 ]));
-LIB.push(solidCarousel('Vi viser deg tallene','LAB','navy',[
+LIB.push(solidCarousel('Vi viser deg tallene','LAB','navy','De fleste komposter har ingen tall. Vi sendte vår til ALS Norge (NO2604972): salmonella ikke påvist, tungmetallklasse 0, N 1.16 %. Dokumentert, ikke påstått. Vil du se PDF-en, si ifra.',[
   ['Åpenhet','Vi viser deg','tallene.','De fleste komposter har ingen.','Sveip for rapporten.'],
   ['Analysert','ALS Norge.','NO2604972.','Uavhengig laboratorium.','Ikke våre egne påstander.'],
   ['Rent','Salmonella:','ikke påvist.','Tungmetallklasse 0.','Rottegrad V.'],
   ['Balansert','Lavt.','Balansert.','N 1.16 %. P 0.48 %. K 0.51 %.','Med vilje — ikke kunstgjødsel.'],
   ['Spør','Vil du se','hele PDF-en?','Send oss en melding.','Vi sender den.'],
 ]));
-LIB.push(solidCarousel('Møt arbeiderne','BIOLOGI','navy',[
+LIB.push(solidCarousel('Møt arbeiderne','BIOLOGI','navy','De er ikke maskiner — de er mark. Eisenia fetida, kompostmarken bygd for jobben. De spiser, vi høster. Ingen snarveier: måneder, ikke dager.',[
   ['Arbeiderne','Møt dem som','gjør jobben.','De er ikke maskiner.','De er mark.'],
   ['Arten','Eisenia','fetida.','Kompostmarken. Bygd for dette.','Ikke meitemarken fra hagen.'],
   ['Jobben','De spiser.','Vi høster.','Råvarer inn. Vermikompost ut.','Ingen snarveier.'],
   ['Tålmodig','Måneder,','ikke dager.','God jord kan ikke forhastes.',''],
 ]));
-LIB.push(solidCarousel('Det lukter skog','PRODUKT','cream',[
+LIB.push(solidCarousel('Det lukter skog','PRODUKT','cream','Slik kjenner du moden kompost: den lukter skog, ikke søppel. Mørk og smuldrete som fuktig skogbunn, jevn tekstur, alt brutt ned. Det er rottegrad V.',[
   ['Test selv','Det lukter','skog.','Ikke søppel. Ikke ammoniakk.','Slik kjenner du moden kompost.'],
   ['Tegn 1','Mørk og','smuldrete.','Som fuktig skogbunn.','Aldri slimete eller klissete.'],
   ['Tegn 2','Jevn','tekstur.','Ingen gjenkjennelige biter.','Alt er brutt ned.'],
   ['Modent','Dette er','rottegrad V.','Fullt nedbrutt og stabilt.','Lab-bekreftet, ikke gjettet.'],
 ]));
-LIB.push(solidCarousel('Lavt er meningen','PRODUKT','white',[
+LIB.push(solidCarousel('Lavt er meningen','PRODUKT','white','Lave tall er ikke en feil — det er meningen. Vermikompost er ikke kunstgjødsel. Poenget er biologi, ikke bare NPK: levende jord som gjør jobben over tid.',[
   ['Misforstått','Lave tall.','Med vilje.','Vermikompost er ikke kunstgjødsel.','Og skal ikke være det.'],
   ['Tallene','N 1.16 %.','Lavt.','Kunstgjødsel ligger mye høyere.','Det er ikke poenget her.'],
   ['Poenget','Biologi,','ikke bare NPK.','Levende jord gjør jobben over tid.','Tall forteller ikke alt.'],
   ['Balansen','Lavt, jevnt,','trygt.','pH 7.1. Balansert.','Bygger jord, brenner ikke.'],
 ]));
-LIB.push(solidCarousel('Laget av Jæren','ANLEGG','navy',[
+LIB.push(solidCarousel('Laget av Jæren','ANLEGG','navy','Råvarene kommer herfra, bokstavelig talt: lamamøkk fra nabolaget, øl-mask fra lokale bryggerier. Sirkulært i praksis, ikke i markedsføringen. Produsert på Klepp Stasjon.',[
   ['Opphav','Laget av','Jæren.','Råvarene kommer herfra.','Bokstavelig talt.'],
   ['Råvare','Lamamøkk','fra nabolaget.','Fra en gård like ved.','Ikke fra en sekk i utlandet.'],
   ['Råvare','Øl-mask fra','Rogaland.','Brukt korn fra lokale bryggerier.','Avfall for dem. Mat for marken.'],
   ['Sirkulært','Sirkulært','i praksis.','Ikke i markedsføringen.','Lokale råvarer, ekte kretsløp.'],
   ['Herfra','Klepp','Stasjon.','Produsert på Jæren.',''],
 ]));
-LIB.push(solidCarousel('Vi selger ikke mirakler','ERFARING','cream',[
+LIB.push(solidCarousel('Vi selger ikke mirakler','ERFARING','cream','Ingen boost, ingen magi — bare moden vermikompost. God jord tar tid, den bygges og kjøpes ikke ferdig. Vi har holdt på siden 2024.',[
   ['Ærlig','Vi selger','ikke mirakler.','Ingen «boost». Ingen magi.','Bare moden vermikompost.'],
   ['Sannheten','God jord','tar tid.','Den bygges, den kjøpes ikke ferdig.','Vermikompost er en start.'],
   ['Hva den gjør','Den nærer','livet i jorda.','Mikrobiologi, struktur, stabilitet.','Sakte. Varig.'],
   ['Tålmodig','Ekte','tar tid.','Vi har holdt på siden 2024.',''],
 ]));
-LIB.push(solidCarousel('Trygg for maten','LAB','white',[
+LIB.push(solidCarousel('Trygg for maten','LAB','white','Trygg nok for grønnsakene du faktisk spiser: tungmetallklasse 0, salmonella ikke påvist, analysert hos ALS Norge (NO2604972). Dokumentert, ikke gjettet.',[
   ['Trygghet','Trygg nok','for maten din.','Til grønnsakene du faktisk spiser.','Sveip for hvorfor.'],
   ['Rent','Tungmetall-','klasse 0.','Den reneste klassen som finnes.','Lab-bekreftet.'],
   ['Trygt','Salmonella:','ikke påvist.','Etter analyse hos ALS Norge.','Ikke noe du vil ha i bedet.'],
   ['Dokumentert','Ikke','gjettet.','Rapport NO2604972, ALS Norge.','Spør, så sender vi PDF-en.'],
 ]));
-LIB.push(solidCarousel('Tre par hender','OM OSS','cream',[
+LIB.push(solidCarousel('Tre par hender','OM OSS','cream','Verminord er tre par hender og én familie på Jæren. Martin på strategi og drift, broren i produksjon, far som juridisk eier. Bygd av folk som faktisk dyrker.',[
   ['Hvem','Tre par','hender.','Det er hele produksjonen.','Et familieselskap på Jæren.'],
   ['Martin','Snart 20 år','med mark.','Først chili. Så tomater og urter.','Dyrker, ikke forretningsmann.'],
   ['Familien','Bror i','produksjon.','Far som juridisk eier.','Liten drift. Tett på.'],
   ['Derfor','Vi er','bønder først.','Bygd av folk som faktisk dyrker.',''],
 ]));
-LIB.push(solidCarousel('Hvert merke betyr noe','SIRKULÆRT','navy',[
+LIB.push(solidCarousel('Hvert merke betyr noe','SIRKULÆRT','navy','Ikke pynt: Debio-registrert under norsk økologisk tilsyn, Mattilsynet-registrert og sporbar, hver sekk håndstemplet med eget batchnummer. Dokumentert, ikke lovet.',[
   ['Stemplet','Hvert merke','betyr noe.','Ikke pynt. Ikke logoer for syns skyld.','Sveip videre.'],
   ['Debio','Debio-','registrert.','Under norsk økologisk tilsyn.','Ikke noe vi har funnet på selv.'],
   ['Mattilsynet','Mattilsynet-','registrert.','Registrert virksomhet, sporbar.','Som det skal være.'],
@@ -550,125 +495,121 @@ LIB.push(solidCarousel('Hvert merke betyr noe','SIRKULÆRT','navy',[
   ['Tillit','Dokumentert,','ikke lovet.','VermiCast, 5 L — 389 kr.',''],
 ]));
 
-/* 3 · 20 TOPICAL CAROUSELS (from Verminord_20_Carousels) -------------- */
-function md(name, cat, theme, rows){ // rows: [tag,title,sub,body]
-  return { name, cat, theme, slides: rows.map(r => ({ tag:r[0], title:r[1], sub:r[2], body:clean(r[3]) })) };
-}
-LIB.push(md('Sopp, bakterier, protozoer','BIOLOGI','navy',[
+LIB.push(md('Sopp, bakterier, protozoer','BIOLOGI','navy','Jord er ikke dødt stoff. Det er sopp, bakterier og protozoer som bryter ned og bygger opp — og planten samarbeider med dem. Vermikompost tilfører liv, ikke bare næring. #vermikompost #jord #soilbiology #norskjord',[
   ['Biologi','Sopp, bakterier,','protozoer.','De bryter ned og bygger opp.'],
   ['Biologi','Jord er ikke','dødt stoff.','Det er et levende nettverk under føttene dine.'],
   ['Biologi','Planten','samarbeider.','Røttene mater mikrobene. Mikrobene mater røttene.'],
   ['Biologi','Vermikompost','tilfører liv.','Ikke bare næring — biologi.'],
 ]));
-LIB.push(md('Rottegrad V','BIOLOGI','cream',[
+LIB.push(md('Rottegrad V','BIOLOGI','cream','Rottegrad V betyr fullt moden vermikompost. Umoden kompost trekker nitrogen fra jorda mens den modnes; moden kompost gir det tilbake. Derfor venter vi til marken er ferdig. #vermikompost #kompost #jord',[
   ['Biologi','Rottegrad','V.','Fullt moden vermikompost.'],
   ['Biologi','Umoden kompost','stjeler.','Den trekker nitrogen fra jorda mens den modnes.'],
   ['Biologi','Moden kompost','gir.','Stabil, ferdig nedbrutt, klar for røttene.'],
   ['Biologi','Derfor venter','vi.','Til marken er ferdig. Ikke før.'],
 ]));
-LIB.push(md('Mikrobiologi > NPK','BIOLOGI','navy',[
+LIB.push(md('Mikrobiologi > NPK','BIOLOGI','navy','Alle snakker om NPK. Få snakker om det som gjør næringen tilgjengelig: mikrobiologien. N 1.16 % er lavt og balansert — nok til å mate, lite nok til å ikke brenne. Resten gjør biologien. #soilbiology #norskjord',[
   ['Biologi','Alle snakker','om NPK.','Få snakker om det som gjør NPK tilgjengelig.'],
   ['Biologi','Tall på sekken','er ikke alt.','Planten tar ikke opp næring uten biologi.'],
   ['Biologi','N 1.16 %,','lav og balansert.','Nok til å mate, lite nok til å ikke brenne.'],
   ['Biologi','Biologien gjør','resten.','Mikrobene gjør næringen plantetilgjengelig.'],
 ]));
-LIB.push(md('Mark som økosystemingeniør','BIOLOGI','cream',[
+LIB.push(md('Mark som økosystemingeniør','BIOLOGI','cream','Mark er en økosystemingeniør. Inn går organisk avfall, ut kommer luftig, drenert jord full av mikroliv. Arten i bedene våre er Eisenia fetida. #mark #vermikompost #soilbiology',[
   ['Biologi','Mark er en','ingeniør.','Den bygger om jorda mens den spiser.'],
   ['Biologi','Inn går','avfall.','Organisk materiale som ellers ville råtnet.'],
   ['Biologi','Ut kommer','struktur.','Luftig, drenert jord full av mikroliv.'],
   ['Biologi','Eisenia','fetida.','Arten som gjør jobben i bedene våre.'],
 ]));
-LIB.push(md('Vermikompost vs. kompost','BIOLOGI','white',[
+LIB.push(md('Vermikompost vs. kompost','BIOLOGI','white','Ikke all kompost er lik. Varmkompost når temperaturer som bryter ned mikrolivet; vermikompost lages av mark ved lav temperatur, så biologien overlever. Derfor er den levende. #vermikompost #kompost',[
   ['Biologi','Ikke all kompost','er lik.','Forskjellen ligger i hvem som lager den.'],
   ['Biologi','Vanlig kompost:','varme.','Mikrobene brytes ned av høy temperatur.'],
   ['Biologi','Vermikompost:','mark.','Lav temperatur. Biologien overlever.'],
   ['Biologi','Derfor er den','levende.','Mer mikroliv per gram, intakt og aktivt.'],
 ]));
-LIB.push(md('Lab-rapporten','LAB','navy',[
+LIB.push(md('Lab-rapporten','LAB','navy','Vi gjettet ikke — vi sendte den til ALS Norge (NO2604972). pH 7.1, C:N 21:1. Balansert, stabil, klar for bruk. Dokumentert, ikke påstått. #vermikompost #lab #norskprodusert',[
   ['Lab','Vi gjettet','ikke.','Vi sendte den til lab.'],
   ['Lab','ALS Norge','analyserte.','Rapport NO2604972. Hele profilen.'],
   ['Lab','pH 7.1,','C:N 21:1.','Balansert. Stabil. Klar for bruk.'],
   ['Lab','Dokumentert,','ikke påstått.','Spør, så sender vi PDF-en.'],
 ]));
-LIB.push(md('Tungmetallklasse I','LAB','white',[
+LIB.push(md('Tungmetallklasse I','LAB','white','Tungmetaller hører ikke hjemme i maten. Derfor måler vi hver batch mot grenseverdiene. Resultat: tungmetallklasse I — trygt også for grønnsaker og krydderurter. #vermikompost #lab',[
   ['Lab','Det du ikke','vil ha.','Tungmetaller hører ikke hjemme i maten.'],
   ['Lab','Derfor måler','vi.','Hver batch dokumenteres mot grenseverdier.'],
   ['Lab','Tungmetall-','klasse I.','Innenfor de strengeste kravene.'],
   ['Lab','Trygt for','spiselig.','Også til grønnsaker og krydderurter.'],
 ]));
-LIB.push(md('Salmonella ikke påvist','LAB','navy',[
+LIB.push(md('Salmonella ikke påvist','LAB','navy','Når råvaren er organisk, er hygiene ikke valgfritt. Prosessen hygieniserer komposten, og resultatet er dokumentert: salmonella ikke påvist. Levende jord og trygg jord. #vermikompost #lab',[
   ['Lab','Hygiene er','ikke valgfritt.','Ikke når råvaren er organisk.'],
   ['Lab','Prosessen','hygieniserer.','Kontrollert nedbrytning, dokumentert resultat.'],
   ['Lab','Salmonella','ikke påvist.','Bekreftet ved analyse.'],
   ['Lab','Levende jord,','trygg jord.','Begge deler — ikke det ene på bekostning av det andre.'],
 ]));
-LIB.push(md('20 år med chili og mark','ERFARING','cream',[
+LIB.push(md('20 år med chili og mark','ERFARING','cream','Det begynte med chili og noen mark i en plastkasse. Snart 20 år senere dyrker jeg fremdeles med vermikompost. Jeg lærte av jorda, ikke av en pitch. — Martin #vermikompost #chilidyrking #jæren',[
   ['Erfaring','Det begynte','med chili.','Og noen mark i en plastkasse.'],
   ['Erfaring','Snart','20 år.','Chili, tomat, krydderurter — alt med vermikompost.'],
   ['Erfaring','Jeg lærte','av jorda.','Ikke av en pitch. Av plantene som svarte.'],
   ['Erfaring','Nå deler','jeg den.','VermiCast er 20 år i en sekk.'],
 ]));
-LIB.push(md('Familieselskap på tre','OM OSS','cream',[
+LIB.push(md('Familieselskap på tre','OM OSS','cream','Verminord er tre personer og én familie. Martin på strategi og drift, broren i daglig produksjon. Vi er bønder først — bygget av folk som faktisk dyrker. #verminord #jæren #familieselskap',[
   ['Om oss','Tre personer.','Én familie.','Verminord er et familieselskap.'],
   ['Om oss','Strategi','og drift.','Martin holder retningen.'],
   ['Om oss','Daglig','produksjon.','Broren steller bedene.'],
   ['Om oss','Bønder','først.','Bygget av folk som faktisk dyrker.'],
 ]));
-LIB.push(md('En dag på CFT-anlegget','ANLEGG','navy',[
+LIB.push(md('En dag på CFT-anlegget','ANLEGG','navy','Slik lages VermiCast: i klimakontrollerte CFT-bed. Marken spiser på toppen, vi høster ferdig kompost fra bunnen. Jevn temperatur hele året, midt på Jæren. #vermikompost #anlegg #jæren',[
   ['Anlegg','En dag','i bedet.','Slik lages VermiCast.'],
   ['Anlegg','Continuous','Flow-Through.','Mark spiser på toppen, høster fra bunnen.'],
   ['Anlegg','Klima-','kontrollert.','Jevn temperatur, hele året, på Jæren.'],
   ['Anlegg','Tålmodighet','i system.','Ingen snarveier. Bare tid og biologi.'],
 ]));
-LIB.push(md('Hvorfor jeg startet','ERFARING','cream',[
+LIB.push(md('Hvorfor jeg startet','ERFARING','cream','Det startet med to mark og en plastkasse. Plantene svarte — bedre vekst, friskere blad, mer smak. Snart 20 år senere er svaret det samme: levende jord gir levende planter. — Martin',[
   ['Erfaring','To mark,','én plastkasse.','Sånn begynte det.'],
   ['Erfaring','Plantene','svarte.','Bedre vekst, friskere blad, mer smak.'],
   ['Erfaring','Jeg ville','forstå hvorfor.','Så jeg fortsatte. I nesten 20 år.'],
   ['Erfaring','Det er fortsatt','det samme.','Levende jord gir levende planter.'],
 ]));
-LIB.push(md('Liv fra dag én','FRØSTART','white',[
+LIB.push(md('Liv fra dag én','FRØSTART','white','Frø trenger lite — mild næring, ikke kraftig gjødsel. Bland en liten andel vermikompost i såjorda, så får spirene biologi fra dag én. Mark brenner ikke unge røtter. #frøstart #vermikompost #såing',[
   ['Frøstart','Liv fra','dag én.','Slik gir du spirene en god start.'],
   ['Frøstart','Frø trenger','lite.','Mild næring, ikke kraftig gjødsel.'],
   ['Frøstart','Bland inn','litt.','En liten andel vermikompost i såjorda.'],
   ['Frøstart','Enkelt','og trygt.','Mark brenner ikke spirene.'],
 ]));
-LIB.push(md('Hvor mye er nok','STELL','white',[
+LIB.push(md('Hvor mye er nok','STELL','white','Mer er ikke bedre — vermikompost er konsentrert biologi. I pottejord: bland inn 5–10 %. I bed: toppdress med et tynt lag. Det er nok. #vermikompost #stell #dosering',[
   ['Stell','Mer er','ikke bedre.','Vermikompost er konsentrert biologi.'],
   ['Stell','I pottejord:','5–10 %.','Bland godt inn. Det holder.'],
   ['Stell','I bed:','toppdress.','Et tynt lag rundt planten.'],
   ['Stell','Det er','nok.','Spar resten til neste sesong.'],
 ]));
-LIB.push(md('Pottejord for tomat','STELL','cream',[
+LIB.push(md('Pottejord for tomat','STELL','cream','Tomat vil ha struktur: luft til røttene og jevn fukt. Start med en lett, drenerende pottejord og bland inn rundt 10 % vermikompost. Resten er stell. #tomatdyrking #vermikompost #drivhus',[
   ['Stell','Tomat vil','ha struktur.','Luft til røttene, jevn fukt.'],
   ['Stell','Start med','god jord.','En lett, drenerende pottejord.'],
   ['Stell','Bland inn','vermikompost.','10 % gir biologi og mild næring.'],
   ['Stell','Resten','er stell.','Vann jevnt, gi lys, vær tålmodig.'],
 ]));
-LIB.push(md('Toppdressing i bed','STELL','navy',[
+LIB.push(md('Toppdressing i bed','STELL','navy','Jorda lever, og den vil mates på overflaten. Legg et tynt lag vermikompost rundt planten, ikke nedgravd, og vann det inn. Gjenta midt i sesongen. #toppdressing #vermikompost #stell',[
   ['Stell','Jorda di','lever.','Den vil mates på overflaten.'],
   ['Stell','Legg et','tynt lag.','Vermikompost rundt planten, ikke nedgravd.'],
   ['Stell','Vann','inn.','Biologien følger vannet ned til røttene.'],
   ['Stell','Gjenta','ved behov.','Midt i sesongen, når veksten er på topp.'],
 ]));
-LIB.push(md('Vermikompost-te (AACT)','TE','navy',[
+LIB.push(md('Vermikompost-te (AACT)','TE','navy','Du kan gjøre fast vermikompost om til flytende næring: vermikompost-te. Vann, luft og tid. Mikrobene mangedobles, og du vanner ut samme dag mens teen er fersk. #vermikompostte #AACT #jord',[
   ['Te','Fra fast','til flytende.','Vermikompost-te, hjemmelaget.'],
   ['Te','Vann,','luft, tid.','En luftpumpe og en bøtte holder.'],
   ['Te','Biologien','formerer seg.','Mikrobene våkner og mangedobles.'],
   ['Te','Vann ut','samme dag.','Fersk te, rett på jorda eller bladene.'],
 ]));
-LIB.push(md('Vår-stell før planting','SESONG','cream',[
+LIB.push(md('Vår-stell før planting','SESONG','cream','Våren starter i jorda — før det første frøet går i bakken. Bland vermikompost inn i bedet tidlig, så mikrobene får et forsprang mens du venter på varmen. #sesong #vår #vermikompost',[
   ['Sesong','Våren','starter i jorda.','Før det første frøet går i bakken.'],
   ['Sesong','Vekk','biologien.','Bland vermikompost inn i bedet tidlig.'],
   ['Sesong','Gi mikrobene','et forsprang.','De jobber mens du venter på varmen.'],
   ['Sesong','Klar når','du er det.','Levende jord møter de første røttene.'],
 ]));
-LIB.push(md('Høst — tilbake til jorda','SESONG','navy',[
+LIB.push(md('Høst — tilbake til jorda','SESONG','navy','Sesongen er over, men jorda skal leve videre. Ikke la bedet ligge nakent. Topp med vermikompost og mat biologien gjennom vinteren. Til våren er jorda klar. #sesong #høst #vermikompost',[
   ['Sesong','Sesongen','er over.','Men jorda skal leve videre.'],
   ['Sesong','Ikke la bedet','ligge nakent.','Bar jord taper struktur og liv.'],
   ['Sesong','Topp med','vermikompost.','Mat biologien gjennom vinteren.'],
   ['Sesong','Til våren','er den klar.','Du takker deg selv i mars.'],
 ]));
-LIB.push(md('Sirkulært — uten navn','SIRKULÆRT','navy',[
+LIB.push(md('Sirkulært — uten navn','SIRKULÆRT','navy','Mark spiser det andre kaster. Avfall er en råvare for den som vet hva marken trenger, og vi holder kretsløpet kort og lokalt. Inn går avfall, ut kommer levende jord. #sirkulært #vermikompost #jæren',[
   ['Sirkulært','Mark spiser','det andre kaster.','Sirkulært i praksis.'],
   ['Sirkulært','Avfall','er en råvare.','For den som vet hva mark trenger.'],
   ['Sirkulært','Lokalt','inn.','Kortreist, ikke markedsføring.'],
@@ -680,435 +621,374 @@ LIB.push(md('Sirkulært — uten navn','SIRKULÆRT','navy',[
    ============================================================ */
 const project = {
   ratio: '45',
-  logo: { customWhite: null, customDark: null, wordmark: true },
+  logo: { customWhite:null, customDark:null, wordmark:true },
   slides: [],
   current: 0,
   activeTpl: 0,
+  name: '',
+  caption: '',
 };
 
 function expandTemplate(tpl){
-  return tpl.slides.map(s => {
-    const isPhoto = tpl.theme === 'photo';
-    return {
-      bgType: tpl.theme,                       // photo|navy|cream|white
-      img: isPhoto ? (s.img || '') : '',
-      tint: s.tint || '#1C3A5C',
-      op: (s.op != null ? s.op : 58),
-      photoText: 'light',
-      tag: s.tag || '',
-      title: s.title || '',
-      sub: s.sub || '',
-      body: s.body || '',
-      scale: 100,
-      logoVariant: null,                       // null → auto from theme
-    };
-  });
+  return tpl.slides.map(s => ({
+    bgType: tpl.theme,
+    img: tpl.theme==='photo' ? (s.img||'') : '',
+    tint: s.tint || '#1C3A5C',
+    op: (s.op!=null ? s.op : 58),
+    photoText: 'light',
+    tag: s.tag||'', title: s.title||'', sub: s.sub||'', body: s.body||'',
+    scale: 100, logoVariant: 'auto',
+  }));
 }
 
 /* ============================================================
-   DOM SHORTCUTS
+   HISTORY (undo / redo)
+   ============================================================ */
+let undoStack = [], redoStack = [];
+function snapshot(){ return JSON.stringify({ slides:project.slides, current:project.current, caption:project.caption, name:project.name, activeTpl:project.activeTpl }); }
+function pushHistory(){ undoStack.push(snapshot()); if (undoStack.length>60) undoStack.shift(); redoStack=[]; markDirty(); saveLocal(); updateHistoryButtons(); }
+function restore(str){ const s=JSON.parse(str); project.slides=s.slides; project.current=Math.min(s.current, s.slides.length-1); project.caption=s.caption||''; project.name=s.name||''; project.activeTpl=s.activeTpl; }
+function undo(){ if(!undoStack.length) return; redoStack.push(snapshot()); restore(undoStack.pop()); renderAll(); updateHistoryButtons(); saveLocal(); toast('Undo'); }
+function redo(){ if(!redoStack.length) return; undoStack.push(snapshot()); restore(redoStack.pop()); renderAll(); updateHistoryButtons(); saveLocal(); toast('Redo'); }
+function updateHistoryButtons(){ $('btnUndo').disabled=!undoStack.length; $('btnRedo').disabled=!redoStack.length; }
+
+let dirty=false;
+function markDirty(){ dirty=true; $('dirtyDot').classList.remove('hidden'); }
+function clearDirty(){ dirty=false; $('dirtyDot').classList.add('hidden'); }
+
+/* ============================================================
+   PERSISTENCE (localStorage autosave + JSON save/load)
+   ============================================================ */
+const LS_KEY = 'verminord_studio_v3';
+let saveT;
+function saveLocal(){
+  clearTimeout(saveT);
+  saveT = setTimeout(() => {
+    try { localStorage.setItem(LS_KEY, JSON.stringify({ ratio:project.ratio, logo:project.logo, slides:project.slides, current:project.current, activeTpl:project.activeTpl, name:project.name, caption:project.caption })); }
+    catch(e){ toast('Autosave paused — project too large for browser storage'); }
+  }, 400);
+}
+function loadLocal(){
+  try {
+    const raw = localStorage.getItem(LS_KEY); if(!raw) return false;
+    const s = JSON.parse(raw);
+    if(!s.slides || !s.slides.length) return false;
+    project.ratio=s.ratio||'45'; project.logo=s.logo||project.logo; project.slides=s.slides;
+    project.current=Math.min(s.current||0, s.slides.length-1); project.activeTpl=s.activeTpl; project.name=s.name||''; project.caption=s.caption||'';
+    document.querySelectorAll('#ratioSeg button').forEach(b=>b.classList.toggle('on', b.dataset.r===project.ratio));
+    return true;
+  } catch(e){ return false; }
+}
+
+/* ============================================================
+   DOM
    ============================================================ */
 const $ = id => document.getElementById(id);
 const esc = s => (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const cur = () => project.slides[project.current];
+const ratioH = () => project.ratio==='45'?1350 : project.ratio==='11'?1080 : 1920;
 
 /* ============================================================
-   BUILD A SLIDE  (single source of truth for preview / thumb / export)
+   BUILD A SLIDE
    ============================================================ */
 function buildSlide(slide, ratio){
   const st = themeStyle(slide);
   const el = document.createElement('div');
-  el.className = 'ig r' + ratio;
+  el.className = 'ig r'+ratio;
   if (st.solid) el.style.background = st.solid;
 
-  // photo + tint
-  if (slide.bgType === 'photo'){
-    if (slide.img){
-      const img = document.createElement('img');
-      img.className = 'ig-photo';
-      img.crossOrigin = 'anonymous';
-      img.src = slide.img;
-      el.appendChild(img);
-    } else {
-      el.style.background = C.navy;
-    }
-    const tint = document.createElement('div');
-    tint.className = 'ig-tint';
-    tint.style.background = slide.tint;
-    tint.style.opacity = slide.op/100;
-    el.appendChild(tint);
+  if (slide.bgType==='photo'){
+    if (slide.img){ const img=document.createElement('img'); img.className='ig-photo'; img.crossOrigin='anonymous'; img.src=slide.img; el.appendChild(img); }
+    else el.style.background = C.navy;
+    const tint=document.createElement('div'); tint.className='ig-tint'; tint.style.background=slide.tint; tint.style.opacity=slide.op/100; el.appendChild(tint);
   }
 
-  // logo
-  const lv = slide.logoVariant || st.logo;
-  const logo = document.createElement('div');
-  logo.className = 'ig-logo';
-  const color = lv === 'white' ? C.white : C.ink;
-  const custom = lv === 'white' ? project.logo.customWhite : project.logo.customDark;
-  if (custom){
-    logo.innerHTML = custom;
-    const svg = logo.querySelector('svg');
-    if (svg){ svg.style.height='42px'; svg.style.width='auto'; }
-  } else {
-    logo.innerHTML = defaultMark(color);
-    if (project.logo.wordmark){
-      const wm = document.createElement('div');
-      wm.className = 'wm'; wm.style.color = color; wm.textContent = 'Verminord';
-      logo.appendChild(wm);
-    }
-  }
+  const lvManual = slide.logoVariant && slide.logoVariant!=='auto';
+  const lv = lvManual ? slide.logoVariant : st.logoVar;
+  const markColor = lvManual ? (lv==='white'?C.white:C.ink) : st.logoColor;
+  const logo=document.createElement('div'); logo.className='ig-logo';
+  const custom = lv==='white' ? project.logo.customWhite : project.logo.customDark;
+  if (custom){ logo.innerHTML=custom; const svg=logo.querySelector('svg'); if(svg){ svg.style.height='42px'; svg.style.width='auto'; } }
+  else { logo.innerHTML=defaultMark(markColor); if(project.logo.wordmark){ const wm=document.createElement('div'); wm.className='wm'; wm.style.color=markColor; wm.textContent='Verminord'; logo.appendChild(wm); } }
   el.appendChild(logo);
 
-  // tag
-  if (slide.tag){
-    const tag = document.createElement('div');
-    tag.className = 'ig-tag'; tag.style.color = st.accent; tag.textContent = slide.tag;
-    el.appendChild(tag);
-  }
+  if (slide.tag){ const tag=document.createElement('div'); tag.className='ig-tag'; tag.style.color=st.accent; tag.textContent=slide.tag; el.appendChild(tag); }
 
-  // center block
-  const center = document.createElement('div');
-  center.className = 'ig-center';
-  center.style.setProperty('--ts', slide.scale/100);
-  if (slide.title){
-    const h = document.createElement('div'); h.className='ig-title'; h.style.color=st.title; h.textContent=slide.title; center.appendChild(h);
-  }
-  if (slide.sub){
-    const s = document.createElement('div'); s.className='ig-subtitle'; s.style.color=st.title; s.textContent=slide.sub; center.appendChild(s);
-  }
-  if (slide.body){
-    const b = document.createElement('div'); b.className='ig-body'; b.style.color=st.body;
-    b.innerHTML = slide.body.split('\n').map(l => esc(l) || '&nbsp;').join('<br>');
-    center.appendChild(b);
-  }
+  const center=document.createElement('div'); center.className='ig-center'; center.style.setProperty('--ts', slide.scale/100);
+  if (slide.title){ const h=document.createElement('div'); h.className='ig-title'; h.style.color=st.title; h.textContent=slide.title; center.appendChild(h); }
+  if (slide.sub){ const s=document.createElement('div'); s.className='ig-subtitle'; s.style.color=st.title; s.textContent=slide.sub; center.appendChild(s); }
+  if (slide.body){ const b=document.createElement('div'); b.className='ig-body'; b.style.color=st.body; b.innerHTML=slide.body.split('\n').map(l=>esc(l)||'&nbsp;').join('<br>'); center.appendChild(b); }
   el.appendChild(center);
 
-  // site
-  const site = document.createElement('div');
-  site.className = 'ig-site'; site.style.color = st.accent; site.textContent = 'VERMINORD.COM';
-  el.appendChild(site);
-
+  const site=document.createElement('div'); site.className='ig-site'; site.style.color=st.accent; site.textContent='VERMINORD.COM'; el.appendChild(site);
   return el;
 }
 
 /* ============================================================
-   RENDER — main preview
+   RENDER — preview (+ overflow guard)
    ============================================================ */
 function renderPreview(){
-  const wrap = $('artWrap');
-  wrap.innerHTML = '';
-  wrap.appendChild(buildSlide(project.slides[project.current], project.ratio));
+  const wrap=$('artWrap'); wrap.innerHTML='';
+  const node=buildSlide(cur(), project.ratio);
+  wrap.appendChild(node);
   fit();
+  // overflow guard: does the centred block fit inside the safe band?
+  requestAnimationFrame(() => {
+    const center=node.querySelector('.ig-center');
+    if(!center) return;
+    const safeTop=176, safeBottom=150;
+    const avail = ratioH() - safeTop - safeBottom;
+    const contentH = center.scrollHeight - (186+150); // subtract padding baked into .ig-center
+    node.classList.toggle('overflowing', contentH > avail);
+  });
 }
 function fit(){
-  const stage = $('stage');
-  const w = 1080, h = project.ratio==='45'?1350 : project.ratio==='11'?1080 : 1920;
-  const scale = Math.min((stage.clientWidth-56)/w, (stage.clientHeight-56)/h, 0.9);
-  const vp = $('viewport');
-  vp.style.transform = `scale(${scale})`;
-  vp.style.width = w*scale+'px';
-  vp.style.height = h*scale+'px';
+  const stage=$('stage'); const w=1080, h=ratioH();
+  const scale=Math.min((stage.clientWidth-56)/w, (stage.clientHeight-56)/h, 0.9);
+  const vp=$('viewport'); vp.style.transform=`scale(${scale})`; vp.style.width=w*scale+'px'; vp.style.height=h*scale+'px';
 }
 window.addEventListener('resize', fit);
 
-/* ============================================================
-   RENDER — filmstrip thumbnails (live mini-renders)
-   ============================================================ */
+/* filmstrip (debounced full rebuild) */
+let filmT;
 function renderFilmstrip(){
-  const fs = $('filmstrip'); fs.innerHTML = '';
-  const th = 92; // thumb height px
-  const w = 1080, h = project.ratio==='45'?1350 : project.ratio==='11'?1080 : 1920;
-  const scale = th / h;
-  project.slides.forEach((slide, i) => {
-    const box = document.createElement('button');
-    box.style.cssText = `position:relative; flex:0 0 auto; width:${Math.round(w*scale)}px; height:${th}px; border-radius:7px; overflow:hidden; border:2px solid ${i===project.current?'var(--gold)':'var(--ui-line2)'}; background:#000; cursor:pointer`;
-    const inner = document.createElement('div');
-    inner.style.cssText = `position:absolute; top:0; left:0; width:${w}px; height:${h}px; transform:scale(${scale}); transform-origin:top left`;
+  clearTimeout(filmT);
+  filmT = setTimeout(_renderFilmstrip, 60);
+}
+function _renderFilmstrip(){
+  const fs=$('filmstrip'); fs.innerHTML='';
+  const th=92, w=1080, h=ratioH(), scale=th/h;
+  project.slides.forEach((slide,i) => {
+    const box=document.createElement('button');
+    box.style.cssText=`position:relative; flex:0 0 auto; width:${Math.round(w*scale)}px; height:${th}px; border-radius:7px; overflow:hidden; border:2px solid ${i===project.current?'var(--gold)':'var(--ui-line2)'}; background:#000; cursor:pointer`;
+    const inner=document.createElement('div');
+    inner.style.cssText=`position:absolute; top:0; left:0; width:${w}px; height:${h}px; transform:scale(${scale}); transform-origin:top left`;
     inner.appendChild(buildSlide(slide, project.ratio));
     box.appendChild(inner);
-    const num = document.createElement('div');
-    num.textContent = i+1;
-    num.style.cssText = 'position:absolute; top:3px; left:4px; font-size:9px; font-weight:700; color:#fff; background:rgba(0,0,0,.55); border-radius:4px; padding:0 4px; font-family:IBM Plex Mono,monospace';
+    const num=document.createElement('div'); num.textContent=i+1;
+    num.style.cssText='position:absolute; top:3px; left:4px; font-size:9px; font-weight:700; color:#fff; background:rgba(0,0,0,.55); border-radius:4px; padding:0 4px; font-family:IBM Plex Mono,monospace';
     box.appendChild(num);
-    box.onclick = () => { project.current = i; renderAll(); };
+    box.onclick=()=>{ project.current=i; renderAll(); };
     fs.appendChild(box);
   });
+  $('slideCount').textContent = (project.current+1)+' / '+project.slides.length;
 }
 
-/* ============================================================
-   RENDER — inspector controls (reflect current slide)
-   ============================================================ */
 function renderControls(){
-  const s = project.slides[project.current];
-  // background segmented
-  document.querySelectorAll('#bgSeg button').forEach(b => b.classList.toggle('on', b.dataset.bg === s.bgType));
-  const isPhoto = s.bgType === 'photo';
+  const s=cur();
+  document.querySelectorAll('#bgSeg button').forEach(b=>b.classList.toggle('on', b.dataset.bg===s.bgType));
+  const isPhoto=s.bgType==='photo';
   $('photoControls').classList.toggle('hidden', !isPhoto);
   $('solidNote').classList.toggle('hidden', isPhoto);
-  if (!isPhoto){
-    const notes = {
-      navy:'Navy + Cream + Gold — the strongest brand triad. White logo.',
-      cream:'Cream + Navy + Ink. No gold text on cream (brand rule). Charcoal logo.',
-      white:'White + Navy + Gold triad. Charcoal logo.',
-    };
-    $('solidNote').textContent = notes[s.bgType] || '';
-  }
-  // photo controls
+  if(!isPhoto){ const n={ navy:'Navy + Cream + Gold — the strongest brand triad.', cream:'Cream + Navy + Ink. No gold text on cream (brand rule).', white:'White + Navy + Gold triad.' }; $('solidNote').textContent=n[s.bgType]||''; }
   $('imgUrl').value = (isPhoto && /^https?:/.test(s.img)) ? s.img : '';
-  $('tintColor').value = s.tint;
-  $('tintOp').value = s.op; $('tintPct').textContent = s.op + '%';
-  document.querySelectorAll('#tintSw .sw').forEach(b => b.classList.toggle('on', b.dataset.c.toLowerCase()===s.tint.toLowerCase()));
-  document.querySelectorAll('#photoTextSeg button').forEach(b => b.classList.toggle('on', b.dataset.t === s.photoText));
-  document.querySelectorAll('#presets .sw2').forEach(b => b.classList.toggle('on', b.dataset.u === s.img));
-  // text
-  $('fTag').value = s.tag; $('fTitle').value = s.title; $('fSub').value = s.sub; $('fBody').value = s.body;
-  // scale
-  $('fScale').value = s.scale; $('tsPct').textContent = s.scale + '%';
-  // logo
-  const st = themeStyle(s);
-  const lv = s.logoVariant || st.logo;
-  document.querySelectorAll('#logoSeg button').forEach(b => b.classList.toggle('on', b.dataset.v === lv));
-  $('wmChk').checked = project.logo.wordmark;
-  const has = project.logo.customWhite || project.logo.customDark;
-  $('logoNote').textContent = has ? 'Using uploaded logo.' : 'Using built-in mark.';
+  $('tintColor').value=s.tint; $('tintOp').value=s.op; $('tintPct').textContent=s.op+'%';
+  document.querySelectorAll('#tintSw .sw').forEach(b=>b.classList.toggle('on', b.dataset.c.toLowerCase()===s.tint.toLowerCase()));
+  document.querySelectorAll('#photoTextSeg button').forEach(b=>b.classList.toggle('on', b.dataset.t===s.photoText));
+  document.querySelectorAll('#presets .sw2').forEach(b=>b.classList.toggle('on', b.dataset.u===s.img));
+  $('fTag').value=s.tag; $('fTitle').value=s.title; $('fSub').value=s.sub; $('fBody').value=s.body;
+  $('fScale').value=s.scale; $('tsPct').textContent=s.scale+'%';
+  document.querySelectorAll('#logoSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===(s.logoVariant||'auto')));
+  $('wmChk').checked=project.logo.wordmark;
+  $('logoNote').textContent = (project.logo.customWhite||project.logo.customDark) ? 'Using uploaded logo.' : 'Using built-in mark.';
+  $('fCaption').value=project.caption;
 }
-
 function renderHeader(){
-  const tpl = LIB[project.activeTpl];
-  $('projName').textContent = tpl ? tpl.name : 'Custom';
-  $('projTheme').textContent = (project.slides[project.current]||{}).bgType || '';
+  const tpl=LIB[project.activeTpl];
+  $('projName').textContent = project.name || (tpl?tpl.name:'Custom');
+  $('projTheme').textContent = (cur()||{}).bgType||'';
 }
-
-function renderAll(){ renderPreview(); renderFilmstrip(); renderControls(); renderHeader(); }
+function renderAll(){ renderPreview(); renderFilmstrip(); renderControls(); renderHeader(); updateHistoryButtons(); }
 
 /* ============================================================
-   TEMPLATE LIBRARY (left)
+   TEMPLATE LIBRARY
    ============================================================ */
-const CATS = ['ALL', ...Array.from(new Set(LIB.map(t=>t.cat)))];
-let activeCat = 'ALL', searchQ = '';
-
-function renderChips(){
-  const wrap = $('catChips'); wrap.innerHTML='';
-  CATS.forEach(c => {
-    const b = document.createElement('button');
-    b.className = 'chip' + (c===activeCat?' on':'');
-    b.textContent = c;
-    b.onclick = () => { activeCat = c; renderTplList(); };
-    wrap.appendChild(b);
-  });
-}
+const CATS=['ALL', ...Array.from(new Set(LIB.map(t=>t.cat)))];
+let activeCat='ALL', searchQ='';
+function renderChips(){ const w=$('catChips'); w.innerHTML=''; CATS.forEach(c=>{ const b=document.createElement('button'); b.className='chip'+(c===activeCat?' on':''); b.textContent=c; b.onclick=()=>{ activeCat=c; renderTplList(); }; w.appendChild(b); }); }
 function renderTplList(){
   renderChips();
-  const list = $('tplList'); list.innerHTML='';
-  const q = searchQ.toLowerCase();
-  const items = LIB.map((t,i)=>({t,i})).filter(({t}) =>
-    (activeCat==='ALL' || t.cat===activeCat) &&
-    (!q || t.name.toLowerCase().includes(q) || t.slides.some(s => (s.title+s.sub+s.body).toLowerCase().includes(q)))
-  );
-  $('tplCount').textContent = items.length + (items.length===1?' set':' sets');
-  items.forEach(({t,i}) => {
-    const b = document.createElement('button');
-    b.className = 'tpl' + (i===project.activeTpl?' on':'');
-    const dot = t.theme==='photo' ? '#7d8794' : t.theme==='navy' ? C.navy : t.theme==='cream' ? C.cream : '#fff';
-    b.innerHTML = `
-      <div class="flex items-center justify-between gap-2">
-        <div class="text-[12.5px] font-semibold leading-snug pr-1">${esc(t.name)}</div>
-        <span style="width:12px;height:12px;border-radius:50%;flex:0 0 auto;background:${dot};border:1px solid rgba(255,255,255,.18)"></span>
-      </div>
-      <div class="flex items-center gap-2 mt-1.5">
-        <span class="eyebrow">${esc(t.cat)}</span>
-        <span class="eyebrow" style="color:var(--ui-faint)">· ${t.slides.length} slides · ${t.theme}</span>
-      </div>`;
-    b.onclick = () => loadTemplate(i);
+  const list=$('tplList'); list.innerHTML='';
+  const q=searchQ.toLowerCase();
+  const items=LIB.map((t,i)=>({t,i})).filter(({t})=>(activeCat==='ALL'||t.cat===activeCat)&&(!q||t.name.toLowerCase().includes(q)||t.slides.some(s=>(s.title+s.sub+s.body).toLowerCase().includes(q))));
+  $('tplCount').textContent=items.length+(items.length===1?' set':' sets');
+  items.forEach(({t,i})=>{
+    const b=document.createElement('button'); b.className='tpl'+(i===project.activeTpl?' on':'');
+    const dot=t.theme==='photo'?'#7d8794':t.theme==='navy'?C.navy:t.theme==='cream'?C.cream:'#fff';
+    b.innerHTML=`<div class="flex items-center justify-between gap-2"><div class="text-[12.5px] font-semibold leading-snug pr-1">${esc(t.name)}</div><span style="width:12px;height:12px;border-radius:50%;flex:0 0 auto;background:${dot};border:1px solid rgba(255,255,255,.18)"></span></div><div class="flex items-center gap-2 mt-1.5"><span class="eyebrow">${esc(t.cat)}</span><span class="eyebrow" style="color:var(--ui-faint)">· ${t.slides.length} slides · ${t.theme}</span></div>`;
+    b.onclick=()=>loadTemplate(i);
     list.appendChild(b);
   });
 }
 function loadTemplate(i){
-  project.slides = expandTemplate(LIB[i]);
-  project.current = 0;
-  project.activeTpl = i;
-  renderTplList();
-  renderAll();
-  toast('Loaded “' + LIB[i].name + '”');
+  if (dirty && !confirm('Load “'+LIB[i].name+'”? Your current unsaved edits will be replaced.')) return;
+  pushHistory();
+  project.slides=expandTemplate(LIB[i]); project.current=0; project.activeTpl=i; project.name=LIB[i].name; project.caption=LIB[i].caption||'';
+  clearDirty();
+  renderTplList(); renderAll(); saveLocal();
+  toast('Loaded “'+LIB[i].name+'”');
 }
 
 /* ============================================================
    INSPECTOR WIRING
    ============================================================ */
-const cur = () => project.slides[project.current];
+document.querySelectorAll('#bgSeg button').forEach(b=>b.onclick=()=>{ pushHistory(); const s=cur(); s.bgType=b.dataset.bg; s.logoVariant='auto'; if(s.bgType==='photo'&&!s.img) s.img=PRESETS[0]; renderAll(); });
 
-// background type
-document.querySelectorAll('#bgSeg button').forEach(b => b.onclick = () => {
-  const s = cur();
-  s.bgType = b.dataset.bg;
-  s.logoVariant = null;         // reset to theme-auto on bg change
-  if (s.bgType==='photo' && !s.img){ s.img = PRESETS[0]; }
-  renderAll();
-});
-
-// image upload (local disk)
-$('btnUpload').onclick = () => $('fileImg').click();
-$('fileImg').onchange = e => {
-  const f = e.target.files[0]; if (!f) return;
-  const rd = new FileReader();
-  rd.onload = () => { const s=cur(); s.bgType='photo'; s.img = rd.result; renderAll(); toast('Image added'); };
-  rd.readAsDataURL(f);
-  e.target.value='';
-};
-$('btnClearImg').onclick = () => { const s=cur(); s.img=''; renderAll(); };
-$('btnSetUrl').onclick = setUrl;
-$('imgUrl').addEventListener('keydown', e => { if (e.key==='Enter') setUrl(); });
-function setUrl(){ const u=$('imgUrl').value.trim(); if(!u) return; const s=cur(); s.bgType='photo'; s.img=u; renderAll(); }
-
-// presets
-const pr = $('presets');
-PRESETS.forEach(u => {
-  const b = document.createElement('button');
-  b.className='sw2';
-  b.dataset.u=u;
-  b.style.cssText='height:34px;border-radius:6px;overflow:hidden;border:2px solid transparent;cursor:pointer;background:#0b0f16';
-  b.innerHTML = `<img src="${u.replace('w=1400','w=200')}" style="width:100%;height:100%;object-fit:cover" loading="lazy">`;
-  b.onclick = () => { const s=cur(); s.bgType='photo'; s.img=u; renderAll(); };
-  pr.appendChild(b);
-});
-// mark active preset border via CSS class handling in renderControls
-const style2 = document.createElement('style');
-style2.textContent = '.sw2.on{border-color:var(--gold)!important}';
-document.head.appendChild(style2);
-
-// tint
-document.querySelectorAll('#tintSw .sw').forEach(b => b.onclick = () => { cur().tint=b.dataset.c; renderPreview(); renderFilmstrip(); renderControls(); });
-$('tintColor').oninput = () => { cur().tint=$('tintColor').value; renderPreview(); renderFilmstrip(); renderControls(); };
-$('tintOp').oninput = () => { cur().op=+$('tintOp').value; $('tintPct').textContent=$('tintOp').value+'%'; renderPreview(); renderFilmstrip(); };
-document.querySelectorAll('#photoTextSeg button').forEach(b => b.onclick = () => { cur().photoText=b.dataset.t; renderAll(); });
-
-// text fields
-$('fTag').oninput   = () => { cur().tag=$('fTag').value; renderPreview(); renderFilmstrip(); };
-$('fTitle').oninput = () => { cur().title=$('fTitle').value; renderPreview(); renderFilmstrip(); };
-$('fSub').oninput   = () => { cur().sub=$('fSub').value; renderPreview(); renderFilmstrip(); };
-$('fBody').oninput  = () => { cur().body=$('fBody').value; renderPreview(); renderFilmstrip(); };
-
-// text scale
-$('fScale').oninput = () => { cur().scale=+$('fScale').value; $('tsPct').textContent=$('fScale').value+'%'; renderPreview(); renderFilmstrip(); };
-
-// logo variant + wordmark
-document.querySelectorAll('#logoSeg button').forEach(b => b.onclick = () => { cur().logoVariant=b.dataset.v; renderAll(); });
-$('wmChk').onchange = () => { project.logo.wordmark=$('wmChk').checked; renderPreview(); renderFilmstrip(); };
-$('btnLogoWhite').onclick = () => $('fileLogoWhite').click();
-$('btnLogoDark').onclick  = () => $('fileLogoDark').click();
-$('fileLogoWhite').onchange = e => readSvg(e, 'customWhite', 'White');
-$('fileLogoDark').onchange  = e => readSvg(e, 'customDark', 'Charcoal');
-function readSvg(e, key, label){
-  const f=e.target.files[0]; if(!f) return;
-  const rd=new FileReader();
-  rd.onload=()=>{ project.logo[key]=sanitizeSvg(rd.result); renderAll(); toast(label+' logo uploaded'); };
-  rd.readAsText(f);
-  e.target.value='';
+$('btnUpload').onclick=()=>$('fileImg').click();
+$('fileImg').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ pushHistory(); const s=cur(); s.bgType='photo'; s.img=rd.result; renderAll(); toast('Image added'); }; rd.readAsDataURL(f); e.target.value=''; };
+$('btnClearImg').onclick=()=>{ pushHistory(); cur().img=''; renderAll(); };
+$('btnSetUrl').onclick=setUrl;
+$('imgUrl').addEventListener('keydown', e=>{ if(e.key==='Enter') setUrl(); });
+function setUrl(){
+  const u=$('imgUrl').value.trim(); if(!u) return;
+  pushHistory(); const s=cur(); s.bgType='photo'; s.img=u; renderAll();
+  // preflight: warn immediately if the URL will taint the export canvas
+  const test=new Image(); test.crossOrigin='anonymous'; let done=false;
+  const timer=setTimeout(()=>{ if(!done){ done=true; toast('Image is slow to load — export may fail'); } }, 15000);
+  test.onload=()=>{ done=true; clearTimeout(timer); };
+  test.onerror=()=>{ done=true; clearTimeout(timer); toastWarn('This URL blocks cross-origin use — it previews, but won’t export. Upload the file instead.'); };
+  test.src=u;
 }
-function sanitizeSvg(str){
-  // keep only the <svg>…</svg>, strip scripts/handlers (local tool, light guard)
-  const m = str.match(/<svg[\s\S]*<\/svg>/i);
-  let svg = m ? m[0] : str;
-  svg = svg.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/on\w+="[^"]*"/gi,'');
-  return svg;
-}
-$('btnLogoReset').onclick = () => { project.logo.customWhite=null; project.logo.customDark=null; renderAll(); toast('Logo reset'); };
+
+const pr=$('presets');
+PRESETS.forEach(u=>{ const b=document.createElement('button'); b.className='sw2'; b.dataset.u=u; b.style.cssText='height:34px;border-radius:6px;overflow:hidden;border:2px solid transparent;cursor:pointer;background:#0b0f16'; b.innerHTML=`<img src="${u.replace('w=1400','w=200')}" style="width:100%;height:100%;object-fit:cover" loading="lazy">`; b.onclick=()=>{ pushHistory(); const s=cur(); s.bgType='photo'; s.img=u; renderAll(); }; pr.appendChild(b); });
+const st2=document.createElement('style'); st2.textContent='.sw2.on{border-color:var(--gold)!important}'; document.head.appendChild(st2);
+
+document.querySelectorAll('#tintSw .sw').forEach(b=>b.onclick=()=>{ pushHistory(); cur().tint=b.dataset.c; renderPreview(); renderFilmstrip(); renderControls(); });
+$('tintColor').oninput=()=>{ cur().tint=$('tintColor').value; renderPreview(); renderFilmstrip(); };
+$('tintColor').onchange=()=>{ pushHistory(); };
+$('tintOp').oninput=()=>{ cur().op=+$('tintOp').value; $('tintPct').textContent=$('tintOp').value+'%'; renderPreview(); renderFilmstrip(); };
+$('tintOp').onchange=()=>pushHistory();
+document.querySelectorAll('#photoTextSeg button').forEach(b=>b.onclick=()=>{ pushHistory(); cur().photoText=b.dataset.t; renderAll(); });
+
+// text — commit history on change (blur), live-update on input
+function liveText(id, key){ const el=$(id); el.oninput=()=>{ cur()[key]=el.value; renderPreview(); renderFilmstrip(); markDirty(); saveLocal(); }; el.onfocus=()=>{ el._pre=snapshot(); }; el.onblur=()=>{ if(el._pre && el._pre!==snapshot()){ undoStack.push(el._pre); if(undoStack.length>60)undoStack.shift(); redoStack=[]; updateHistoryButtons(); } }; }
+liveText('fTag','tag'); liveText('fTitle','title'); liveText('fSub','sub'); liveText('fBody','body');
+
+$('fScale').oninput=()=>{ cur().scale=+$('fScale').value; $('tsPct').textContent=$('fScale').value+'%'; renderPreview(); renderFilmstrip(); markDirty(); saveLocal(); };
+$('fScale').onchange=()=>pushHistory();
+
+document.querySelectorAll('#logoSeg button').forEach(b=>b.onclick=()=>{ pushHistory(); cur().logoVariant=b.dataset.v; renderAll(); });
+$('wmChk').onchange=()=>{ pushHistory(); project.logo.wordmark=$('wmChk').checked; renderPreview(); renderFilmstrip(); };
+$('btnLogoWhite').onclick=()=>$('fileLogoWhite').click();
+$('btnLogoDark').onclick=()=>$('fileLogoDark').click();
+$('fileLogoWhite').onchange=e=>readSvg(e,'customWhite','White');
+$('fileLogoDark').onchange=e=>readSvg(e,'customDark','Charcoal');
+function readSvg(e,key,label){ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ pushHistory(); project.logo[key]=sanitizeSvg(rd.result); renderAll(); toast(label+' logo uploaded'); }; rd.readAsText(f); e.target.value=''; }
+function sanitizeSvg(str){ const m=str.match(/<svg[\s\S]*<\/svg>/i); let svg=m?m[0]:str; return svg.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/on\w+="[^"]*"/gi,''); }
+$('btnLogoReset').onclick=()=>{ pushHistory(); project.logo.customWhite=null; project.logo.customDark=null; renderAll(); toast('Logo reset'); };
+
+// caption
+$('fCaption').oninput=()=>{ project.caption=$('fCaption').value; markDirty(); saveLocal(); };
+$('fCaption').onfocus=()=>{ $('fCaption')._pre=snapshot(); };
+$('fCaption').onblur=()=>{ const el=$('fCaption'); if(el._pre&&el._pre!==snapshot()){ undoStack.push(el._pre); redoStack=[]; updateHistoryButtons(); } };
+$('btnCopyCaption').onclick=async()=>{ try{ await navigator.clipboard.writeText(project.caption||''); toast('Caption copied'); }catch(e){ toast('Copy failed'); } };
 
 // ratio
-document.querySelectorAll('#ratioSeg button').forEach(b => b.onclick = () => {
-  document.querySelectorAll('#ratioSeg button').forEach(x=>x.classList.remove('on'));
-  b.classList.add('on');
-  project.ratio = b.dataset.r;
-  renderAll();
-});
+document.querySelectorAll('#ratioSeg button').forEach(b=>b.onclick=()=>{ document.querySelectorAll('#ratioSeg button').forEach(x=>x.classList.remove('on')); b.classList.add('on'); project.ratio=b.dataset.r; renderAll(); saveLocal(); });
 
 // slide management
-$('btnAdd').onclick = () => {
-  const base = cur();
-  project.slides.splice(project.current+1, 0, { ...JSON.parse(JSON.stringify(base)), tag:base.tag, title:'New title', sub:'ny linje.', body:'Rediger teksten her.' });
-  project.current++; renderAll();
-};
-$('btnDup').onclick = () => {
-  project.slides.splice(project.current+1, 0, JSON.parse(JSON.stringify(cur())));
-  project.current++; renderAll(); toast('Slide duplicated');
-};
-$('btnDel').onclick = () => {
-  if (project.slides.length<=1){ toast('Keep at least one slide'); return; }
-  project.slides.splice(project.current,1);
-  project.current = Math.max(0, project.current-1);
-  renderAll();
-};
+$('btnAdd').onclick=()=>{ pushHistory(); const base=cur(); project.slides.splice(project.current+1,0,{ ...JSON.parse(JSON.stringify(base)), title:'Ny tittel', sub:'ny linje.', body:'Rediger teksten her.' }); project.current++; renderAll(); };
+$('btnDup').onclick=()=>{ pushHistory(); project.slides.splice(project.current+1,0,JSON.parse(JSON.stringify(cur()))); project.current++; renderAll(); toast('Slide duplicated'); };
+$('btnDel').onclick=()=>{ if(project.slides.length<=1){ toast('Keep at least one slide'); return; } pushHistory(); project.slides.splice(project.current,1); project.current=Math.max(0,project.current-1); renderAll(); };
+function moveSlide(dir){ const j=project.current+dir; if(j<0||j>=project.slides.length) return; pushHistory(); const a=project.slides; [a[project.current],a[j]]=[a[j],a[project.current]]; project.current=j; renderAll(); }
+$('btnMoveL').onclick=()=>moveSlide(-1);
+$('btnMoveR').onclick=()=>moveSlide(1);
 
-// keyboard nav
-document.addEventListener('keydown', e => {
-  if (/input|textarea/i.test(document.activeElement.tagName)) return;
-  if (e.key==='ArrowRight' && project.current<project.slides.length-1){ project.current++; renderAll(); }
-  if (e.key==='ArrowLeft'  && project.current>0){ project.current--; renderAll(); }
+// save / load project JSON
+$('btnSave').onclick=()=>{ const blob=new Blob([JSON.stringify({ v:3, ratio:project.ratio, logo:project.logo, slides:project.slides, name:project.name, caption:project.caption, activeTpl:project.activeTpl },null,2)],{type:'application/json'}); const a=document.createElement('a'); a.download=(slug(project.name||'verminord'))+'.json'; a.href=URL.createObjectURL(blob); a.click(); toast('Project saved'); };
+$('btnLoad').onclick=()=>$('fileProject').click();
+$('fileProject').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ try{ const s=JSON.parse(rd.result); if(!s.slides) throw 0; pushHistory(); project.ratio=s.ratio||'45'; project.logo=s.logo||project.logo; project.slides=s.slides; project.name=s.name||''; project.caption=s.caption||''; project.activeTpl=s.activeTpl; project.current=0; document.querySelectorAll('#ratioSeg button').forEach(b=>b.classList.toggle('on', b.dataset.r===project.ratio)); renderAll(); toast('Project loaded'); }catch(err){ toast('Invalid project file'); } }; rd.readAsText(f); e.target.value=''; };
+
+// keyboard
+document.addEventListener('keydown', e=>{
+  const inField=/input|textarea/i.test(document.activeElement.tagName);
+  const mod=e.metaKey||e.ctrlKey;
+  if(mod && e.key.toLowerCase()==='z'){ e.preventDefault(); e.shiftKey?redo():undo(); return; }
+  if(mod && e.key.toLowerCase()==='y'){ e.preventDefault(); redo(); return; }
+  if(mod && e.key.toLowerCase()==='d'){ e.preventDefault(); $('btnDup').click(); return; }
+  if(inField) return;
+  if(e.altKey && e.key==='ArrowLeft'){ e.preventDefault(); moveSlide(-1); return; }
+  if(e.altKey && e.key==='ArrowRight'){ e.preventDefault(); moveSlide(1); return; }
+  if(e.key==='ArrowRight' && project.current<project.slides.length-1){ project.current++; renderAll(); }
+  if(e.key==='ArrowLeft' && project.current>0){ project.current--; renderAll(); }
 });
 
 /* ============================================================
-   EXPORT ENGINE  (html2canvas, 2× hi-res)
+   EXPORT ENGINE
    ============================================================ */
-async function waitImg(el){
-  const img = el.querySelector('img.ig-photo');
-  if (!img || !img.getAttribute('src')) return;
-  if (img.complete && img.naturalWidth) return;
-  await new Promise(res => { img.onload=res; img.onerror=res; });
-}
-async function capture(slide){
+const FACES=[["700 88px 'IBM Plex Sans'","IBM Plex Sans"],["italic 500 64px 'IBM Plex Serif'","IBM Plex Serif Italic"],["400 30px 'IBM Plex Serif'","IBM Plex Serif"],["400 20px 'IBM Plex Mono'","IBM Plex Mono"]];
+async function ensureFonts(){
   await document.fonts.ready;
-  const node = buildSlide(slide, project.ratio);
-  const holder = document.createElement('div');
-  holder.style.cssText = 'position:fixed;left:-20000px;top:0;';
-  holder.appendChild(node);
-  document.body.appendChild(holder);
-  try {
-    await waitImg(node);
-    await new Promise(r => setTimeout(r, 60));
-    return await html2canvas(node, { scale:2, useCORS:true, backgroundColor:'#1C3A5C', logging:false, width:1080, height: project.ratio==='45'?1350:project.ratio==='11'?1080:1920 });
-  } finally { holder.remove(); }
+  await Promise.all(FACES.map(([f])=>document.fonts.load(f).catch(()=>{})));
+  const missing=FACES.filter(([f])=>!document.fonts.check(f)).map(([,n])=>n);
+  return missing;
 }
-function download(canvas, name){
-  const a=document.createElement('a'); a.download=name; a.href=canvas.toDataURL('image/png'); a.click();
+async function waitImg(el){ const img=el.querySelector('img.ig-photo'); if(!img||!img.getAttribute('src')) return; if(img.complete&&img.naturalWidth) return; await new Promise(res=>{ img.onload=res; img.onerror=res; }); }
+async function capture(slide){
+  const node=buildSlide(slide, project.ratio);
+  const holder=document.createElement('div'); holder.style.cssText='position:fixed;left:-20000px;top:0;'; holder.appendChild(node); document.body.appendChild(holder);
+  try{ await waitImg(node); await new Promise(r=>setTimeout(r,60)); return await html2canvas(node,{ scale:2, useCORS:true, backgroundColor:'#1C3A5C', logging:false, width:1080, height:ratioH() }); }
+  finally{ holder.remove(); }
 }
-$('btnExport').onclick = async () => {
-  const btn=$('btnExport'); const label=btn.innerHTML; btn.style.opacity=.6; btn.disabled=true;
-  try {
-    const cnv = await capture(cur());
-    download(cnv, `verminord-slide-${project.current+1}.png`);
-    toast('Exported slide ' + (project.current+1));
-  } catch(err){ toast('Export failed — try a preset image'); console.error(err); }
-  finally { btn.style.opacity=1; btn.disabled=false; btn.innerHTML=label; }
+const slug=s=>(s||'verminord').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'')||'verminord';
+function toBlob(canvas){ return new Promise(res=>canvas.toBlob(res,'image/png')); }
+
+$('btnExport').onclick=async()=>{
+  const btn=$('btnExport'); const html=btn.innerHTML; btn.disabled=true;
+  try{
+    const missing=await ensureFonts();
+    if(missing.length){ toastWarn('Fonts not ready ('+missing.join(', ')+') — export cancelled to avoid off-brand type. Check your connection.'); return; }
+    const cnv=await capture(cur());
+    const a=document.createElement('a'); a.download=`${slug(project.name)}-${String(project.current+1).padStart(2,'0')}-${project.ratio}.png`; a.href=cnv.toDataURL('image/png'); a.click();
+    toast('Exported slide '+(project.current+1));
+  }catch(err){ toastWarn('Export failed — if you used a custom URL, upload the image instead'); console.error(err); }
+  finally{ btn.disabled=false; btn.innerHTML=html; }
 };
-$('btnExportAll').onclick = async () => {
+
+$('btnExportAll').onclick=async()=>{
   const btn=$('btnExportAll'); btn.disabled=true;
-  const name = (LIB[project.activeTpl]?LIB[project.activeTpl].name:'verminord').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
-  try {
-    for (let i=0;i<project.slides.length;i++){
-      btn.textContent = `Exporting ${i+1}/${project.slides.length}…`;
-      const cnv = await capture(project.slides[i]);
-      download(cnv, `${name}-${String(i+1).padStart(2,'0')}.png`);
-      await new Promise(r=>setTimeout(r,250));
+  try{
+    const missing=await ensureFonts();
+    if(missing.length){ toastWarn('Fonts not ready ('+missing.join(', ')+') — export cancelled. Check your connection.'); return; }
+    const name=slug(project.name);
+    const failed=[];
+    if(typeof JSZip!=='undefined'){
+      const zip=new JSZip();
+      for(let i=0;i<project.slides.length;i++){
+        btn.textContent=`Rendering ${i+1}/${project.slides.length}…`;
+        try{ const cnv=await capture(project.slides[i]); const blob=await toBlob(cnv); zip.file(`${name}-${String(i+1).padStart(2,'0')}-${project.ratio}.png`, blob); }
+        catch(err){ failed.push(i+1); console.error('slide',i+1,err); }
+      }
+      if(project.caption) zip.file('caption.txt', project.caption);
+      btn.textContent='Zipping…';
+      const out=await zip.generateAsync({type:'blob'});
+      const a=document.createElement('a'); a.download=`${name}.zip`; a.href=URL.createObjectURL(out); a.click();
+    } else {
+      // fallback: sequential downloads
+      for(let i=0;i<project.slides.length;i++){ try{ const cnv=await capture(project.slides[i]); const a=document.createElement('a'); a.download=`${name}-${String(i+1).padStart(2,'0')}-${project.ratio}.png`; a.href=cnv.toDataURL('image/png'); a.click(); await new Promise(r=>setTimeout(r,300)); }catch(err){ failed.push(i+1); } }
     }
-    toast('Exported all slides');
-  } catch(err){ toast('Export failed'); console.error(err); }
-  finally { btn.disabled=false; btn.textContent='Export all'; }
+    toast(failed.length ? `Exported ${project.slides.length-failed.length} of ${project.slides.length} — slide(s) ${failed.join(', ')} failed` : `Exported all ${project.slides.length} slides`);
+  }catch(err){ toastWarn('Export failed'); console.error(err); }
+  finally{ btn.disabled=false; btn.textContent='Export ZIP'; }
 };
 
 /* ============================================================
    TOAST
    ============================================================ */
 let toastT;
-function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'),1900); }
+function toast(msg,warn){ const t=$('toast'); t.textContent=msg; t.classList.toggle('warn',!!warn); t.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>t.classList.remove('show'), warn?3600:1900); }
+function toastWarn(msg){ toast(msg,true); }
 
-// search
-$('tplSearch').oninput = e => { searchQ = e.target.value; renderTplList(); };
+$('tplSearch').oninput=e=>{ searchQ=e.target.value; renderTplList(); };
 
 /* ============================================================
    BOOT
    ============================================================ */
-project.slides = expandTemplate(LIB[0]);
+if(!loadLocal()){ project.slides=expandTemplate(LIB[0]); project.name=LIB[0].name; project.caption=LIB[0].caption||''; }
 renderTplList();
 renderAll();
+updateHistoryButtons();
 document.fonts.ready.then(renderAll);
 </script>
 </body>
