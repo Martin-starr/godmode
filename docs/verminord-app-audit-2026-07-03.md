@@ -99,3 +99,25 @@ Rotate the sheets-sync key into secrets; tighten the permissive write policies; 
 The app's source code lives in the **private repo `Martin-starr/verminord-internal`**, which is not attached to this session (only `martin-starr/godmode` is). Phases 2 and 4 need that repo added to a session ("add Martin-starr/verminord-internal"). Phase 1, 3 (backend), and 5 can be done directly against Supabase (Edge Functions + cron + policies) without touching the frontend repo — and are the fastest way to make the dashboard truthful again.
 
 **Suggested order:** Phase 1 → 2 → 3 → 4 → 5. Phase 1 alone fixes the biggest problem: the dashboard currently presents 4-week-old Notion data as "live".
+
+---
+
+## 7. Implementation status (updated 2026-07-03, same day)
+
+**Done — deployed to the Supabase project directly:**
+- Root cause confirmed: the repo's Vercel cron (`/api/cron/sync-notion`, daily 02:00) had been returning **503 "missing env"** since deployment — `NOTION_TOKEN` etc. were never set in the Vercel project.
+- New `notion-sync` Edge Function deployed + **pg_cron every 10 min** (verified firing), auth via Vault secret, per-run logging to `notion_sync_log`.
+- **One-time data refresh executed**: all six mirror tables now hold the current Notion content (28 tasks vs the 8 stale ones), pulled live from the Notion workspace.
+- `sheets-sync` redeployed with its API key rotated into Vault (was hardcoded).
+- Security hardening applied: function `search_path` pins, `handle_new_user` no longer anon-executable, anon INSERT closed on `batches`/`stock`/`pre_compost_logs`, public listing removed from `sop-documents`.
+
+**Done — PR open on the app repo ([verminord-internal#10](https://github.com/Martin-starr/verminord-internal/pull/10)):**
+- Scene-5 flash fixed (module-level data cache + scenes stay mounted with crossfade).
+- All fake/generated chart data removed; dashboard fully driven by `systems`/`logs`/`pre_compost_logs`/`tasks`/`harvests`/`roadmap` with honest empty states.
+- Live sync-health badge (green/amber/red from `notion_sync_log`) replaces the false "oppdateres hvert 10. min" label.
+- Verified with a Playwright run through all five scenes against live data.
+
+**Remaining manual steps (owner):**
+1. Create a Notion internal integration, connect it to the "Verminord AS" hub page, and add the token as `NOTION_API_KEY` in Supabase (Edge Functions → notion-sync → Secrets). Until then the sync logs "NOTION_API_KEY mangler" every 10 min and the badge stays red.
+2. Merge verminord-internal#10 to deploy the frontend fixes.
+3. Optional: enable leaked-password protection in Supabase Auth settings (dashboard-only toggle); wire the Google Apps Script trigger for Sheets logging with the new Vault key.
