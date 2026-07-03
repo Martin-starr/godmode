@@ -351,6 +351,13 @@
         </div>
         <input type="file" id="fileLogoWhite" accept=".svg,image/svg+xml" class="hidden" />
         <input type="file" id="fileLogoDark" accept=".svg,image/svg+xml" class="hidden" />
+        <div id="logoSizeRow" class="space-y-1.5 hidden">
+          <div class="flex items-center justify-between">
+            <span class="lbl" style="margin:0">Logo size</span>
+            <span id="logoSizeVal" class="eyebrow">96px</span>
+          </div>
+          <input id="logoSize" type="range" min="48" max="220" value="96" class="w-full" />
+        </div>
         <div class="flex items-center justify-between">
           <p id="logoNote" class="text-[11px]" style="color:var(--ui-faint)">Using built-in mark.</p>
           <button id="btnLogoReset" class="text-[11px] underline" style="color:var(--ui-faint)">Reset</button>
@@ -630,7 +637,7 @@ LIB.push(md('Sirkulært — uten navn','SIRKULÆRT','navy','Mark spiser det andr
    ============================================================ */
 const project = {
   ratio: '45',
-  logo: { customWhite:null, customDark:null, wordmark:true },
+  logo: { customWhite:null, customDark:null, wordmark:true, size:96 },
   slides: [],
   current: 0,
   activeTpl: 0,
@@ -718,7 +725,7 @@ function buildSlide(slide, ratio){
   const markColor = lvManual ? (lv==='white'?C.white:C.ink) : st.logoColor;
   const logo=document.createElement('div'); logo.className='ig-logo';
   const custom = lv==='white' ? project.logo.customWhite : project.logo.customDark;
-  if (custom){ logo.innerHTML=custom; const svg=logo.querySelector('svg'); if(svg){ svg.style.height='42px'; svg.style.width='auto'; } }
+  if (custom){ logo.innerHTML=custom; const svg=logo.querySelector('svg'); if(svg){ svg.style.height=(project.logo.size||96)+'px'; svg.style.width='auto'; svg.style.display='block'; } }
   else { logo.innerHTML=defaultMark(markColor); if(project.logo.wordmark){ const wm=document.createElement('div'); wm.className='wm'; wm.style.color=markColor; wm.textContent='Verminord'; logo.appendChild(wm); } }
   el.appendChild(logo);
 
@@ -807,7 +814,11 @@ function renderControls(){
   $('fScale').value=s.scale; $('tsPct').textContent=s.scale+'%';
   document.querySelectorAll('#logoSeg button').forEach(b=>b.classList.toggle('on', b.dataset.v===(s.logoVariant||'auto')));
   $('wmChk').checked=project.logo.wordmark;
-  $('logoNote').textContent = (project.logo.customWhite||project.logo.customDark) ? 'Using uploaded logo.' : 'Using built-in mark.';
+  const hasCustom = !!(project.logo.customWhite||project.logo.customDark);
+  $('logoNote').textContent = hasCustom ? 'Using uploaded logo.' : 'Using built-in mark.';
+  $('logoSizeRow').classList.toggle('hidden', !hasCustom);
+  $('logoSize').value = project.logo.size||96;
+  $('logoSizeVal').textContent = (project.logo.size||96)+'px';
   $('fCaption').value=project.caption;
 }
 function renderHeader(){
@@ -894,8 +905,28 @@ $('btnLogoDark').onclick=()=>$('fileLogoDark').click();
 $('fileLogoWhite').onchange=e=>readSvg(e,'customWhite','White');
 $('fileLogoDark').onchange=e=>readSvg(e,'customDark','Charcoal');
 function readSvg(e,key,label){ const f=e.target.files[0]; if(!f) return; const rd=new FileReader(); rd.onload=()=>{ pushHistory(); project.logo[key]=sanitizeSvg(rd.result); renderAll(); toast(label+' logo uploaded'); }; rd.readAsText(f); e.target.value=''; }
-function sanitizeSvg(str){ const m=str.match(/<svg[\s\S]*<\/svg>/i); let svg=m?m[0]:str; return svg.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/on\w+="[^"]*"/gi,''); }
+function sanitizeSvg(str){
+  const m=str.match(/<svg[\s\S]*<\/svg>/i); let svg=m?m[0]:str;
+  svg=svg.replace(/<script[\s\S]*?<\/script>/gi,'').replace(/on\w+="[^"]*"/gi,'');
+  // Normalise so CSS height scales the artwork correctly:
+  // 1. ensure a viewBox exists (derive from width/height attrs if missing)
+  // 2. strip fixed width/height so the tool controls the rendered size
+  const openMatch=svg.match(/<svg[^>]*>/i);
+  if(openMatch){
+    let open=openMatch[0];
+    if(!/viewBox=/i.test(open)){
+      const w=(open.match(/width="([\d.]+)\s*(?:px)?"/i)||[])[1];
+      const h=(open.match(/height="([\d.]+)\s*(?:px)?"/i)||[])[1];
+      if(w&&h) open=open.replace(/<svg/i, `<svg viewBox="0 0 ${w} ${h}"`);
+    }
+    open=open.replace(/\s(width|height)="[^"]*"/gi,'');
+    svg=svg.replace(openMatch[0], open);
+  }
+  return svg;
+}
 $('btnLogoReset').onclick=()=>{ pushHistory(); project.logo.customWhite=null; project.logo.customDark=null; renderAll(); toast('Logo reset'); };
+$('logoSize').oninput=()=>{ project.logo.size=+$('logoSize').value; $('logoSizeVal').textContent=$('logoSize').value+'px'; renderPreview(); renderFilmstrip(); saveLocal(); };
+$('logoSize').onchange=()=>pushHistory();
 
 // caption
 $('fCaption').oninput=()=>{ project.caption=$('fCaption').value; markDirty(); saveLocal(); };
