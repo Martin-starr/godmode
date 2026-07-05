@@ -21,9 +21,14 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Fetch logos from the old deployment
+        # The deployment URL sits behind Vercel Authentication; the
+        # _vercel_share token is a temporary (23 h) view-only bypass minted
+        # for this recovery and worthless after it expires.
         run: |
-          curl -fsS https://verminord-dash-iqjrza1zd-sahithewes-projects.vercel.app/logo-white.png -o public/logo-white.png
-          curl -fsS https://verminord-dash-iqjrza1zd-sahithewes-projects.vercel.app/logo-dark.png -o public/logo-dark.png
+          SHARE="_vercel_share=iQirPMK01xCuROE5esYEy945T5duXpOf"
+          BASE="https://verminord-dash-iqjrza1zd-sahithewes-projects.vercel.app"
+          curl -fsSL -c /tmp/jar -b /tmp/jar "$BASE/logo-white.png?$SHARE" -o public/logo-white.png
+          curl -fsSL -c /tmp/jar -b /tmp/jar "$BASE/logo-dark.png?$SHARE" -o public/logo-dark.png
           file public/logo-white.png public/logo-dark.png
           # sanity: both must be real PNGs
           [ "$(head -c 4 public/logo-white.png | tail -c 3)" = "PNG" ]
