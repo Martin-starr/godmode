@@ -37,17 +37,18 @@ export const GET = guarded(async (req, ctx, user) => {
   }
   step("sync phase done");
 
-  const [team, systems, readings, tasks, projects, checklist, partners, files, targets] = await Promise.all([
-    sql`select id, name, role, access from dash.team order by id`,
-    sql`select id, status from dash.systems order by sort`,
-    sql`select id, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source from dash.readings order by date desc, id desc`,
-    sql`select id, title, sub, tag, tagcls, who, open from dash.tasks order by id`,
-    sql`select id, col, tag, title, descr, who from dash.projects order by sort, id`,
-    sql`select id, project_id, text, done from dash.checklist order by sort, id`,
-    sql`select id, name, type, status, tagcls, next_step, who from dash.partners order by id`,
-    sql`select id, name, cat, ver, date, size, (content is not null) as stored from dash.files order by id desc`,
-    sql`select metric, min, max from dash.targets`,
-  ]);
+  // Strictly sequential: concurrent queries pipelined onto one pooled
+  // connection hang indefinitely behind Supavisor's transaction pooler
+  // (single queries answer in <100 ms; a 9-way Promise.all never returns).
+  const team = await sql`select id, name, role, access from dash.team order by id`;
+  const systems = await sql`select id, status from dash.systems order by sort`;
+  const readings = await sql`select id, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source from dash.readings order by date desc, id desc`;
+  const tasks = await sql`select id, title, sub, tag, tagcls, who, open from dash.tasks order by id`;
+  const projects = await sql`select id, col, tag, title, descr, who from dash.projects order by sort, id`;
+  const checklist = await sql`select id, project_id, text, done from dash.checklist order by sort, id`;
+  const partners = await sql`select id, name, type, status, tagcls, next_step, who from dash.partners order by id`;
+  const files = await sql`select id, name, cat, ver, date, size, (content is not null) as stored from dash.files order by id desc`;
+  const targets = await sql`select metric, min, max from dash.targets`;
   step("payload queries done (" + readings.length + " readings)");
 
   return json({
