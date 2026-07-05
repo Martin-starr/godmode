@@ -247,7 +247,13 @@ function Chart({ series, metric, range, h = 300 }) {
 /* Brief                                                               */
 /* ------------------------------------------------------------------ */
 
-function BriefView({ data, range, setRange, metric, setMetric }) {
+function fmtReceived(ts) {
+  const d = new Date(ts);
+  return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
+
+function BriefView({ data, range, setRange, metric, setMetric, canEdit, markInboxDone }) {
+  const inbox = data.inbox || [];
   const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
   const series = buildSeries(data.readings, active, metric, range);
 
@@ -371,6 +377,49 @@ function BriefView({ data, range, setRange, metric, setMetric }) {
         </div>
       </div>
       <div className="rule" />
+      {inbox.length ? (
+        <div>
+          <div className="sechead">
+            <span className="eyebrow gold">Innboks · Viktig e-post</span>
+            <span className="mut">{inbox.length} plukket ut av Claude</span>
+          </div>
+          <div className="tscroll">
+            <table className="htbl">
+              <tbody>
+                {inbox.map((m, i) => (
+                  <tr key={m.id}>
+                    <td className="hn">{String(i + 1).padStart(2, "0")}</td>
+                    <td>
+                      <div className="ht">
+                        {m.link ? (
+                          <a href={m.link} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                            {m.subject}
+                          </a>
+                        ) : (
+                          m.subject
+                        )}
+                      </div>
+                      <div className="hs">{m.sender} · {fmtReceived(m.received_at)} — {m.summary}</div>
+                    </td>
+                    <td className="rt"><span className={"tag " + (m.category === "Svar kreves" ? "gold" : "")}>{m.category}</span></td>
+                    <td className="assignee">
+                      {m.draft_url ? (
+                        <a className="lnk" href={m.draft_url} target="_blank" rel="noreferrer" style={{ display: "inline-block" }}>
+                          Åpne utkast
+                        </a>
+                      ) : null}
+                      {canEdit ? (
+                        <button className="lnk g" onClick={() => markInboxDone(m.id)}>Ferdig</button>
+                      ) : null}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="rule" />
+        </div>
+      ) : null}
       <div className="sechead">
         <span className="eyebrow gold">Krever handling</span>
         <span className="mut">{openTasks.length} åpne</span>
@@ -1936,6 +1985,15 @@ export default function App() {
     });
   };
 
+  const markInboxDone = async (id) => {
+    setData((d) => ({ ...d, inbox: (d.inbox || []).filter((m) => m.id !== id) }));
+    await api("/api/inbox", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, status: "done" }),
+    });
+  };
+
   const syncLine = data.lastSync
     ? "Sheets synk " + new Date(data.lastSync).toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })
     : "Skylagring aktiv";
@@ -1985,7 +2043,7 @@ export default function App() {
             </span>
           </div>
           {view === "brief" && (
-            <BriefView data={data} range={briefRange} setRange={setBriefRange} metric={briefMetric} setMetric={setBriefMetric} />
+            <BriefView data={data} range={briefRange} setRange={setBriefRange} metric={briefMetric} setMetric={setBriefMetric} canEdit={editable} markInboxDone={markInboxDone} />
           )}
           {view === "logg" && (
             <LoggView

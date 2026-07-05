@@ -49,6 +49,8 @@ export const GET = guarded(async (req, ctx, user) => {
   const partners = await sql`select id, name, type, status, tagcls, next_step, who from dash.partners order by id`;
   const files = await sql`select id, name, cat, ver, date, size, (content is not null) as stored from dash.files order by id desc`;
   const targets = await sql`select metric, min, max from dash.targets`;
+  const inbox = await sql`select id, gmail_id, received_at, sender, subject, summary, category, link, draft_url, status
+    from dash.inbox where status = 'open' order by received_at desc limit 20`;
   step("payload queries done (" + readings.length + " readings)");
 
   return json({
@@ -63,6 +65,7 @@ export const GET = guarded(async (req, ctx, user) => {
     partners,
     files,
     targets,
+    inbox,
     sheetsConfigured: !!sheetsConfig(),
     lastSync,
   });
