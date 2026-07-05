@@ -7,6 +7,9 @@ name: Recover brand logos
 
 on:
   workflow_dispatch:
+  push:
+    branches: [master]
+    paths: [".github/workflows/fetch-logos.yml"]
 
 permissions:
   contents: write
@@ -31,5 +34,9 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add public/logo-white.png public/logo-dark.png
-          git commit -m "Recover original logo PNGs from the pre-rebuild deployment"
-          git push
+          if git diff --cached --quiet; then
+            echo "Logos already committed — nothing to do."
+          else
+            git commit -m "Recover original logo PNGs from the pre-rebuild deployment"
+            git push
+          fi
