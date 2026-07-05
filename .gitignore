@@ -2,3 +2,7 @@
 __pycache__/
 .env
 *.tmp
+node_modules/
+.next/
+.vercel/
+.env*.local
