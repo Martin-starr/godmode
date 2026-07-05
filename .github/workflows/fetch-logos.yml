@@ -1,0 +1,35 @@
+name: Recover brand logos
+
+# One-shot utility: the original logo PNGs only exist on the pre-rebuild
+# Vercel deployment (the source was never committed). This fetches them from
+# that deployment's still-live URL and commits them to public/, which in turn
+# auto-deploys the site with the real logos.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch logos from the old deployment
+        run: |
+          curl -fsS https://verminord-dash-iqjrza1zd-sahithewes-projects.vercel.app/logo-white.png -o public/logo-white.png
+          curl -fsS https://verminord-dash-iqjrza1zd-sahithewes-projects.vercel.app/logo-dark.png -o public/logo-dark.png
+          file public/logo-white.png public/logo-dark.png
+          # sanity: both must be real PNGs
+          [ "$(head -c 4 public/logo-white.png | tail -c 3)" = "PNG" ]
+          [ "$(head -c 4 public/logo-dark.png | tail -c 3)" = "PNG" ]
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add public/logo-white.png public/logo-dark.png
+          git commit -m "Recover original logo PNGs from the pre-rebuild deployment"
+          git push
