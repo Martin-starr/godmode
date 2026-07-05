@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { json } from "@/lib/http";
+import { json, withWatchdog } from "@/lib/http";
 
 export const runtime = "nodejs";
 export const maxDuration = 15;
@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const sql = db();
-    const rows = await sql`select name from dash.team order by id`;
+    const rows = await withWatchdog(() => sql`select name from dash.team order by id`);
     return json(rows);
   } catch {
     return json([]);
