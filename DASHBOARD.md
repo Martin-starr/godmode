@@ -52,7 +52,7 @@ workflowfila.
 **Lokalt:**
 
 ```bash
-cd apps/verminord-dash
+
 npm install
 npx vercel pull --yes --environment=production   # logg inn når CLI spør
 npx vercel build --prod
@@ -63,8 +63,8 @@ npx vercel deploy --prebuilt --prod
 
 ```bash
 # Postgres med dash-skjema + testdata (passord: test123)
-psql ... -f scripts/schema.sql
-psql ... -v pw="<scrypt-hash>" -f scripts/seed-local.sql
+psql ... -f dash-scripts/schema.sql
+psql ... -v pw="<scrypt-hash>" -f dash-scripts/seed-local.sql
 
 DASH_DATABASE_URL=postgresql://... DASH_DB_NO_SSL=1 npm run dev
 ```

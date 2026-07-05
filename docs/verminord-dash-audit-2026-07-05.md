@@ -40,7 +40,8 @@ finnes ikke. Kildekoden var altså tapt — ingenting å fikse i.
 
 Jeg har derfor **rekonstruert hele appen** fra produksjonsbundelen (JS + CSS
 lastet ned fra Vercel-deployen) og databaseskjemaet, og lagt den i dette repoet:
-**`apps/verminord-dash/`**. Rute-tabellen fra `next build` matcher originalen
+**repo-roten** (`app/`, `lib/`, `public/` — lagt i roten slik at Vercels
+git-integrasjon virker uten oppsett). Rute-tabellen fra `next build` matcher originalen
 1:1 (samme 25 ruter, samme sidestørrelse ±0,4 kB). Fra nå av er appen
 versjonskontrollert.
 
@@ -68,19 +69,20 @@ Playwright i iPhone-størrelse): innlogging, alle 8 seksjoner nåbare, **oppgave
 lagt til på 73 ms**, **prosjekt opprettet på 68 ms**, måling loggført, desktop
 uendret, feil passord avvises. 11/11 tester grønne, skjermbilder tatt.
 
-## 4. Slik deployes fiksen (én manuell ting gjenstår)
+## 4. Slik deployes fiksen (kun klikk — ingen tasting)
 
-Claude-miljøets nettverkspolicy blokkerer `api.vercel.com`, så jeg fikk ikke
-deployet direkte herfra. Alt er klart i repoet:
+Claude-miljøets nettverkspolicy blokkerer `api.vercel.com`, så deploy skjer via
+Vercels git-integrasjon. Appen ligger i repo-roten nettopp for at standard-
+innstillingene skal stemme:
 
-1. Lag et Vercel-token: vercel.com → Settings → Tokens → Create.
-2. GitHub: `martin-starr/godmode` → Settings → Secrets and variables → Actions
-   → New repository secret: `VERCEL_TOKEN`.
-3. Actions-fanen → «Deploy verminord-dash» → Run workflow.
+1. vercel.com → prosjektet **verminord-dash** → **Settings** → **Git**
+2. **Connect Git Repository** → GitHub → velg **Martin-starr/godmode**
+3. Ferdig — alle standardvalg er riktige (Root Directory `./`,
+   production branch `master`). Hver push til master deployer automatisk.
 
-Workflowen henter logoene fra det kjørende nettstedet, bygger og deployer til
-`verminord-dash`-prosjektet, og røyktester `/api/users` etterpå. (Alternativt:
-`npx vercel deploy` lokalt fra `apps/verminord-dash/` — se README der.)
+Claude overvåker prosjektet og dytter en deploy så snart koblingen er på
+plass. (Fallback: GitHub-workflowen «Deploy verminord-dash» med et
+`VERCEL_TOKEN`-secret, eller `npx vercel deploy` lokalt — se DASHBOARD.md.)
 
 **Sjekk etter deploy:** Innstillinger → Datakilde. Står Google Sheets som
 «Ikke tilkoblet», sett `DASH_SHEETS_ID` + `DASH_SHEETS_API_KEY` på

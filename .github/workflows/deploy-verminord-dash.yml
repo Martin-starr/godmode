@@ -1,11 +1,12 @@
 name: Deploy verminord-dash
 
+# Fallback deploy path. The primary path is the Vercel git integration:
+# connect the `verminord-dash` Vercel project to this repo (Settings -> Git)
+# and every push to master deploys automatically — no token needed.
+# This workflow only does anything if a VERCEL_TOKEN repo secret exists.
+
 on:
   workflow_dispatch:
-  push:
-    branches: [master]
-    paths:
-      - "apps/verminord-dash/**"
 
 concurrency:
   group: deploy-verminord-dash
@@ -18,38 +19,51 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/verminord-dash
     steps:
       - uses: actions/checkout@v4
 
+      - name: Check for VERCEL_TOKEN
+        id: token
+        run: |
+          if [ -n "${{ secrets.VERCEL_TOKEN }}" ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No VERCEL_TOKEN secret configured — nothing to do (use the Vercel git integration instead)."
+          fi
+
       - uses: actions/setup-node@v4
+        if: steps.token.outputs.present == 'true'
         with:
           node-version: 20
 
       - name: Install dependencies
+        if: steps.token.outputs.present == 'true'
         run: npm ci
 
       # Keep the original brand assets: copy the logo PNGs from the live site
       # into public/ so the deployed app keeps the exact logos. If they can't
       # be fetched the app falls back to a styled text wordmark.
       - name: Fetch live brand assets (best effort)
+        if: steps.token.outputs.present == 'true'
         run: |
           curl -fsS https://dash.verminord.app/logo-dark.png -o public/logo-dark.png || true
           curl -fsS https://dash.verminord.app/logo-white.png -o public/logo-white.png || true
-          ls -la public/ || true
 
       - name: Pull Vercel project settings
+        if: steps.token.outputs.present == 'true'
         run: npx vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Build
+        if: steps.token.outputs.present == 'true'
         run: npx vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Deploy to production
+        if: steps.token.outputs.present == 'true'
         run: npx vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Smoke test
+        if: steps.token.outputs.present == 'true'
         run: |
           sleep 10
           curl -fsS https://dash.verminord.app/api/users
