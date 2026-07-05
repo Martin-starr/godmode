@@ -8,20 +8,34 @@ export const maxDuration = 25;
 export const dynamic = "force-dynamic";
 
 const HOUR = 60 * 60 * 1000;
+const SYNC_BUDGET_MS = 6000;
 
 export const GET = guarded(async (req, ctx, user) => {
+  const t0 = Date.now();
+  const step = (msg) => console.log("[bootstrap +" + (Date.now() - t0) + "ms] " + msg);
   const sql = db();
+  step("auth ok (" + user.name + ")");
 
-  // Opportunistic hourly Sheets import — never allowed to break the app.
+  // Opportunistic hourly Sheets import. It gets a hard time budget and is
+  // never allowed to delay or break the app: if it can't finish in time we
+  // respond without it and it retries on a later bootstrap.
   let lastSync = (await sql`select value from dash.meta where key = 'last_sync'`)[0]?.value || null;
+  step("meta read, lastSync " + lastSync);
   if (sheetsConfig() && (!lastSync || Date.now() - Date.parse(lastSync) > HOUR)) {
     try {
-      await syncSheets();
-      lastSync = new Date().toISOString();
+      await Promise.race([
+        syncSheets().then(() => {
+          lastSync = new Date().toISOString();
+        }),
+        new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("brukte mer enn " + SYNC_BUDGET_MS + " ms — fortsetter uten å vente")), SYNC_BUDGET_MS)
+        ),
+      ]);
     } catch (e) {
-      console.error("sheets sync failed:", e.message);
+      console.error("[bootstrap] sheets sync: " + e.message);
     }
   }
+  step("sync phase done");
 
   const [team, systems, readings, tasks, projects, checklist, partners, files, targets] = await Promise.all([
     sql`select id, name, role, access from dash.team order by id`,
@@ -34,6 +48,7 @@ export const GET = guarded(async (req, ctx, user) => {
     sql`select id, name, cat, ver, date, size, (content is not null) as stored from dash.files order by id desc`,
     sql`select metric, min, max from dash.targets`,
   ]);
+  step("payload queries done (" + readings.length + " readings)");
 
   return json({
     user: { name: user.name, access: user.access },
