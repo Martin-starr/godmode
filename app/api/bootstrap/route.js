@@ -66,7 +66,9 @@ export const GET = guarded(async (req, ctx, user) => {
     files,
     targets,
     inbox,
-    sheetsConfigured: !!sheetsConfig(),
+    // "Connected" when env-based sync is configured OR the Claude sync
+    // routine has written within the last two hours.
+    sheetsConfigured: !!sheetsConfig() || (!!lastSync && Date.now() - Date.parse(lastSync) < 2 * HOUR),
     lastSync,
   });
 });
