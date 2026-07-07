@@ -195,6 +195,11 @@ button, input, select, textarea { font-family: inherit; }
 .tin:focus { border-color: var(--navy); outline: none; }
 .mut { color: var(--muted); font-size: 12px; }
 
+/* Innboks */
+.star-btn { background: none; border: 0; font-size: 16px; padding: 2px 4px; cursor: pointer; line-height: 1; }
+.inbox-detail { padding: 0 0 18px 62px; border-bottom: 1px solid var(--line2); }
+.inbox-batch { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(28, 58, 92, 0.04); border: 1px solid var(--line); border-radius: 2px; margin-bottom: 16px; }
+
 /* ------------------------------------------------------------------ */
 /* Mobile. The nav is a fixed bottom bar; before this revision it was  */
 /* a horizontally scrolling strip where only the first four items were */
@@ -217,7 +222,7 @@ button, input, select, textarea { font-family: inherit; }
   .brand, .navk, .sidefoot { display: none; }
   .nav {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     padding: 0;
     width: 100%;
   }

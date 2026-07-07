@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
 
 /* ------------------------------------------------------------------ */
 /* Shared helpers                                                      */
@@ -252,8 +252,9 @@ function fmtReceived(ts) {
   return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 
-function BriefView({ data, range, setRange, metric, setMetric, canEdit, markInboxDone }) {
+function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbox }) {
   const inbox = data.inbox || [];
+  const inboxCounts = data.inboxCounts || { total: 0, urgent: 0 };
   const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
   const series = buildSeries(data.readings, active, metric, range);
 
@@ -381,13 +382,18 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, markInbo
         <div>
           <div className="sechead">
             <span className="eyebrow gold">Innboks · Viktig e-post</span>
-            <span className="mut">{inbox.length} plukket ut av Claude</span>
+            <button className="lnk" onClick={() => goToInbox()} style={{ fontSize: 12 }}>
+              Se alle ({inboxCounts.total}) →
+            </button>
           </div>
           <div className="tscroll">
             <table className="htbl">
               <tbody>
-                {inbox.map((m, i) => (
+                {inbox.filter((m) => m.category === "Svar kreves" || m.is_starred).slice(0, 5).map((m, i) => (
                   <tr key={m.id}>
+                    <td style={{ width: 22, paddingRight: 0, color: m.is_starred ? "var(--gold)" : "var(--line)", fontSize: 14 }}>
+                      {m.is_starred ? "★" : ""}
+                    </td>
                     <td className="hn">{String(i + 1).padStart(2, "0")}</td>
                     <td>
                       <div className="ht">
@@ -408,12 +414,37 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, markInbo
                           Åpne utkast
                         </a>
                       ) : null}
-                      {canEdit ? (
-                        <button className="lnk g" onClick={() => markInboxDone(m.id)}>Ferdig</button>
-                      ) : null}
                     </td>
                   </tr>
                 ))}
+                {inbox.filter((m) => m.category === "Svar kreves" || m.is_starred).length === 0 && (
+                  inbox.slice(0, 3).map((m, i) => (
+                    <tr key={m.id}>
+                      <td style={{ width: 22, paddingRight: 0 }} />
+                      <td className="hn">{String(i + 1).padStart(2, "0")}</td>
+                      <td>
+                        <div className="ht">
+                          {m.link ? (
+                            <a href={m.link} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
+                              {m.subject}
+                            </a>
+                          ) : (
+                            m.subject
+                          )}
+                        </div>
+                        <div className="hs">{m.sender} · {fmtReceived(m.received_at)} — {m.summary}</div>
+                      </td>
+                      <td className="rt"><span className={"tag " + (m.category === "Svar kreves" ? "gold" : "")}>{m.category}</span></td>
+                      <td className="assignee">
+                        {m.draft_url ? (
+                          <a className="lnk" href={m.draft_url} target="_blank" rel="noreferrer" style={{ display: "inline-block" }}>
+                            Åpne utkast
+                          </a>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -1622,6 +1653,281 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsC
 }
 
 /* ------------------------------------------------------------------ */
+/* Innboks                                                             */
+/* ------------------------------------------------------------------ */
+
+const INBOX_STATUSES = [["open", "Åpne"], ["done", "Ferdige"], ["all", "Alle"]];
+const INBOX_CATS = ["Alle", "Svar kreves", "Til info"];
+
+function InboxView({ data, canEdit, addTask, setView, showToast }) {
+  const [items, setItems] = useState(data.inbox || []);
+  const [total, setTotal] = useState(data.inboxCounts?.total || 0);
+  const [status, setStatus] = useState("open");
+  const [category, setCategory] = useState("Alle");
+  const [source, setSource] = useState("Alle");
+  const [q, setQ] = useState("");
+  const [expanded, setExpanded] = useState(null);
+  const [selected, setSelected] = useState(new Set());
+  const [loading, setLoading] = useState(false);
+  const [offset, setOffset] = useState(0);
+  const searchTimer = useRef(null);
+
+  const fetchInbox = async (params = {}) => {
+    const s = params.status ?? status;
+    const c = params.category ?? category;
+    const src = params.source ?? source;
+    const search = params.q ?? q;
+    const off = params.offset ?? 0;
+
+    setLoading(true);
+    const qs = new URLSearchParams({ status: s, limit: "50", offset: String(off) });
+    if (c && c !== "Alle") qs.set("category", c);
+    if (src && src !== "Alle") qs.set("source", src);
+    if (search) qs.set("q", search);
+
+    const res = await api("/api/inbox?" + qs);
+    if (res.ok) {
+      const body = await res.json();
+      if (off > 0) {
+        setItems((prev) => [...prev, ...body.items]);
+      } else {
+        setItems(body.items);
+      }
+      setTotal(body.total);
+      setOffset(off);
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchInbox(); }, []);
+
+  const applyFilter = (key, val) => {
+    const next = { status, category, source, q, offset: 0, [key]: val };
+    if (key === "status") setStatus(val);
+    if (key === "category") setCategory(val);
+    if (key === "source") setSource(val);
+    setSelected(new Set());
+    setExpanded(null);
+    fetchInbox(next);
+  };
+
+  const handleSearch = (val) => {
+    setQ(val);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => fetchInbox({ q: val, offset: 0 }), 350);
+  };
+
+  const markDone = async (id) => {
+    setItems((prev) => prev.filter((m) => m.id !== id));
+    setTotal((t) => t - 1);
+    await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: "done" }) });
+  };
+
+  const reopen = async (id) => {
+    setItems((prev) => prev.filter((m) => m.id !== id));
+    await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: "open" }) });
+  };
+
+  const toggleStar = async (id) => {
+    const item = items.find((m) => m.id === id);
+    if (!item) return;
+    const next = !item.is_starred;
+    setItems((prev) => prev.map((m) => m.id === id ? { ...m, is_starred: next } : m));
+    await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "star", id, is_starred: next }) });
+  };
+
+  const deleteItem = async (id) => {
+    setItems((prev) => prev.filter((m) => m.id !== id));
+    setTotal((t) => t - 1);
+    await api("/api/inbox/" + id, { method: "DELETE" });
+  };
+
+  const batchDone = async () => {
+    const ids = [...selected];
+    setItems((prev) => prev.filter((m) => !selected.has(m.id)));
+    setTotal((t) => t - ids.length);
+    setSelected(new Set());
+    await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "batch_done", ids }) });
+  };
+
+  const createTask = async (m) => {
+    const ok = await addTask({ title: m.subject, sub: m.summary, tag: "Ny", who: "" });
+    if (ok && showToast) showToast("Oppgave opprettet fra e-post");
+  };
+
+  const toggleSelect = (id) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const openCount = data.inboxCounts?.total || 0;
+  const urgentCount = data.inboxCounts?.urgent || 0;
+  const sources = [...new Set(items.map((m) => m.source || "gmail"))];
+
+  return (
+    <div>
+      <span className="eyebrow">Innboks · E-posttriage</span>
+      <div className="hero">
+        Innboks<span className="li"> e-post</span>
+      </div>
+      <div className="herosub">
+        {openCount} åpne · {urgentCount} krever svar · Triagert av Claude
+      </div>
+      <div className="rule" />
+
+      <div className="metrics3">
+        <div className="m3">
+          <div className="k">Åpne</div>
+          <div className="v">{openCount}</div>
+        </div>
+        <div className="m3">
+          <div className="k">Svar kreves</div>
+          <div className="v gold">{urgentCount}</div>
+        </div>
+        <div className="m3">
+          <div className="k">Kilder</div>
+          <div className="v">{sources.length}<small> konto{sources.length !== 1 ? "er" : ""}</small></div>
+        </div>
+      </div>
+      <div className="rule" />
+
+      <div className="sechead">
+        <div className="toggle">
+          {INBOX_STATUSES.map(([key, label]) => (
+            <button key={key} className={"tbtn " + (status === key ? "on" : "")} onClick={() => applyFilter("status", key)}>{label}</button>
+          ))}
+        </div>
+        <input
+          className="input"
+          placeholder="Søk i e-post..."
+          value={q}
+          onChange={(e) => handleSearch(e.target.value)}
+          style={{ maxWidth: 220, padding: "9px 14px", fontSize: 13 }}
+        />
+      </div>
+
+      <div className="chips" style={{ marginBottom: 16 }}>
+        {INBOX_CATS.map((c) => (
+          <button key={c} className={"chip " + (category === c ? "on" : "")} onClick={() => applyFilter("category", c)}>{c}</button>
+        ))}
+        {sources.length > 1 && (
+          <>
+            <span style={{ width: 1, height: 24, background: "var(--line)", margin: "0 4px" }} />
+            <button className={"chip " + (source === "Alle" ? "on" : "")} onClick={() => applyFilter("source", "Alle")}>Alle kilder</button>
+            {sources.map((s) => (
+              <button key={s} className={"chip " + (source === s ? "on" : "")} onClick={() => applyFilter("source", s)}>{s}</button>
+            ))}
+          </>
+        )}
+      </div>
+
+      {selected.size > 0 && canEdit && (
+        <div className="inbox-batch">
+          <span className="mut">{selected.size} valgt</span>
+          <button className="btn sm" onClick={batchDone}>Merk ferdig</button>
+          <button className="lnk" onClick={() => setSelected(new Set())}>Avbryt</button>
+        </div>
+      )}
+
+      <div className="tscroll">
+        <table className="htbl">
+          <tbody>
+            {items.map((m, i) => (
+              <Fragment key={m.id}>
+                <tr style={{ cursor: "pointer" }} onClick={() => setExpanded(expanded === m.id ? null : m.id)}>
+                  {canEdit && status === "open" && (
+                    <td style={{ width: 28, paddingRight: 0 }} onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(m.id)}
+                        onChange={() => toggleSelect(m.id)}
+                        style={{ accentColor: "var(--navy)" }}
+                      />
+                    </td>
+                  )}
+                  <td style={{ width: 28, paddingRight: 0 }} onClick={(e) => { e.stopPropagation(); toggleStar(m.id); }}>
+                    <button className="star-btn" style={{ color: m.is_starred ? "var(--gold)" : "var(--line)" }}>
+                      {m.is_starred ? "★" : "☆"}
+                    </button>
+                  </td>
+                  <td className="hn">{String(i + 1).padStart(2, "0")}</td>
+                  <td>
+                    <div className="ht">
+                      {m.link ? (
+                        <a href={m.link} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "none" }} onClick={(e) => e.stopPropagation()}>
+                          {m.subject}
+                        </a>
+                      ) : (
+                        m.subject
+                      )}
+                    </div>
+                    <div className="hs">{m.sender} · {fmtReceived(m.received_at)} — {m.summary}</div>
+                  </td>
+                  <td className="rt">
+                    {m.source && m.source !== "gmail" && <span className="tag" style={{ marginRight: 8, fontSize: 8, padding: "3px 6px" }}>{m.source}</span>}
+                    <span className={"tag " + (m.category === "Svar kreves" ? "gold" : "")}>{m.category}</span>
+                  </td>
+                  <td className="assignee">
+                    {m.draft_url ? (
+                      <a className="lnk" href={m.draft_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Åpne utkast</a>
+                    ) : null}
+                  </td>
+                </tr>
+                {expanded === m.id && (
+                  <tr>
+                    <td colSpan={canEdit && status === "open" ? 6 : 5} className="inbox-detail">
+                      {m.snippet && <div style={{ marginBottom: 14, lineHeight: 1.6, fontSize: 13, color: "var(--ink)" }}>{m.snippet}</div>}
+                      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 14 }}>
+                        Fra: {m.sender} · Mottatt: {fmtReceived(m.received_at)} · Kilde: {m.source || "gmail"}
+                      </div>
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                        {m.link && <a className="btn sm ghost" href={m.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Åpne i Gmail</a>}
+                        {canEdit && (
+                          <>
+                            <button className="btn sm ghost" onClick={() => createTask(m)}>Lag oppgave</button>
+                            {m.status === "open" ? (
+                              <button className="btn sm" onClick={() => markDone(m.id)}>Ferdig</button>
+                            ) : (
+                              <button className="btn sm ghost" onClick={() => reopen(m.id)}>Gjenåpne</button>
+                            )}
+                            <button className="lnk g" onClick={() => { if (window.confirm("Slette «" + m.subject + "»?")) deleteItem(m.id); }}>Slett</button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {items.length === 0 && !loading && (
+        <div style={{ textAlign: "center", padding: "40px 0", color: "var(--muted)", fontSize: 13 }}>
+          {status === "open" ? "Ingen åpne e-poster — alt er håndtert." : "Ingen e-poster funnet."}
+        </div>
+      )}
+
+      {loading && (
+        <div style={{ textAlign: "center", padding: "20px 0", color: "var(--muted)", fontSize: 12 }}>Laster...</div>
+      )}
+
+      {items.length < total && !loading && (
+        <div style={{ textAlign: "center", marginTop: 20 }}>
+          <button className="btn sm ghost" onClick={() => fetchInbox({ offset: offset + 50 })}>
+            Last flere ({total - items.length} gjenstår)
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* App shell                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -1632,6 +1938,7 @@ const NAV_DRIFT = [
   ["hygienisering", "Hygienisering"],
 ];
 const NAV_ARBEID = [
+  ["innboks", "Innboks"],
   ["oppgaver", "Oppgaver"],
   ["prosjekter", "Prosjekter"],
   ["sop", "SOP / filer"],
@@ -1985,14 +2292,6 @@ export default function App() {
     });
   };
 
-  const markInboxDone = async (id) => {
-    setData((d) => ({ ...d, inbox: (d.inbox || []).filter((m) => m.id !== id) }));
-    await api("/api/inbox", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, status: "done" }),
-    });
-  };
 
   const syncLine = data.lastSync
     ? "Sheets synk " + new Date(data.lastSync).toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })
@@ -2043,7 +2342,10 @@ export default function App() {
             </span>
           </div>
           {view === "brief" && (
-            <BriefView data={data} range={briefRange} setRange={setBriefRange} metric={briefMetric} setMetric={setBriefMetric} canEdit={editable} markInboxDone={markInboxDone} />
+            <BriefView data={data} range={briefRange} setRange={setBriefRange} metric={briefMetric} setMetric={setBriefMetric} canEdit={editable} goToInbox={() => setView("innboks")} />
+          )}
+          {view === "innboks" && (
+            <InboxView data={data} canEdit={editable} addTask={addTask} setView={setView} showToast={showToast} />
           )}
           {view === "logg" && (
             <LoggView

@@ -49,8 +49,11 @@ export const GET = guarded(async (req, ctx, user) => {
   const partners = await sql`select id, name, type, status, tagcls, next_step, who from dash.partners order by id`;
   const files = await sql`select id, name, cat, ver, date, size, (content is not null) as stored from dash.files order by id desc`;
   const targets = await sql`select metric, min, max from dash.targets`;
-  const inbox = await sql`select id, gmail_id, received_at, sender, subject, summary, category, link, draft_url, status
-    from dash.inbox where status = 'open' order by received_at desc limit 20`;
+  const inbox = await sql`select id, gmail_id, received_at, sender, subject, summary, category, link, draft_url, status, source, snippet, is_starred
+    from dash.inbox where status = 'open' order by is_starred desc, received_at desc limit 20`;
+  const inboxCounts = await sql`select count(*)::int as total,
+    count(*) filter (where category = 'Svar kreves')::int as urgent
+    from dash.inbox where status = 'open'`;
   step("payload queries done (" + readings.length + " readings)");
 
   return json({
@@ -66,6 +69,7 @@ export const GET = guarded(async (req, ctx, user) => {
     files,
     targets,
     inbox,
+    inboxCounts: inboxCounts[0] || { total: 0, urgent: 0 },
     // "Connected" when env-based sync is configured OR the Claude sync
     // routine has written within the last two hours.
     sheetsConfigured: !!sheetsConfig() || (!!lastSync && Date.now() - Date.parse(lastSync) < 2 * HOUR),
