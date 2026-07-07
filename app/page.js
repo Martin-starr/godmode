@@ -389,38 +389,12 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
           <div className="tscroll">
             <table className="htbl">
               <tbody>
-                {inbox.filter((m) => m.category === "Svar kreves" || m.is_starred).slice(0, 5).map((m, i) => (
-                  <tr key={m.id}>
-                    <td style={{ width: 22, paddingRight: 0, color: m.is_starred ? "var(--gold)" : "var(--line)", fontSize: 14 }}>
-                      {m.is_starred ? "★" : ""}
-                    </td>
-                    <td className="hn">{String(i + 1).padStart(2, "0")}</td>
-                    <td>
-                      <div className="ht">
-                        {m.link ? (
-                          <a href={m.link} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "none" }}>
-                            {m.subject}
-                          </a>
-                        ) : (
-                          m.subject
-                        )}
-                      </div>
-                      <div className="hs">{m.sender} · {fmtReceived(m.received_at)} — {m.summary}</div>
-                    </td>
-                    <td className="rt"><span className={"tag " + (m.category === "Svar kreves" ? "gold" : "")}>{m.category}</span></td>
-                    <td className="assignee">
-                      {m.draft_url ? (
-                        <a className="lnk" href={m.draft_url} target="_blank" rel="noreferrer" style={{ display: "inline-block" }}>
-                          Åpne utkast
-                        </a>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-                {inbox.filter((m) => m.category === "Svar kreves" || m.is_starred).length === 0 && (
-                  inbox.slice(0, 3).map((m, i) => (
+                {(() => {
+                  const urgent = inbox.filter((m) => m.category === "Svar kreves" || m.priority === "høy" || m.is_starred);
+                  const rows = urgent.length ? urgent.slice(0, 5) : inbox.slice(0, 3);
+                  return rows.map((m, i) => (
                     <tr key={m.id}>
-                      <td style={{ width: 22, paddingRight: 0 }} />
+                      <td style={{ width: 4, padding: 0, background: prioColor(m.priority) }} />
                       <td className="hn">{String(i + 1).padStart(2, "0")}</td>
                       <td>
                         <div className="ht">
@@ -436,15 +410,15 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
                       </td>
                       <td className="rt"><span className={"tag " + (m.category === "Svar kreves" ? "gold" : "")}>{m.category}</span></td>
                       <td className="assignee">
-                        {m.draft_url ? (
-                          <a className="lnk" href={m.draft_url} target="_blank" rel="noreferrer" style={{ display: "inline-block" }}>
-                            Åpne utkast
-                          </a>
+                        {m.draft_body || m.draft_url ? (
+                          <button className="lnk" onClick={() => goToInbox()} style={{ display: "inline-block", color: "var(--gold)", fontWeight: 600 }}>
+                            Utkast klart →
+                          </button>
                         ) : null}
                       </td>
                     </tr>
-                  ))
-                )}
+                  ));
+                })()}
               </tbody>
             </table>
           </div>
@@ -1452,7 +1426,7 @@ function HygieneView({ canEdit }) {
 /* Innstillinger                                                       */
 /* ------------------------------------------------------------------ */
 
-function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsConfigured, addSystem, updateSystem, deleteSystem }) {
+function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsConfigured, lastSync, addSystem, updateSystem, deleteSystem }) {
   const systems = data.systems.map((s) => s.id);
   const latest = latestBySystem(data.readings, systems);
   const [adding, setAdding] = useState(false);
@@ -1627,16 +1601,21 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsC
           <div className="setrow">
             <div>
               <div className="sl">Google Sheets</div>
-              <div className="ss">Produksjonslogger · synkes automatisk hver time</div>
+              <div className="ss">
+                Produksjonslogger · synkes automatisk hver time
+                {lastSync ? (
+                  <> · Sist synk {new Date(lastSync).toLocaleString("nb-NO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</>
+                ) : null}
+              </div>
             </div>
-            {sheetsConfigured ? (
-              <span className="trange">
+            <span className="trange">
+              {sheetsConfigured ? (
                 <span className="pill">Tilkoblet</span>
-                {canEdit ? <button className="btn ghost sm" onClick={syncNow}>Synk nå</button> : null}
-              </span>
-            ) : (
-              <span className="pill warn">Ikke tilkoblet</span>
-            )}
+              ) : (
+                <span className="pill warn">Ikke tilkoblet</span>
+              )}
+              {canEdit ? <button className="btn ghost sm" onClick={syncNow}>Synk nå</button> : null}
+            </span>
           </div>
           {syncMsg ? <div className="mut" style={{ marginTop: 8 }}>{syncMsg}</div> : null}
           <div className="setrow">
@@ -1658,6 +1637,17 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsC
 
 const INBOX_STATUSES = [["open", "Åpne"], ["done", "Ferdige"], ["all", "Alle"]];
 const INBOX_CATS = ["Alle", "Svar kreves", "Til info"];
+
+function prioColor(p) {
+  if (p === "høy") return "var(--gold)";
+  if (p === "lav") return "transparent";
+  return "rgba(28, 58, 92, 0.3)";
+}
+function prioLabel(p) {
+  if (p === "høy") return "Høy";
+  if (p === "lav") return "Lav";
+  return "Medium";
+}
 
 function InboxView({ data, canEdit, addTask, setView, showToast }) {
   const [items, setItems] = useState(data.inbox || []);
@@ -1765,7 +1755,17 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
 
   const openCount = data.inboxCounts?.total || 0;
   const urgentCount = data.inboxCounts?.urgent || 0;
+  const highPrio = data.inboxCounts?.high_priority || items.filter((m) => m.priority === "høy").length;
   const sources = [...new Set(items.map((m) => m.source || "gmail"))];
+
+  const copyDraft = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      if (showToast) showToast("Utkast kopiert til utklippstavlen");
+    } catch {
+      if (showToast) showToast("Kunne ikke kopiere — velg og kopier manuelt");
+    }
+  };
 
   return (
     <div>
@@ -1784,12 +1784,12 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
           <div className="v">{openCount}</div>
         </div>
         <div className="m3">
-          <div className="k">Svar kreves</div>
-          <div className="v gold">{urgentCount}</div>
+          <div className="k">Høy prioritet</div>
+          <div className="v gold">{highPrio}</div>
         </div>
         <div className="m3">
-          <div className="k">Kilder</div>
-          <div className="v">{sources.length}<small> konto{sources.length !== 1 ? "er" : ""}</small></div>
+          <div className="k">Svar kreves</div>
+          <div className="v">{urgentCount}</div>
         </div>
       </div>
       <div className="rule" />
@@ -1853,6 +1853,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
                       {m.is_starred ? "★" : "☆"}
                     </button>
                   </td>
+                  <td style={{ width: 4, padding: 0, background: prioColor(m.priority) }} />
                   <td className="hn">{String(i + 1).padStart(2, "0")}</td>
                   <td>
                     <div className="ht">
@@ -1867,33 +1868,67 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
                     <div className="hs">{m.sender} · {fmtReceived(m.received_at)} — {m.summary}</div>
                   </td>
                   <td className="rt">
-                    {m.source && m.source !== "gmail" && <span className="tag" style={{ marginRight: 8, fontSize: 8, padding: "3px 6px" }}>{m.source}</span>}
+                    {m.source && m.source !== "gmail" && <span className="tag" style={{ marginRight: 6, fontSize: 8, padding: "3px 6px" }}>{m.source}</span>}
+                    {m.severity && m.severity !== "normal" && (
+                      <span className={"tag " + (m.severity === "kritisk" ? "gold" : "")} style={{ marginRight: 6 }}>{m.severity}</span>
+                    )}
                     <span className={"tag " + (m.category === "Svar kreves" ? "gold" : "")}>{m.category}</span>
                   </td>
                   <td className="assignee">
-                    {m.draft_url ? (
+                    {m.draft_body ? (
+                      <span className="mut" style={{ fontSize: 10, letterSpacing: "0.12em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 600 }}>Utkast klart</span>
+                    ) : m.draft_url ? (
                       <a className="lnk" href={m.draft_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Åpne utkast</a>
                     ) : null}
                   </td>
                 </tr>
                 {expanded === m.id && (
                   <tr>
-                    <td colSpan={canEdit && status === "open" ? 6 : 5} className="inbox-detail">
-                      {m.snippet && <div style={{ marginBottom: 14, lineHeight: 1.6, fontSize: 13, color: "var(--ink)" }}>{m.snippet}</div>}
-                      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 14 }}>
-                        Fra: {m.sender} · Mottatt: {fmtReceived(m.received_at)} · Kilde: {m.source || "gmail"}
+                    <td colSpan={canEdit && status === "open" ? 7 : 6} className="inbox-detail">
+                      <div className="inbox-meta">
+                        <div><span className="mk">Fra</span><span className="mv">{m.sender}</span></div>
+                        <div><span className="mk">Mottatt</span><span className="mv">{fmtReceived(m.received_at)}</span></div>
+                        <div><span className="mk">Kilde</span><span className="mv">{m.source || "gmail"}</span></div>
+                        {m.priority && (
+                          <div>
+                            <span className="mk">Prioritet</span>
+                            <span className={"mv prio-" + m.priority}>{prioLabel(m.priority)}</span>
+                          </div>
+                        )}
+                        {m.severity && m.severity !== "normal" && (
+                          <div>
+                            <span className="mk">Alvorlighet</span>
+                            <span className={"mv sev-" + m.severity}>{m.severity}</span>
+                          </div>
+                        )}
                       </div>
-                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                      {m.snippet && (
+                        <div className="inbox-snippet">
+                          <div className="mk" style={{ marginBottom: 8 }}>Sammendrag</div>
+                          <div style={{ lineHeight: 1.6, fontSize: 13 }}>{m.snippet}</div>
+                        </div>
+                      )}
+                      {m.draft_body && (
+                        <div className="inbox-draft">
+                          <div className="draft-head">
+                            <span className="mk">Foreslått svar</span>
+                            <button className="lnk" onClick={(e) => { e.stopPropagation(); copyDraft(m.draft_body); }}>Kopier</button>
+                          </div>
+                          <pre className="draft-body">{m.draft_body}</pre>
+                        </div>
+                      )}
+                      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
                         {m.link && <a className="btn sm ghost" href={m.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Åpne i Gmail</a>}
+                        {m.draft_url && <a className="btn sm ghost" href={m.draft_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Åpne utkast i Gmail</a>}
                         {canEdit && (
                           <>
-                            <button className="btn sm ghost" onClick={() => createTask(m)}>Lag oppgave</button>
+                            <button className="btn sm ghost" onClick={(e) => { e.stopPropagation(); createTask(m); }}>Lag oppgave</button>
                             {m.status === "open" ? (
-                              <button className="btn sm" onClick={() => markDone(m.id)}>Ferdig</button>
+                              <button className="btn sm" onClick={(e) => { e.stopPropagation(); markDone(m.id); }}>Ferdig</button>
                             ) : (
-                              <button className="btn sm ghost" onClick={() => reopen(m.id)}>Gjenåpne</button>
+                              <button className="btn sm ghost" onClick={(e) => { e.stopPropagation(); reopen(m.id); }}>Gjenåpne</button>
                             )}
-                            <button className="lnk g" onClick={() => { if (window.confirm("Slette «" + m.subject + "»?")) deleteItem(m.id); }}>Slett</button>
+                            <button className="lnk g" onClick={(e) => { e.stopPropagation(); if (window.confirm("Slette «" + m.subject + "»?")) deleteItem(m.id); }}>Slett</button>
                           </>
                         )}
                       </div>
@@ -1923,6 +1958,16 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
           </button>
         </div>
       )}
+
+      <div className="inbox-trustbar">
+        <div>
+          <div className="mk">Triage-rutine</div>
+          <div className="mv">Daglig 07:00 · Gmail-connector · martin@verminord.no{sources.includes("post") ? " + post@verminord.no" : ""}</div>
+        </div>
+        <button className="btn sm ghost" onClick={() => fetchInbox({ offset: 0 })}>
+          Oppdater
+        </button>
+      </div>
     </div>
   );
 }
@@ -2394,6 +2439,7 @@ export default function App() {
               saveTargets={saveTargets}
               canEdit={editable}
               sheetsConfigured={data.sheetsConfigured}
+              lastSync={data.lastSync}
               addSystem={addSystem}
               updateSystem={updateSystem}
               deleteSystem={deleteSystem}

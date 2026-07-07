@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const maxDuration = 15;
 export const dynamic = "force-dynamic";
 
-const COLS = "id, gmail_id, received_at, sender, subject, summary, category, link, draft_url, status, source, snippet, is_starred";
+const COLS = "id, gmail_id, received_at, sender, subject, summary, category, link, draft_url, status, source, snippet, is_starred, priority, severity, draft_body";
 
 export const GET = guarded(async (req) => {
   const u = new URL(req.url);

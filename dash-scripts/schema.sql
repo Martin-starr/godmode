@@ -121,5 +121,8 @@ create table if not exists dash.inbox (
   source text not null default 'gmail',
   snippet text not null default '',
   is_starred boolean not null default false,
+  priority text not null default 'medium',
+  severity text not null default 'normal',
+  draft_body text not null default '',
   created_at timestamptz not null default now()
 );
