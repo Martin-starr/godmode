@@ -195,6 +195,29 @@ button, input, select, textarea { font-family: inherit; }
 .tin:focus { border-color: var(--navy); outline: none; }
 .mut { color: var(--muted); font-size: 12px; }
 
+/* Innboks */
+.star-btn { background: none; border: 0; font-size: 16px; padding: 2px 4px; cursor: pointer; line-height: 1; }
+.inbox-detail { padding: 4px 0 22px 62px; border-bottom: 1px solid var(--line2); background: rgba(28, 58, 92, 0.02); }
+.inbox-batch { display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: rgba(28, 58, 92, 0.04); border: 1px solid var(--line); border-radius: 2px; margin-bottom: 16px; }
+.inbox-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 16px 26px; padding: 16px 20px; background: #fff; border: 1px solid var(--line); border-radius: 2px; margin-bottom: 16px; }
+.inbox-meta > div { display: flex; flex-direction: column; gap: 4px; }
+.mk { font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.mv { font-size: 13px; color: var(--ink); font-weight: 500; }
+.mv.prio-høy { color: var(--gold); font-weight: 700; }
+.mv.prio-medium { color: var(--navy); }
+.mv.prio-lav { color: var(--muted); }
+.mv.sev-kritisk { color: var(--gold); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+.mv.sev-viktig { color: var(--navy); font-weight: 600; }
+.inbox-snippet { padding: 16px 20px; background: #fff; border: 1px solid var(--line); border-radius: 2px; margin-bottom: 16px; color: var(--ink); }
+.inbox-draft { border: 1px solid var(--gold); border-radius: 2px; overflow: hidden; margin-bottom: 4px; background: #fff; }
+.inbox-draft .draft-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; background: rgba(184, 153, 58, 0.08); border-bottom: 1px solid var(--gold); }
+.inbox-draft .draft-body { margin: 0; padding: 18px 20px; font-family: inherit; font-size: 13px; line-height: 1.6; color: var(--ink); white-space: pre-wrap; word-break: break-word; }
+.inbox-trustbar { display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding: 18px 22px; background: var(--navy); color: #fff; border-radius: 2px; }
+.inbox-trustbar .mk { color: hsla(0, 0%, 100%, 0.55); margin-bottom: 4px; }
+.inbox-trustbar .mv { color: #fff; font-size: 12px; }
+.inbox-trustbar .btn.ghost { color: #fff; border-color: hsla(0, 0%, 100%, 0.3); }
+.inbox-trustbar .btn.ghost:hover { background: hsla(0, 0%, 100%, 0.06); }
+
 /* ------------------------------------------------------------------ */
 /* Mobile. The nav is a fixed bottom bar; before this revision it was  */
 /* a horizontally scrolling strip where only the first four items were */
@@ -217,7 +240,7 @@ button, input, select, textarea { font-family: inherit; }
   .brand, .navk, .sidefoot { display: none; }
   .nav {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(5, 1fr);
     padding: 0;
     width: 100%;
   }
