@@ -33,10 +33,17 @@ export async function GET() {
     mark("files");
     counts.targets = (await sql`select count(*)::int as n from dash.targets`)[0].n;
     mark("targets");
+    counts.readings_all = (await sql`select count(*)::int as n from dash.readings_all`)[0].n;
+    mark("readings_all");
     // Same shape as bootstrap's heaviest query, to mirror real payload size.
-    const rows = await sql`select id, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source from dash.readings order by date desc, id desc`;
+    const rows = await sql`select id, rid, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source, logged_at, editable
+      from dash.readings_all order by date desc, logged_at desc nulls last, id desc`;
     mark("full readings fetch (" + rows.length + " rows)");
-    return json({ ok: true, total_ms: Date.now() - t0, counts, steps });
+    const meta = await sql`select key, value from dash.meta`;
+    mark("meta");
+    const metaOut = {};
+    for (const m of meta) metaOut[m.key] = m.value;
+    return json({ ok: true, total_ms: Date.now() - t0, counts, meta: metaOut, newest_reading: rows[0]?.date || null, steps });
   } catch (e) {
     return json({ ok: false, total_ms: Date.now() - t0, error: e.message, steps }, 500);
   }

@@ -1,14 +1,10 @@
 import { db } from "@/lib/db";
 import { canEdit } from "@/lib/auth";
 import { json, guarded } from "@/lib/http";
-import { sheetsConfig, syncSheets } from "@/lib/sheets";
 
 export const runtime = "nodejs";
 export const maxDuration = 25;
 export const dynamic = "force-dynamic";
-
-const HOUR = 60 * 60 * 1000;
-const SYNC_BUDGET_MS = 6000;
 
 export const GET = guarded(async (req, ctx, user) => {
   const t0 = Date.now();
@@ -16,34 +12,26 @@ export const GET = guarded(async (req, ctx, user) => {
   const sql = db();
   step("auth ok (" + user.name + ")");
 
-  // Opportunistic hourly Sheets import. It gets a hard time budget and is
-  // never allowed to delay or break the app: if it can't finish in time we
-  // respond without it and it retries on a later bootstrap.
-  let lastSync = (await sql`select value from dash.meta where key = 'last_sync'`)[0]?.value || null;
-  step("meta read, lastSync " + lastSync);
-  if (sheetsConfig() && (!lastSync || Date.now() - Date.parse(lastSync) > HOUR)) {
-    try {
-      await Promise.race([
-        syncSheets().then(() => {
-          lastSync = new Date().toISOString();
-        }),
-        new Promise((_, reject) =>
-          setTimeout(() => reject(new Error("brukte mer enn " + SYNC_BUDGET_MS + " ms — fortsetter uten å vente")), SYNC_BUDGET_MS)
-        ),
-      ]);
-    } catch (e) {
-      console.error("[bootstrap] sheets sync: " + e.message);
-    }
-  }
-  step("sync phase done");
+  // Readings arrive continuously in public.logs via the phone logger; when a
+  // new system name shows up there it must exist in dash.systems or the UI
+  // can't offer it anywhere. Added as 'Tatt ut' so nothing clutters the
+  // active views until Martin flips it on under Innstillinger.
+  await sql`insert into dash.systems (id, status, sort)
+    select s.system, 'Tatt ut',
+           (select coalesce(max(sort), 0) from dash.systems) + row_number() over (order by s.system)
+    from (select distinct system from dash.readings_all
+          where system not in (select id from dash.systems)) s
+    on conflict (id) do nothing`;
+  step("system auto-add done");
 
   // Strictly sequential: concurrent queries pipelined onto one pooled
   // connection hang indefinitely behind Supavisor's transaction pooler
   // (single queries answer in <100 ms; a 9-way Promise.all never returns).
   const team = await sql`select id, name, role, access from dash.team order by id`;
   const systems = await sql`select id, status from dash.systems order by sort`;
-  const readings = await sql`select id, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source from dash.readings order by date desc, id desc`;
-  const tasks = await sql`select id, title, sub, tag, tagcls, who, open from dash.tasks order by id`;
+  const readings = await sql`select id, rid, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source, logged_at, editable
+    from dash.readings_all order by date desc, logged_at desc nulls last, id desc`;
+  const tasks = await sql`select id, title, sub, descr, tag, tagcls, who, open from dash.tasks order by id`;
   const projects = await sql`select id, col, tag, title, descr, who from dash.projects order by sort, id`;
   const checklist = await sql`select id, project_id, text, done from dash.checklist order by sort, id`;
   const partners = await sql`select id, name, type, status, tagcls, next_step, who from dash.partners order by id`;
@@ -58,6 +46,7 @@ export const GET = guarded(async (req, ctx, user) => {
     count(*) filter (where category = 'Svar kreves')::int as urgent,
     count(*) filter (where priority = 'høy')::int as high_priority
     from dash.inbox where status = 'open'`;
+  const inboxLastSync = (await sql`select value from dash.meta where key = 'inbox_last_sync'`)[0]?.value || null;
   step("payload queries done (" + readings.length + " readings)");
 
   return json({
@@ -74,10 +63,7 @@ export const GET = guarded(async (req, ctx, user) => {
     targets,
     inbox,
     inboxCounts: inboxCounts[0] || { total: 0, urgent: 0 },
-    // "Connected" when env-based sync is configured OR the Claude sync
-    // routine has written within the last 26h (daily-sync cadence + a
-    // little slack, so the badge doesn't flip red every morning).
-    sheetsConfigured: !!sheetsConfig() || (!!lastSync && Date.now() - Date.parse(lastSync) < 26 * HOUR),
-    lastSync,
+    inboxLastSync,
+    aiEnabled: !!process.env.ANTHROPIC_API_KEY,
   });
 });

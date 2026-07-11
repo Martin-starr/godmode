@@ -25,7 +25,9 @@ export const POST = guarded(
     const rows = await sql`insert into dash.readings (system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source)
       values (${r.system}, ${r.date}, ${r.temp}, ${r.ph}, ${r.fukt}, ${r.for_l}, ${r.notat}, ${r.avvik}, ${user.name}, '')
       returning id, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source`;
-    return json(rows[0]);
+    // Same shape as dash.readings_all rows so client state stays homogeneous.
+    const r0 = rows[0];
+    return json({ ...r0, id: "d:" + r0.id, rid: r0.id, logged_at: null, editable: true });
   },
   { edit: true }
 );

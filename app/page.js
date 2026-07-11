@@ -71,7 +71,7 @@ function buildSeries(readings, systems, metric, range) {
   return systems.map((id, i) => {
     const values = rows
       .filter((r) => r.system === id)
-      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id))
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : String(a.logged_at || "") < String(b.logged_at || "") ? -1 : 1))
       .map((r) => r[key]);
     const style =
       SYS_COLORS[id] !== undefined
@@ -571,20 +571,20 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
                 <td className="num">{r.for_l}L</td>
                 <td className="num rt">
                   {r.logged_by}
-                  {canEdit && r.source !== "sheets" ? (
+                  {canEdit && r.editable ? (
                     <span style={{ display: "block", marginTop: 4 }}>
                       <button className="lnk" onClick={() => startEditReading(r)}>Endre</button>
                       <button
                         className="lnk g"
                         onClick={() => {
-                          if (window.confirm("Slette målingen for " + r.system + " " + fmtDate(r.date) + "?")) deleteReading(r.id);
+                          if (window.confirm("Slette målingen for " + r.system + " " + fmtDate(r.date) + "?")) deleteReading(r);
                         }}
                       >
                         Slett
                       </button>
                     </span>
-                  ) : r.source === "sheets" ? (
-                    <span className="dt" style={{ display: "block" }}>Sheets</span>
+                  ) : r.source === "sheets" || r.source === "app" ? (
+                    <span className="dt" style={{ display: "block" }}>{r.source === "app" ? "App" : "Sheets"}</span>
                   ) : null}
                 </td>
               </tr>
@@ -2129,11 +2129,11 @@ export default function App() {
     setForm(EMPTY_READING);
   };
 
-  const deleteReading = async (id) => {
-    const res = await api("/api/readings/" + id, { method: "DELETE" });
+  const deleteReading = async (r) => {
+    const res = await api("/api/readings/" + r.rid, { method: "DELETE" });
     if (!res.ok) return reportError(res, "Sletting feilet.");
-    if (editingReadingId === id) cancelEditReading();
-    setData((d) => ({ ...d, readings: d.readings.filter((r) => r.id !== id) }));
+    if (editingReadingId === r.rid) cancelEditReading();
+    setData((d) => ({ ...d, readings: d.readings.filter((x) => x.id !== r.id) }));
   };
 
   const addTask = async (task) => {
@@ -2338,9 +2338,8 @@ export default function App() {
   };
 
 
-  const syncLine = data.lastSync
-    ? "Sheets synk " + new Date(data.lastSync).toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })
-    : "Skylagring aktiv";
+  const newestApp = data.readings.find((r) => r.source === "app");
+  const syncLine = newestApp ? "App-logg " + fmtDate(newestApp.date) : "Skylagring aktiv";
   const outside = countOutside(data.readings, data.targets);
   const metaRight = view === "sop"
     ? outside.obs + " obs · " + data.readings.filter((r) => r.avvik).length + " avvik"
@@ -2405,7 +2404,7 @@ export default function App() {
               editingReadingId={editingReadingId}
               startEditReading={(r) => {
                 setForm({ system: r.system, date: r.date, temp: r.temp, ph: r.ph, fukt: r.fukt, for_l: r.for_l, notat: r.notat, avvik: !!r.avvik });
-                setEditingReadingId(r.id);
+                setEditingReadingId(r.rid);
               }}
               cancelEditReading={cancelEditReading}
               deleteReading={deleteReading}
