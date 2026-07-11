@@ -1728,6 +1728,8 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
   const [offset, setOffset] = useState(0);
   const [syncing, setSyncing] = useState(false);
   const [lastSync, setLastSync] = useState(data.inboxLastSync || null);
+  const [draftOnly, setDraftOnly] = useState(false);
+  const [drafting, setDrafting] = useState(null);
   const searchTimer = useRef(null);
 
   const fetchInbox = async (params = {}) => {
@@ -1736,12 +1738,14 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     const src = params.source ?? source;
     const search = params.q ?? q;
     const off = params.offset ?? 0;
+    const d = params.draft ?? draftOnly;
 
     setLoading(true);
     const qs = new URLSearchParams({ status: s, limit: "50", offset: String(off) });
     if (c && c !== "Alle") qs.set("category", c);
     if (src && src !== "Alle") qs.set("source", src);
     if (search) qs.set("q", search);
+    if (d) qs.set("draft", "1");
 
     const res = await api("/api/inbox?" + qs);
     if (res.ok) {
@@ -1760,10 +1764,11 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
   useEffect(() => { fetchInbox(); }, []);
 
   const applyFilter = (key, val) => {
-    const next = { status, category, source, q, offset: 0, [key]: val };
+    const next = { status, category, source, q, draft: draftOnly, offset: 0, [key]: val };
     if (key === "status") setStatus(val);
     if (key === "category") setCategory(val);
     if (key === "source") setSource(val);
+    if (key === "draft") setDraftOnly(val);
     setSelected(new Set());
     setExpanded(null);
     fetchInbox(next);
@@ -1850,6 +1855,34 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     fetchInbox({ offset: 0 });
   };
 
+  const generateDraft = async (id) => {
+    if (drafting) return;
+    setDrafting(id);
+    const res = await api("/api/inbox/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setDrafting(null);
+    if (!res.ok) {
+      if (showToast) showToast(await failMsg(res, "Kunne ikke lage utkast."));
+      return;
+    }
+    const updated = await res.json();
+    setItems((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+    if (showToast) showToast("Utkast klart — trykk Kopier for å bruke det");
+  };
+
+  const editItem = async (id, fields) => {
+    setItems((prev) => prev.map((m) => (m.id === id ? { ...m, ...fields } : m)));
+    const res = await api("/api/inbox", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "edit", id, ...fields }),
+    });
+    if (!res.ok && showToast) showToast(await failMsg(res, "Kunne ikke lagre endringen."));
+  };
+
   return (
     <div>
       <span className="eyebrow">Innboks · E-posttriage</span>
@@ -1896,6 +1929,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
         {INBOX_CATS.map((c) => (
           <button key={c} className={"chip " + (category === c ? "on" : "")} onClick={() => applyFilter("category", c)}>{c}</button>
         ))}
+        <button className={"chip " + (draftOnly ? "on" : "")} onClick={() => applyFilter("draft", !draftOnly)}>Utkast klare</button>
         {sources.length > 1 && (
           <>
             <span style={{ width: 1, height: 24, background: "var(--line)", margin: "0 4px" }} />
@@ -1972,12 +2006,41 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
                         <div><span className="mk">Fra</span><span className="mv">{m.sender}</span></div>
                         <div><span className="mk">Mottatt</span><span className="mv">{fmtReceived(m.received_at)}</span></div>
                         <div><span className="mk">Kilde</span><span className="mv">{m.source || "gmail"}</span></div>
-                        {m.priority && (
-                          <div>
-                            <span className="mk">Prioritet</span>
+                        <div>
+                          <span className="mk">Prioritet</span>
+                          {canEdit ? (
+                            <select
+                              className="select"
+                              style={{ width: "auto", padding: "5px 8px", fontSize: 12 }}
+                              value={m.priority || "medium"}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => editItem(m.id, { priority: e.target.value })}
+                            >
+                              <option value="høy">Høy</option>
+                              <option value="medium">Medium</option>
+                              <option value="lav">Lav</option>
+                            </select>
+                          ) : (
                             <span className={"mv prio-" + m.priority}>{prioLabel(m.priority)}</span>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                        <div>
+                          <span className="mk">Kategori</span>
+                          {canEdit ? (
+                            <select
+                              className="select"
+                              style={{ width: "auto", padding: "5px 8px", fontSize: 12 }}
+                              value={m.category}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => editItem(m.id, { category: e.target.value })}
+                            >
+                              <option value="Svar kreves">Svar kreves</option>
+                              <option value="Til info">Til info</option>
+                            </select>
+                          ) : (
+                            <span className="mv">{m.category}</span>
+                          )}
+                        </div>
                         {m.severity && m.severity !== "normal" && (
                           <div>
                             <span className="mk">Alvorlighet</span>
@@ -2003,6 +2066,15 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
                         {m.link && <a className="btn sm ghost" href={m.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Åpne i Gmail</a>}
                         {m.draft_url && <a className="btn sm ghost" href={m.draft_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Åpne utkast i Gmail</a>}
+                        {canEdit && !m.draft_body && data.aiEnabled && (
+                          <button
+                            className="btn sm ghost"
+                            disabled={drafting === m.id}
+                            onClick={(e) => { e.stopPropagation(); generateDraft(m.id); }}
+                          >
+                            {drafting === m.id ? "Skriver utkast …" : "Lag svar-utkast"}
+                          </button>
+                        )}
                         {canEdit && (
                           <>
                             <button className="btn sm ghost" onClick={(e) => { e.stopPropagation(); createTask(m); }}>Lag oppgave</button>
