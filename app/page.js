@@ -9,11 +9,13 @@ import { Fragment, useEffect, useRef, useState } from "react";
 // fetch with a hard timeout so a dead backend surfaces as an error message
 // instead of a button that silently does nothing (the pre-rebuild behaviour
 // on mobile was a request hanging for 300 s with no feedback at all).
+// timeoutMs override: Gmail sync and AI routes legitimately run 20-30s.
 async function api(path, opts = {}) {
+  const { timeoutMs = 15000, ...rest } = opts;
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 15000);
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    return await fetch(path, { ...opts, signal: ctrl.signal });
+    return await fetch(path, { ...rest, signal: ctrl.signal });
   } catch {
     return {
       ok: false,
@@ -1231,6 +1233,7 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
+      timeoutMs: 35000,
     });
     setBusy(false);
     if (!res.ok) {
@@ -1835,8 +1838,8 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
   const [inboxLastSync, setInboxLastSync] = useState(data.inboxLastSync || null);
 
   const syncInboxNow = async () => {
-    setSyncMsg("Synkroniserer …");
-    const res = await api("/api/inbox/sync", { method: "POST" });
+    setSyncMsg("Synkroniserer — kan ta opptil et halvt minutt …");
+    const res = await api("/api/inbox/sync", { method: "POST", timeoutMs: 35000 });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
       setSyncMsg(body.error || "Synk feilet — prøv igjen.");
@@ -2172,7 +2175,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
   const syncNow = async () => {
     if (syncing) return;
     setSyncing(true);
-    const res = await api("/api/inbox/sync", { method: "POST" });
+    const res = await api("/api/inbox/sync", { method: "POST", timeoutMs: 35000 });
     setSyncing(false);
     if (!res.ok) {
       if (showToast) showToast(await failMsg(res, "Synk feilet — prøv igjen."));
@@ -2191,6 +2194,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
+      timeoutMs: 35000,
     });
     setDrafting(null);
     if (!res.ok) {
