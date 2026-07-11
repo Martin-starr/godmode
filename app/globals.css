@@ -282,3 +282,24 @@ button, input, select, textarea { font-family: inherit; }
   .kpi { padding: 16px 16px 16px 0; }
   .tscroll table { min-width: 520px; }
 }
+
+/* Print: white paper, content only — nav, forms and actions disappear. */
+.print-only { display: none; }
+@media print {
+  body { background: #fff; }
+  .app { display: block; }
+  .side, .topmeta, .no-print, .lnk, .btn, .toggle, .chips, .drop, .star-btn,
+  .inbox-trustbar, .inbox-batch, .toast, .mlogout, input[type="checkbox"] { display: none !important; }
+  .main { padding: 0; }
+  .wrap { max-width: 100%; padding: 0; }
+  .print-only { display: block; font-size: 11px; letter-spacing: 0.18em;
+                text-transform: uppercase; color: #5A6270; margin-bottom: 14px; }
+  .hero { font-size: 26px; }
+  .kanban { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .tscroll { overflow: visible; }
+  .tscroll table { min-width: 0; }
+  svg { max-height: 340px; }
+  input, select, textarea { border: 0; background: none; }
+  .card { border: 1px solid #ddd; box-shadow: none; }
+  tr, .pcard, .setrow { break-inside: avoid; }
+}

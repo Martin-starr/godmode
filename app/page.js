@@ -106,6 +106,16 @@ function latestBySystem(readings, systems) {
   return out;
 }
 
+function PrintButton() {
+  return (
+    <button className="btn ghost sm no-print" onClick={() => window.print()}>Skriv ut</button>
+  );
+}
+
+function PrintHeader({ title }) {
+  return <div className="print-only">Verminord · {title} · {new Date().toLocaleDateString("nb-NO")}</div>;
+}
+
 function Logo({ variant }) {
   const [broken, setBroken] = useState(false);
   if (broken) {
@@ -502,7 +512,11 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
 
   return (
     <div>
-      <span className="eyebrow">Logg · Registrering</span>
+      <PrintHeader title="Produksjonslogg" />
+      <div className="sechead" style={{ marginBottom: 0 }}>
+        <span className="eyebrow">Logg · Registrering</span>
+        <PrintButton />
+      </div>
       <div className="hero">Produksjon</div>
       <div className="herosub">Bekreft at målingen er loggført. Historiske målinger kan legges inn i ettertid.</div>
       <div className="rule" />
@@ -677,7 +691,11 @@ function SystemsView({ data, activeSystem, setActiveSystem }) {
 
   return (
     <div>
-      <span className="eyebrow">Systemer · Per benk</span>
+      <PrintHeader title="Systemer" />
+      <div className="sechead" style={{ marginBottom: 0 }}>
+        <span className="eyebrow">Systemer · Per benk</span>
+        <PrintButton />
+      </div>
       <div className="hero">Anlegg</div>
       <div className="herosub">{active.length} aktive systemer · Forkompost via autologger</div>
       <div className="rule" />
@@ -787,7 +805,11 @@ function FilesView({ data, uploadFiles, removeFile, updateFile, canEdit }) {
 
   return (
     <div>
-      <span className="eyebrow">Dokumentasjon</span>
+      <PrintHeader title="SOP og dokumenter" />
+      <div className="sechead" style={{ marginBottom: 0 }}>
+        <span className="eyebrow">Dokumentasjon</span>
+        <PrintButton />
+      </div>
       <div className="hero">SOP · Regelverk · Filer</div>
       <div className="herosub">Last opp SOP-er, sertifiseringer, lab-rapporter og HMS. Alt samlet ett sted — klart å vise ved tilsyn.</div>
       <div className="rule" />
@@ -1020,7 +1042,11 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
 
   return (
     <div>
-      <span className="eyebrow">Arbeid · Langsiktig</span>
+      <PrintHeader title="Prosjekter" />
+      <div className="sechead" style={{ marginBottom: 0 }}>
+        <span className="eyebrow">Arbeid · Langsiktig</span>
+        <PrintButton />
+      </div>
       <div className="hero">Prosjekter</div>
       <div className="herosub">Enkel oversikt over prosjekter, store oppgaver og partnere som jobbes over tid. Kryss av stegene på veien.</div>
       <div className="rule" />
@@ -1508,7 +1534,11 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit, showToast, 
 
   return (
     <div>
-      <span className="eyebrow">Arbeid · Oppgaver</span>
+      <PrintHeader title="Oppgaver" />
+      <div className="sechead" style={{ marginBottom: 0 }}>
+        <span className="eyebrow">Arbeid · Oppgaver</span>
+        <PrintButton />
+      </div>
       <div className="hero">Oppgaver</div>
       <div className="herosub">Alt som krever handling — legg til, kryss av og hold listen kort.</div>
       <div className="rule" />
