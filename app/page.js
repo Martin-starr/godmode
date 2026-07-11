@@ -1726,6 +1726,8 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(data.inboxLastSync || null);
   const searchTimer = useRef(null);
 
   const fetchInbox = async (params = {}) => {
@@ -1833,6 +1835,21 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     }
   };
 
+  const syncNow = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    const res = await api("/api/inbox/sync", { method: "POST" });
+    setSyncing(false);
+    if (!res.ok) {
+      if (showToast) showToast(await failMsg(res, "Synk feilet — prøv igjen."));
+      return;
+    }
+    const body = await res.json();
+    setLastSync(body.last_sync);
+    if (showToast) showToast("Synkronisert: " + body.nye + " nye · " + body.oppdatert + " oppdatert");
+    fetchInbox({ offset: 0 });
+  };
+
   return (
     <div>
       <span className="eyebrow">Innboks · E-posttriage</span>
@@ -1840,7 +1857,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
         Innboks<span className="li"> e-post</span>
       </div>
       <div className="herosub">
-        {openCount} åpne · {urgentCount} krever svar · Triagert av Claude
+        {openCount} åpne · {urgentCount} krever svar · Triage ved hver synk
       </div>
       <div className="rule" />
 
@@ -2027,12 +2044,19 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
 
       <div className="inbox-trustbar">
         <div>
-          <div className="mk">Triage-rutine</div>
-          <div className="mv">Daglig 07:00 · Gmail-connector · martin@verminord.no{sources.includes("post") ? " + post@verminord.no" : ""}</div>
+          <div className="mk">Gmail-synk</div>
+          <div className="mv">
+            Sist oppdatert {lastSync ? fmtReceived(lastSync) : "aldri"} · henter siste 7 dager via Gmail-broen
+            {canEdit ? "" : " · kun lesing"}
+          </div>
         </div>
-        <button className="btn sm ghost" onClick={() => fetchInbox({ offset: 0 })}>
-          Oppdater
-        </button>
+        {canEdit ? (
+          <button className="btn sm ghost" onClick={syncNow} disabled={syncing}>
+            {syncing ? "Synkroniserer …" : "Oppdater"}
+          </button>
+        ) : (
+          <button className="btn sm ghost" onClick={() => fetchInbox({ offset: 0 })}>Last på nytt</button>
+        )}
       </div>
     </div>
   );
