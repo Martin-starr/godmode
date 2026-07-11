@@ -1798,7 +1798,7 @@ function HygieneView({ canEdit }) {
 /* Innstillinger                                                       */
 /* ------------------------------------------------------------------ */
 
-function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsConfigured, lastSync, addSystem, updateSystem, deleteSystem }) {
+function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSystem, updateSystem, deleteSystem }) {
   const systems = data.systems.map((s) => s.id);
   const latest = latestBySystem(data.readings, systems);
   const [adding, setAdding] = useState(false);
@@ -1832,16 +1832,24 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsC
     setPwMsg("Passord oppdatert.");
   };
 
-  const syncNow = async () => {
+  const [inboxLastSync, setInboxLastSync] = useState(data.inboxLastSync || null);
+
+  const syncInboxNow = async () => {
     setSyncMsg("Synkroniserer …");
-    const res = await api("/api/sync", { method: "POST" });
+    const res = await api("/api/inbox/sync", { method: "POST" });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setSyncMsg(body.error || "Synk feilet.");
+      setSyncMsg(body.error || "Synk feilet — prøv igjen.");
       return;
     }
-    setSyncMsg("Importert: " + body.imported + " · hoppet over: " + body.skipped);
+    setInboxLastSync(body.last_sync);
+    setSyncMsg("Hentet " + body.hentet + " tråder · " + body.nye + " nye · " + body.oppdatert + " oppdatert");
   };
+
+  // Live app data flows in via dash.readings_all — freshness = newest phone log.
+  const newestApp = data.readings.find((r) => r.source === "app");
+  const appFresh = !!newestApp && newestApp.date >= isoDaysAgo(3);
+  const inboxFresh = !!inboxLastSync && Date.now() - Date.parse(inboxLastSync) < 26 * 60 * 60 * 1000;
 
   const targetInput = (metric, field, style) => (
     <input
@@ -1969,24 +1977,32 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsC
               {targetInput("hygiene", "min")}<span className="mut">°C ·</span>{targetInput("hygiene", "max")}<span className="mut">min</span>
             </span>
           </div>
-          <div className="sechead" style={{ marginTop: 36 }}><span className="eyebrow">Datakilde</span></div>
+          <div className="sechead" style={{ marginTop: 36 }}><span className="eyebrow">Datakilder</span></div>
           <div className="setrow">
             <div>
-              <div className="sl">Google Sheets</div>
+              <div className="sl">Produksjonslogg · Verminord-appen</div>
               <div className="ss">
-                Produksjonslogger · synkes automatisk hver time
-                {lastSync ? (
-                  <> · Sist synk {new Date(lastSync).toLocaleString("nb-NO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</>
-                ) : null}
+                Leses direkte fra app-databasen (log.verminord.app)
+                {newestApp ? <> · Siste logg {fmtDate(newestApp.date)}</> : null}
+              </div>
+            </div>
+            <span className={"pill" + (appFresh ? "" : " warn")}>{appFresh ? "Tilkoblet" : newestApp ? "Ingen logg siste 3 dager" : "Ingen data"}</span>
+          </div>
+          <div className="setrow">
+            <div>
+              <div className="sl">Innboks · Gmail</div>
+              <div className="ss">
+                Apps Script-bro · triage ved hver synk
+                {inboxLastSync ? (
+                  <> · Sist synk {new Date(inboxLastSync).toLocaleString("nb-NO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</>
+                ) : (
+                  <> · aldri synkronisert</>
+                )}
               </div>
             </div>
             <span className="trange">
-              {sheetsConfigured ? (
-                <span className="pill">Tilkoblet</span>
-              ) : (
-                <span className="pill warn">Ikke tilkoblet</span>
-              )}
-              {canEdit ? <button className="btn ghost sm" onClick={syncNow}>Synk nå</button> : null}
+              <span className={"pill" + (inboxFresh ? "" : " warn")}>{inboxFresh ? "Tilkoblet" : "Trenger synk"}</span>
+              {canEdit ? <button className="btn ghost sm" onClick={syncInboxNow}>Synk nå</button> : null}
             </span>
           </div>
           {syncMsg ? <div className="mut" style={{ marginTop: 8 }}>{syncMsg}</div> : null}
@@ -1996,6 +2012,13 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsC
               <div className="ss">Center 374 · manuell import på Hygienisering-siden</div>
             </div>
             <span className="pill">Manuell import</span>
+          </div>
+          <div className="setrow">
+            <div>
+              <div className="sl">AI-funksjoner</div>
+              <div className="ss">Svar-utkast og hjernedump{data.aiEnabled ? "" : " · legg inn ANTHROPIC_API_KEY på Vercel-prosjektet for å aktivere"}</div>
+            </div>
+            <span className={"pill" + (data.aiEnabled ? "" : " warn")}>{data.aiEnabled ? "Aktivert" : "Ikke konfigurert"}</span>
           </div>
         </div>
       </div>
@@ -2905,8 +2928,6 @@ export default function App() {
               setTargets={setTargets}
               saveTargets={saveTargets}
               canEdit={editable}
-              sheetsConfigured={data.sheetsConfigured}
-              lastSync={data.lastSync}
               addSystem={addSystem}
               updateSystem={updateSystem}
               deleteSystem={deleteSystem}
