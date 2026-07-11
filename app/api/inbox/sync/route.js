@@ -57,6 +57,7 @@ export const POST = guarded(
           snippet     = excluded.snippet,
           link        = excluded.link,
           status      = case when dash.inbox.status = 'done'
+                              and excluded.status = 'open'
                               and excluded.received_at > dash.inbox.received_at + interval '2 minutes'
                              then 'open' else dash.inbox.status end
         where excluded.received_at > dash.inbox.received_at

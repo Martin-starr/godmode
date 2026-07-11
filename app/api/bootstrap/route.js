@@ -15,13 +15,24 @@ export const GET = guarded(async (req, ctx, user) => {
   // Readings arrive continuously in public.logs via the phone logger; when a
   // new system name shows up there it must exist in dash.systems or the UI
   // can't offer it anywhere. Added as 'Tatt ut' so nothing clutters the
-  // active views until Martin flips it on under Innstillinger.
-  await sql`insert into dash.systems (id, status, sort)
-    select s.system, 'Tatt ut',
-           (select coalesce(max(sort), 0) from dash.systems) + row_number() over (order by s.system)
-    from (select distinct system from dash.readings_all
-          where system not in (select id from dash.systems)) s
-    on conflict (id) do nothing`;
+  // active views until Martin flips it on under Innstillinger. Only names
+  // from the live phone source are added, and names the user deliberately
+  // deleted (tombstoned in dash.meta) stay deleted.
+  const unknown = await sql`select distinct system from dash.readings_all
+    where source = 'app' and system not in (select id from dash.systems)`;
+  if (unknown.length) {
+    const hiddenRaw = (await sql`select value from dash.meta where key = 'systems_hidden'`)[0]?.value;
+    let hidden = [];
+    try { hidden = JSON.parse(hiddenRaw || "[]"); } catch {}
+    const toAdd = unknown.map((r) => r.system).filter((s) => !hidden.includes(s));
+    if (toAdd.length) {
+      await sql`insert into dash.systems (id, status, sort)
+        select s, 'Tatt ut',
+               (select coalesce(max(sort), 0) from dash.systems) + row_number() over ()
+        from unnest(${toAdd}::text[]) s
+        on conflict (id) do nothing`;
+    }
+  }
   step("system auto-add done");
 
   // Strictly sequential: concurrent queries pipelined onto one pooled
@@ -30,7 +41,7 @@ export const GET = guarded(async (req, ctx, user) => {
   const team = await sql`select id, name, role, access from dash.team order by id`;
   const systems = await sql`select id, status from dash.systems order by sort`;
   const readings = await sql`select id, rid, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source, logged_at, editable
-    from dash.readings_all order by date desc, logged_at desc nulls last, id desc`;
+    from dash.readings_all order by date desc, logged_at desc nulls last, rid desc nulls last, id desc`;
   const tasks = await sql`select id, title, sub, descr, tag, tagcls, who, open from dash.tasks order by id`;
   const projects = await sql`select id, col, tag, title, descr, who from dash.projects order by sort, id`;
   const checklist = await sql`select id, project_id, text, done from dash.checklist order by sort, id`;

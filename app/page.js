@@ -62,6 +62,16 @@ function fmtDate(iso) {
   return parts.length !== 3 ? iso : parts[2] + "." + parts[1] + "." + parts[0].slice(2);
 }
 
+// Phone logs can miss single measurements (NULL in public.logs) — show a
+// dash instead of pretending the value was 0.
+function fmtVal(v, suffix = "") {
+  return v == null ? "—" : v + suffix;
+}
+
+function fmtPh(v) {
+  return v == null ? "—" : Number(v).toFixed(1);
+}
+
 function inRange(readings, range) {
   const min = isoDaysAgo(rangeDays(range) - 1);
   return readings.filter((r) => r.date >= min);
@@ -72,8 +82,14 @@ function buildSeries(readings, systems, metric, range) {
   const key = METRIC_KEY[metric];
   return systems.map((id, i) => {
     const values = rows
-      .filter((r) => r.system === id)
-      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : String(a.logged_at || "") < String(b.logged_at || "") ? -1 : 1))
+      .filter((r) => r.system === id && r[key] != null)
+      .sort((a, b) => {
+        if (a.date !== b.date) return a.date < b.date ? -1 : 1;
+        const la = String(a.logged_at || "");
+        const lb = String(b.logged_at || "");
+        if (la !== lb) return la < lb ? -1 : 1;
+        return Number(a.rid || 0) - Number(b.rid || 0);
+      })
       .map((r) => r[key]);
     const style =
       SYS_COLORS[id] !== undefined
@@ -93,9 +109,9 @@ function countOutside(readings, targets) {
   let ph = 0;
   let fukt = 0;
   for (const r of readings) {
-    if (r.temp < t.temp.min || r.temp > t.temp.max) temp++;
-    if (r.ph < t.ph.min || r.ph > t.ph.max) ph++;
-    if (r.fukt < t.fukt.min || r.fukt > t.fukt.max) fukt++;
+    if (r.temp != null && (r.temp < t.temp.min || r.temp > t.temp.max)) temp++;
+    if (r.ph != null && (r.ph < t.ph.min || r.ph > t.ph.max)) ph++;
+    if (r.fukt != null && (r.fukt < t.fukt.min || r.fukt > t.fukt.max)) fukt++;
   }
   return { temp, ph, fukt, obs: readings.length };
 }
@@ -315,9 +331,10 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
     ph: data.targets.find((x) => x.metric === "ph"),
     fukt: data.targets.find((x) => x.metric === "fukt"),
   };
+  const bad = (v, tt) => v != null && !!tt && (v < tt.min || v > tt.max);
   const outsideNow = active.filter((id) => {
     const r = latest[id];
-    return !!r && !!t.temp && (r.temp < t.temp.min || r.temp > t.temp.max || r.ph < t.ph.min || r.ph > t.ph.max || r.fukt < t.fukt.min || r.fukt > t.fukt.max);
+    return !!r && (bad(r.temp, t.temp) || bad(r.ph, t.ph) || bad(r.fukt, t.fukt));
   }).length;
 
   const kpis = [
@@ -523,7 +540,7 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
       <div className="herosub">Bekreft at målingen er loggført. Historiske målinger kan legges inn i ettertid.</div>
       <div className="rule" />
       <div className="charthead">
-        <span className="eyebrow">Historikk · {RANGE_LABEL[loggRange]}</span>
+        <span className="eyebrow">Historikk · {metric === "TEMP" ? "Temperatur (°C)" : metric === "PH" ? "pH" : "Fuktighet (%)"} · {RANGE_LABEL[loggRange]}</span>
         <span style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
           <div className="toggle">
             {METRICS.map(([key, label]) => (
@@ -640,9 +657,9 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
                   </div>
                   {r.notat ? <div className="dt" style={{ marginTop: 2, fontStyle: "italic" }}>{r.notat}</div> : null}
                 </td>
-                <td className="num"><b>{r.temp}°</b></td>
-                <td className="num">{r.ph}</td>
-                <td className="num">{r.fukt}%</td>
+                <td className="num"><b>{fmtVal(r.temp, "°")}</b></td>
+                <td className="num">{fmtVal(r.ph)}</td>
+                <td className="num">{fmtVal(r.fukt, "%")}</td>
                 <td className="num">{r.for_l}L</td>
                 <td className="num rt">
                   {r.logged_by}
@@ -709,7 +726,7 @@ function SystemsView({ data, activeSystem, setActiveSystem }) {
               <button key={id} className={"sysrow " + (activeSystem === id ? "on" : "")} onClick={() => setActiveSystem(id)}>
                 <div>
                   <div className="nm">{id}</div>
-                  <div className="mt">{r.temp}° · pH {Number(r.ph).toFixed(1)} · {r.fukt}% fukt</div>
+                  <div className="mt">{fmtVal(r.temp, "°")} · pH {fmtPh(r.ph)} · {fmtVal(r.fukt, "%")} fukt</div>
                 </div>
                 <span className="pill">I drift</span>
               </button>
@@ -727,15 +744,15 @@ function SystemsView({ data, activeSystem, setActiveSystem }) {
           <div className="metrics3">
             <div className="m3">
               <div className="k">Temperatur</div>
-              <div className="v">{current.temp}<small>°C</small></div>
+              <div className="v">{fmtVal(current.temp)}<small>°C</small></div>
             </div>
             <div className="m3">
               <div className="k">pH</div>
-              <div className="v">{Number(current.ph).toFixed(1)}</div>
+              <div className="v">{fmtPh(current.ph)}</div>
             </div>
             <div className="m3">
               <div className="k">Fuktighet</div>
-              <div className="v">{current.fukt}<small>%</small></div>
+              <div className="v">{fmtVal(current.fukt)}<small>%</small></div>
             </div>
           </div>
           <div className="charthead"><span className="eyebrow">Temperatur (°C) · siste 30 dager</span></div>
@@ -752,9 +769,9 @@ function SystemsView({ data, activeSystem, setActiveSystem }) {
                 r ? (
                   <tr key={r.id}>
                     <td><span className="sy">{fmtDate(r.date)}</span></td>
-                    <td className="num"><b>{r.temp}°</b></td>
-                    <td className="num">pH {r.ph}</td>
-                    <td className="num">{r.fukt}%</td>
+                    <td className="num"><b>{fmtVal(r.temp, "°")}</b></td>
+                    <td className="num">pH {fmtVal(r.ph)}</td>
+                    <td className="num">{fmtVal(r.fukt, "%")}</td>
                     <td className="num rt">{r.logged_by}</td>
                   </tr>
                 ) : (
@@ -1196,14 +1213,16 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
   const [busy, setBusy] = useState(false);
   const [applying, setApplying] = useState(false);
 
-  const taskById = new Map(data.tasks.map((t) => [t.id, t]));
-  const projectById = new Map(data.projects.map((p) => [p.id, p]));
-  const checkById = new Map(data.checklist.map((c) => [c.id, c]));
+  // postgres.js delivers bigint ids as strings while AI/pasted ops carry
+  // numbers — key everything by Number so both shapes resolve.
+  const taskById = new Map(data.tasks.map((t) => [Number(t.id), t]));
+  const projectById = new Map(data.projects.map((p) => [Number(p.id), p]));
+  const checkById = new Map(data.checklist.map((c) => [Number(c.id), c]));
 
   const describe = (o) => {
-    const t = taskById.get(o.id);
-    const p = projectById.get(o.id);
-    const c = checkById.get(o.id);
+    const t = taskById.get(Number(o.id));
+    const p = projectById.get(Number(o.id));
+    const c = checkById.get(Number(o.id));
     switch (o.op) {
       case "create_task": return "+ Oppgave: «" + o.title + "»" + (o.who ? " (" + o.who + ")" : "");
       case "update_task": return "✎ Endre oppgave: «" + (t ? t.title : o.id) + "»";
@@ -1214,7 +1233,7 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
       case "update_project": return "✎ Endre prosjekt: «" + (p ? p.title : o.id) + "»";
       case "delete_project": return "− Slett prosjekt: «" + (p ? p.title : o.id) + "»";
       case "add_check": {
-        const proj = projectById.get(o.project_id);
+        const proj = projectById.get(Number(o.project_id));
         return "+ Sjekkpunkt i «" + (proj ? proj.title : o.project_id) + "»: " + o.text;
       }
       case "toggle_check": return (o.done === false ? "☐ Fjern kryss: «" : "✓ Kryss av: «") + (c ? c.text : o.id) + "»";
@@ -1287,7 +1306,7 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
       case "update_task":
       case "complete_task":
       case "reopen_task": {
-        const t = taskById.get(o.id);
+        const t = taskById.get(Number(o.id));
         if (!t) return { ok: false };
         const open = o.op === "complete_task" ? 0 : o.op === "reopen_task" ? 1 : t.open;
         return put("/api/tasks", {
@@ -1320,7 +1339,7 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
         return upd;
       }
       case "update_project": {
-        const p = projectById.get(o.id);
+        const p = projectById.get(Number(o.id));
         if (!p) return { ok: false };
         return put("/api/projects", {
           id: o.id,
@@ -1353,7 +1372,7 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
       else failed++;
     }
     setApplying(false);
-    showToast(ok + " endringer utført" + (failed ? " · " + failed + " feilet" : ""));
+    showToast(ok + (ok === 1 ? " endring utført" : " endringer utført") + (failed ? " · " + failed + " feilet" : ""));
     setOps(null);
     setText("");
     setPasted("");
@@ -1370,7 +1389,7 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
   };
 
   return (
-    <div>
+    <div className="no-print">
       <div className="sechead">
         <span className="eyebrow">Hjernedump</span>
         <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? "Lukk" : "Åpne hjernedump"}</button>
@@ -1384,7 +1403,7 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
                 <textarea
                   className="ta"
                   style={{ minHeight: 110 }}
-                  placeholder={"F.eks: Bestill mer strø til CFT2, Mathias tar det. Mattilsynet-oppgaven er ferdig. Nytt prosjekt: nettbutikk-lansering — steg: produktbilder, priser, frakt."}
+                  placeholder={"F.eks.: Bestill mer strø til CFT2, Mathias tar det. Mattilsynet-oppgaven er ferdig. Nytt prosjekt: nettbutikk-lansering — steg: produktbilder, priser, frakt."}
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                 />
@@ -1547,7 +1566,7 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit, showToast, 
       <div className="rule" />
       {canEdit ? <BraindumpPanel data={data} showToast={showToast} refreshAll={refreshAll} /> : null}
       {canEdit ? (
-        <div className="card" style={{ padding: "22px 24px", marginBottom: 30 }}>
+        <div className="card no-print" style={{ padding: "22px 24px", marginBottom: 30 }}>
           <div className="f2">
             <div className="field">
               <label>Tittel</label>
@@ -1846,7 +1865,11 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
       return;
     }
     setInboxLastSync(body.last_sync);
-    setSyncMsg("Hentet " + body.hentet + " tråder · " + body.nye + " nye · " + body.oppdatert + " oppdatert");
+    setSyncMsg(
+      "Hentet " + (body.hentet === 1 ? "1 tråd" : body.hentet + " tråder") +
+      " · " + (body.nye === 1 ? "1 ny" : body.nye + " nye") +
+      " · " + body.oppdatert + " oppdatert"
+    );
   };
 
   // Live app data flows in via dash.readings_all — freshness = newest phone log.
@@ -1909,7 +1932,7 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
               <div className="setrow" key={s.id}>
                 <div>
                   <div className={"sl" + (s.status === "I drift" ? "" : " mut")}>{s.id}</div>
-                  <div className="ss">{r.temp}° · pH {Number(r.ph).toFixed(1)} · {r.fukt}% fukt</div>
+                  <div className="ss">{fmtVal(r.temp, "°")} · pH {fmtPh(r.ph)} · {fmtVal(r.fukt, "%")} fukt</div>
                 </div>
                 <span className="trange">
                   <span className={"pill" + (s.status === "I drift" ? "" : " warn")}>{s.status}</span>
@@ -2183,7 +2206,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     }
     const body = await res.json();
     setLastSync(body.last_sync);
-    if (showToast) showToast("Synkronisert: " + body.nye + " nye · " + body.oppdatert + " oppdatert");
+    if (showToast) showToast("Synkronisert: " + (body.nye === 1 ? "1 ny" : body.nye + " nye") + " · " + body.oppdatert + " oppdatert");
     fetchInbox({ offset: 0 });
   };
 
@@ -2898,7 +2921,7 @@ export default function App() {
               canEdit={editable}
               editingReadingId={editingReadingId}
               startEditReading={(r) => {
-                setForm({ system: r.system, date: r.date, temp: r.temp, ph: r.ph, fukt: r.fukt, for_l: r.for_l, notat: r.notat, avvik: !!r.avvik });
+                setForm({ system: r.system, date: r.date, temp: r.temp ?? "", ph: r.ph ?? "", fukt: r.fukt ?? "", for_l: r.for_l ?? 0, notat: r.notat, avvik: !!r.avvik });
                 setEditingReadingId(r.rid);
               }}
               cancelEditReading={cancelEditReading}

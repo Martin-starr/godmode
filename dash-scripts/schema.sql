@@ -146,7 +146,8 @@ create table if not exists public.logs (
 );
 
 -- Single read path for readings: live public.logs + dashboard's own rows.
--- Full definition and rationale in migrations/001_readings_all.sql.
+-- Full definition and rationale in migrations/001_readings_all.sql and
+-- 003_readings_all_nulls.sql (NULL metrics pass through; dedup uses to_char).
 create or replace view dash.readings_all as
 with t as (
   select
@@ -168,16 +169,16 @@ select
 from dash.readings r
 where r.source <> 'sheets'
    or not exists (select 1 from public.logs l
-                  where l.system = r.system and l.date::text = r.date)
+                  where l.system = r.system and to_char(l.date, 'YYYY-MM-DD') = r.date)
 union all
 select
   'a:' || l.id::text                       as id,
   null::bigint                             as rid,
   l.system,
   to_char(l.date, 'YYYY-MM-DD')            as date,
-  coalesce(l.temperature, 0)::real         as temp,
-  coalesce(l.ph, 0)::real                  as ph,
-  coalesce(l.moisture, 0)::real            as fukt,
+  l.temperature::real                      as temp,
+  l.ph::real                               as ph,
+  l.moisture::real                         as fukt,
   coalesce(l.feed_amount_liters, 0)::real  as for_l,
   coalesce(l.notes, '')                    as notat,
   case when (l.temperature is not null and (l.temperature < t.temp_min or l.temperature > t.temp_max))

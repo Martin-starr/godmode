@@ -37,9 +37,11 @@ export async function GET() {
     mark("readings_all");
     // Same shape as bootstrap's heaviest query, to mirror real payload size.
     const rows = await sql`select id, rid, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source, logged_at, editable
-      from dash.readings_all order by date desc, logged_at desc nulls last, id desc`;
+      from dash.readings_all order by date desc, logged_at desc nulls last, rid desc nulls last, id desc`;
     mark("full readings fetch (" + rows.length + " rows)");
-    const meta = await sql`select key, value from dash.meta`;
+    // Whitelisted sync stamps only — this route is unauthenticated, and
+    // dash.meta is a general key/value store other processes write to.
+    const meta = await sql`select key, value from dash.meta where key in ('last_sync', 'inbox_last_sync')`;
     mark("meta");
     const metaOut = {};
     for (const m of meta) metaOut[m.key] = m.value;
