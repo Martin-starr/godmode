@@ -1145,7 +1145,273 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
 const TASK_TAGS = ["Ny", "Rutine", "Avklar"];
 const EMPTY_TASK = { title: "", sub: "", descr: "", tag: "Ny", who: "Mathias" };
 
-function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
+/* Braindump: free text -> proposed task/project operations -> user approves
+   -> applied through the existing CRUD endpoints. Works in two modes:
+   /api/braindump (server-side Claude) when AI is configured, otherwise a
+   copy/paste prompt template + paste-JSON-back flow with the same preview. */
+
+const BRAINDUMP_RULES =
+  "Du oversetter en hjernedump til konkrete operasjoner mot oppgave- og prosjektlisten.\n" +
+  "Gyldige op-verdier: create_task, update_task, complete_task, reopen_task, delete_task, " +
+  "create_project, update_project, delete_project, add_check, toggle_check.\n" +
+  "Felter: id (eksisterende oppgave/prosjekt/sjekkpunkt), project_id, title, sub, descr, " +
+  "tag (Ny/Rutine/Avklar), who (teammedlem), col (Planlagt/Pågår/Fullført), text (sjekkpunkt), " +
+  "done (true/false), checks (liste med sjekkpunkter for nytt prosjekt), note (kort norsk forklaring).\n" +
+  "Bruk KUN id-er fra tilstanden. Slett aldri noe som ikke eksplisitt skal slettes.";
+
+function BraindumpPanel({ data, showToast, refreshAll }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [pasted, setPasted] = useState("");
+  const [ops, setOps] = useState(null);
+  const [checked, setChecked] = useState(new Set());
+  const [busy, setBusy] = useState(false);
+  const [applying, setApplying] = useState(false);
+
+  const taskById = new Map(data.tasks.map((t) => [t.id, t]));
+  const projectById = new Map(data.projects.map((p) => [p.id, p]));
+  const checkById = new Map(data.checklist.map((c) => [c.id, c]));
+
+  const describe = (o) => {
+    const t = taskById.get(o.id);
+    const p = projectById.get(o.id);
+    const c = checkById.get(o.id);
+    switch (o.op) {
+      case "create_task": return "+ Oppgave: «" + o.title + "»" + (o.who ? " (" + o.who + ")" : "");
+      case "update_task": return "✎ Endre oppgave: «" + (t ? t.title : o.id) + "»";
+      case "complete_task": return "✓ Fullfør: «" + (t ? t.title : o.id) + "»";
+      case "reopen_task": return "↺ Gjenåpne: «" + (t ? t.title : o.id) + "»";
+      case "delete_task": return "− Slett oppgave: «" + (t ? t.title : o.id) + "»";
+      case "create_project": return "+ Prosjekt: «" + o.title + "»" + (o.checks && o.checks.length ? " (" + o.checks.length + " sjekkpunkter)" : "");
+      case "update_project": return "✎ Endre prosjekt: «" + (p ? p.title : o.id) + "»";
+      case "delete_project": return "− Slett prosjekt: «" + (p ? p.title : o.id) + "»";
+      case "add_check": {
+        const proj = projectById.get(o.project_id);
+        return "+ Sjekkpunkt i «" + (proj ? proj.title : o.project_id) + "»: " + o.text;
+      }
+      case "toggle_check": return (o.done === false ? "☐ Fjern kryss: «" : "✓ Kryss av: «") + (c ? c.text : o.id) + "»";
+      default: return o.op;
+    }
+  };
+
+  const showProposal = (list) => {
+    setOps(list);
+    setChecked(new Set(list.map((_, i) => i)));
+  };
+
+  const interpret = async () => {
+    setBusy(true);
+    const res = await api("/api/braindump", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      showToast(await failMsg(res, "Klarte ikke å tolke teksten — prøv igjen."));
+      return;
+    }
+    const body = await res.json();
+    showProposal(body.ops || []);
+  };
+
+  const promptTemplate = () => {
+    const state = {
+      team: data.team.map((t) => t.name),
+      tasks: data.tasks.map(({ id, title, sub, tag, who, open: o }) => ({ id, title, sub, tag, who, open: o })),
+      projects: data.projects.map(({ id, col, tag, title, who }) => ({ id, col, tag, title, who })),
+      checklist: data.checklist,
+    };
+    return BRAINDUMP_RULES +
+      "\n\nNåværende tilstand:\n" + JSON.stringify(state) +
+      "\n\nHjernedump:\n" + text +
+      '\n\nSvar KUN med gyldig JSON på formen {"ops":[{"op":"...","note":"..."}]} — ingen annen tekst.';
+  };
+
+  const copyTemplate = async () => {
+    try {
+      await navigator.clipboard.writeText(promptTemplate());
+      showToast("Prompt-mal kopiert — lim den inn i Claude og lim JSON-svaret inn under");
+    } catch {
+      showToast("Kunne ikke kopiere automatisk — velg teksten manuelt");
+    }
+  };
+
+  const readPasted = () => {
+    try {
+      const cleaned = pasted.trim().replace(/^```(json)?/i, "").replace(/```$/, "").trim();
+      const parsed = JSON.parse(cleaned);
+      const list = (Array.isArray(parsed) ? parsed : parsed.ops || []).filter((o) => o && o.op);
+      showProposal(list);
+    } catch {
+      showToast("Ugyldig JSON — lim inn hele svaret fra Claude");
+    }
+  };
+
+  const post = (path, body) => api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const put = (path, body) => api(path, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+  const applyOne = async (o) => {
+    switch (o.op) {
+      case "create_task":
+        return post("/api/tasks", { title: o.title, sub: o.sub || "", descr: o.descr || "", tag: o.tag || "Ny", who: o.who || "" });
+      case "update_task":
+      case "complete_task":
+      case "reopen_task": {
+        const t = taskById.get(o.id);
+        if (!t) return { ok: false };
+        const open = o.op === "complete_task" ? 0 : o.op === "reopen_task" ? 1 : t.open;
+        return put("/api/tasks", {
+          id: o.id,
+          title: o.title ?? t.title,
+          sub: o.sub ?? t.sub,
+          descr: o.descr ?? t.descr ?? "",
+          tag: o.tag ?? t.tag,
+          who: o.who ?? t.who,
+          open,
+        });
+      }
+      case "delete_task":
+        return api("/api/tasks/" + o.id, { method: "DELETE" });
+      case "create_project": {
+        const res = await post("/api/projects", { col: o.col || "Planlagt", who: o.who || "" });
+        if (!res.ok) return res;
+        const created = await res.json();
+        const upd = await put("/api/projects", {
+          id: created.id,
+          col: o.col || created.col,
+          tag: o.tag || "Nytt",
+          title: o.title,
+          descr: o.descr || "",
+          who: o.who || created.who,
+        });
+        for (const check of o.checks || []) {
+          await post("/api/checks", { project_id: created.id, text: check });
+        }
+        return upd;
+      }
+      case "update_project": {
+        const p = projectById.get(o.id);
+        if (!p) return { ok: false };
+        return put("/api/projects", {
+          id: o.id,
+          col: o.col ?? p.col,
+          tag: o.tag ?? p.tag,
+          title: o.title ?? p.title,
+          descr: o.descr ?? p.descr,
+          who: o.who ?? p.who,
+        });
+      }
+      case "delete_project":
+        return api("/api/projects/" + o.id, { method: "DELETE" });
+      case "add_check":
+        return post("/api/checks", { project_id: o.project_id, text: o.text });
+      case "toggle_check":
+        return post("/api/checks", { id: o.id, done: o.done !== false });
+      default:
+        return { ok: false };
+    }
+  };
+
+  const applyOps = async () => {
+    setApplying(true);
+    let ok = 0;
+    let failed = 0;
+    for (let i = 0; i < ops.length; i++) {
+      if (!checked.has(i)) continue;
+      const res = await applyOne(ops[i]);
+      if (res && res.ok) ok++;
+      else failed++;
+    }
+    setApplying(false);
+    showToast(ok + " endringer utført" + (failed ? " · " + failed + " feilet" : ""));
+    setOps(null);
+    setText("");
+    setPasted("");
+    setOpen(false);
+    refreshAll();
+  };
+
+  const toggleOp = (i) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
+
+  return (
+    <div>
+      <div className="sechead">
+        <span className="eyebrow">Hjernedump</span>
+        <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? "Lukk" : "Åpne hjernedump"}</button>
+      </div>
+      {open ? (
+        <div className="card" style={{ padding: "22px 24px", marginBottom: 30 }}>
+          {!ops ? (
+            <div>
+              <div className="field">
+                <label>Skriv fritt — nye oppgaver, prosjekter, endringer, ting som er gjort</label>
+                <textarea
+                  className="ta"
+                  style={{ minHeight: 110 }}
+                  placeholder={"F.eks: Bestill mer strø til CFT2, Mathias tar det. Mattilsynet-oppgaven er ferdig. Nytt prosjekt: nettbutikk-lansering — steg: produktbilder, priser, frakt."}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {data.aiEnabled ? (
+                  <button className="btn sm" onClick={interpret} disabled={busy || !text.trim()}>
+                    {busy ? "Tolker …" : "Tolk med Claude"}
+                  </button>
+                ) : null}
+                <button className="btn sm ghost" onClick={copyTemplate} disabled={!text.trim()}>Kopier prompt-mal</button>
+              </div>
+              {data.aiEnabled ? null : (
+                <div className="mut" style={{ marginTop: 12 }}>
+                  AI er ikke koblet til i appen ennå — kopier malen, lim den inn i Claude (app eller nettleser), og lim JSON-svaret inn under.
+                </div>
+              )}
+              <div className="field" style={{ marginTop: 16, marginBottom: 0 }}>
+                <label>Lim inn JSON-svar fra Claude</label>
+                <textarea className="ta" style={{ minHeight: 56 }} placeholder='{"ops": [...]}' value={pasted} onChange={(e) => setPasted(e.target.value)} />
+              </div>
+              {pasted.trim() ? (
+                <button className="btn sm ghost" style={{ marginTop: 10 }} onClick={readPasted}>Les inn JSON</button>
+              ) : null}
+            </div>
+          ) : (
+            <div>
+              <div className="sechead" style={{ marginBottom: 8 }}>
+                <span className="eyebrow gold">Foreslåtte endringer</span>
+                <span className="mut">{checked.size} av {ops.length} valgt</span>
+              </div>
+              {ops.length === 0 ? <div className="mut">Fant ingen konkrete operasjoner i teksten — prøv å være mer spesifikk.</div> : null}
+              {ops.map((o, i) => (
+                <button key={i} className={"chk " + (checked.has(i) ? "done" : "")} onClick={() => toggleOp(i)}>
+                  <span className="chkbox" />
+                  <span style={{ textAlign: "left" }}>
+                    {describe(o)}
+                    {o.note ? <span style={{ display: "block", fontSize: 11, color: "var(--muted)" }}>{o.note}</span> : null}
+                  </span>
+                </button>
+              ))}
+              <div style={{ display: "flex", gap: 8, marginTop: 16, alignItems: "center" }}>
+                <button className="btn sm" onClick={applyOps} disabled={applying || checked.size === 0}>
+                  {applying ? "Utfører …" : "Utfør (" + checked.size + ")"}
+                </button>
+                <button className="lnk" onClick={() => setOps(null)}>Tilbake</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TasksView({ data, addTask, updateTask, deleteTask, canEdit, showToast, refreshAll }) {
   const [form, setForm] = useState(EMPTY_TASK);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_TASK);
@@ -1246,6 +1512,7 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
       <div className="hero">Oppgaver</div>
       <div className="herosub">Alt som krever handling — legg til, kryss av og hold listen kort.</div>
       <div className="rule" />
+      {canEdit ? <BraindumpPanel data={data} showToast={showToast} refreshAll={refreshAll} /> : null}
       {canEdit ? (
         <div className="card" style={{ padding: "22px 24px", marginBottom: 30 }}>
           <div className="f2">
@@ -2584,7 +2851,7 @@ export default function App() {
           {view === "systemer" && <SystemsView data={data} activeSystem={activeSystem} setActiveSystem={setActiveSystem} />}
           {view === "hygienisering" && <HygieneView canEdit={editable} />}
           {view === "sop" && <FilesView data={data} uploadFiles={uploadFiles} removeFile={removeFile} updateFile={updateFile} canEdit={editable} />}
-          {view === "oppgaver" && <TasksView data={data} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} canEdit={editable} />}
+          {view === "oppgaver" && <TasksView data={data} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} canEdit={editable} showToast={showToast} refreshAll={boot} />}
           {view === "prosjekter" && (
             <ProjectsView
               data={data}
