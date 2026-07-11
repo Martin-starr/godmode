@@ -36,6 +36,9 @@ export const GET = guarded(async (req) => {
     conditions.push("(subject ilike $" + (vals.length + 1) + " or sender ilike $" + (vals.length + 1) + " or summary ilike $" + (vals.length + 1) + ")");
     vals.push("%" + q + "%");
   }
+  if (u.searchParams.get("draft") === "1") {
+    conditions.push("draft_body <> ''");
+  }
 
   const where = conditions.length ? "where " + conditions.join(" and ") : "";
 
@@ -60,6 +63,22 @@ export const PUT = guarded(
     if (body.action === "star") {
       const sql = db();
       const rows = await sql`update dash.inbox set is_starred = ${!!body.is_starred} where id = ${Number(body.id)}
+        returning ${sql.unsafe(COLS)}`;
+      if (!rows.length) return err("Fant ikke e-posten.", 404);
+      return json(rows[0]);
+    }
+
+    if (body.action === "edit") {
+      const cats = ["Svar kreves", "Til info"];
+      const prios = ["høy", "medium", "lav"];
+      const category = cats.includes(body.category) ? body.category : null;
+      const priority = prios.includes(body.priority) ? body.priority : null;
+      if (!category && !priority) return err("Ingen gyldige felter å endre.");
+      const sql = db();
+      const rows = await sql`update dash.inbox set
+          category = coalesce(${category}, category),
+          priority = coalesce(${priority}, priority)
+        where id = ${Number(body.id)}
         returning ${sql.unsafe(COLS)}`;
       if (!rows.length) return err("Fant ikke e-posten.", 404);
       return json(rows[0]);

@@ -20,7 +20,9 @@ export const PUT = guarded(
       where id = ${Number(params.id)} and source <> 'sheets'
       returning id, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source`;
     if (!rows.length) return err("Målingen finnes ikke, eller kommer fra Sheets og kan ikke endres.", 404);
-    return json(rows[0]);
+    // Same shape as dash.readings_all rows so client state stays homogeneous.
+    const r0 = rows[0];
+    return json({ ...r0, id: "d:" + r0.id, rid: r0.id, logged_at: null, editable: true });
   },
   { edit: true }
 );

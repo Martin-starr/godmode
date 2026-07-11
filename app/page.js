@@ -71,7 +71,7 @@ function buildSeries(readings, systems, metric, range) {
   return systems.map((id, i) => {
     const values = rows
       .filter((r) => r.system === id)
-      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id))
+      .sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : String(a.logged_at || "") < String(b.logged_at || "") ? -1 : 1))
       .map((r) => r[key]);
     const style =
       SYS_COLORS[id] !== undefined
@@ -104,6 +104,16 @@ function latestBySystem(readings, systems) {
     out[id] = readings.find((r) => r.system === id) || { temp: 0, ph: 0, fukt: 0 };
   }
   return out;
+}
+
+function PrintButton() {
+  return (
+    <button className="btn ghost sm no-print" onClick={() => window.print()}>Skriv ut</button>
+  );
+}
+
+function PrintHeader({ title }) {
+  return <div className="print-only">Verminord · {title} · {new Date().toLocaleDateString("nb-NO")}</div>;
 }
 
 function Logo({ variant }) {
@@ -186,7 +196,7 @@ function LoginView({ team, onLogin }) {
 /* Line chart (SVG)                                                    */
 /* ------------------------------------------------------------------ */
 
-function Chart({ series, metric, range, h = 300 }) {
+function Chart({ series, metric, range, h = 300, target }) {
   const base = metric === "TEMP" ? [15, 30] : metric === "PH" ? [6.5, 8.5] : [55, 90];
   let lo = base[0];
   let hi = base[1];
@@ -194,6 +204,10 @@ function Chart({ series, metric, range, h = 300 }) {
     if (v < lo) lo = v;
     if (v > hi) hi = v;
   }));
+  if (target) {
+    if (target.min < lo) lo = target.min;
+    if (target.max > hi) hi = target.max;
+  }
   lo = Math.floor(lo) - 1;
   hi = Math.ceil(hi) + 1;
   const y = (v) => h - 26 - ((v - lo) / (hi - lo)) * (h - 16 - 26);
@@ -235,6 +249,14 @@ function Chart({ series, metric, range, h = 300 }) {
   return (
     <svg viewBox={"0 0 1000 " + h} width="100%" style={{ display: "block", height: "auto", overflow: "visible" }} preserveAspectRatio="none">
       {grid}
+      {target ? (
+        <>
+          <rect x={42} width={946} y={y(target.max)} height={Math.max(0, y(target.min) - y(target.max))} fill="rgba(184,153,58,0.08)" />
+          <line x1={42} x2={988} y1={y(target.min)} y2={y(target.min)} stroke="#B8993A" strokeWidth={1} strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+          <line x1={42} x2={988} y1={y(target.max)} y2={y(target.max)} stroke="#B8993A" strokeWidth={1} strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+          <text x={988} y={y(target.max) - 5} textAnchor="end" fontSize={11} fill="#B8993A">mål {target.min}–{target.max}</text>
+        </>
+      ) : null}
       {lines}
       <text x={42} y={h - 6} fontSize={11} fill="#5A6270">{dateLabel(days - 1)}</text>
       <text x={500} y={h - 6} textAnchor="middle" fontSize={11} fill="#5A6270">{dateLabel(Math.round((days - 1) / 2))}</text>
@@ -362,7 +384,7 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
         <div className="charthead">
           <span className="eyebrow">Produksjonslogger · {RANGE_LABEL[range]}</span>
         </div>
-        <Chart series={series} metric={metric} range={range} />
+        <Chart series={series} metric={metric} range={range} target={data.targets.find((x) => x.metric === METRIC_KEY[metric])} />
         <div className="legend">
           {series.map((s) => (
             <span className="lg" key={s.id}>
@@ -456,9 +478,15 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
 
 function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggRange, canEdit, editingReadingId, startEditReading, cancelEditReading, deleteReading }) {
   const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
-  const series = buildSeries(data.readings, active, "TEMP", loggRange);
-  const recent = data.readings.slice(0, 10);
+  const [metric, setMetric] = useState("TEMP");
+  const series = buildSeries(data.readings, active, metric, loggRange);
+  const target = data.targets.find((t) => t.metric === METRIC_KEY[metric]);
   const [busy, setBusy] = useState(false);
+  const [histSys, setHistSys] = useState("Alle");
+  const [histFrom, setHistFrom] = useState("");
+  const [histTo, setHistTo] = useState("");
+  const [avvikOnly, setAvvikOnly] = useState(false);
+  const [visible, setVisible] = useState(25);
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
   const save = async () => {
     setBusy(true);
@@ -466,90 +494,131 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
     setBusy(false);
   };
 
+  // Every system that has ever been logged — history reaches beyond the
+  // currently active ones (BIN 1/2, retired benches).
+  const allSystems = [...new Set(data.readings.map((r) => r.system))].sort((a, b) => a.localeCompare(b, "nb"));
+  const setFilter = (setter) => (val) => {
+    setter(val);
+    setVisible(25);
+  };
+  const filtered = data.readings.filter(
+    (r) =>
+      (histSys === "Alle" || r.system === histSys) &&
+      (!histFrom || r.date >= histFrom) &&
+      (!histTo || r.date <= histTo) &&
+      (!avvikOnly || r.avvik)
+  );
+  const shown = filtered.slice(0, visible);
+
   return (
     <div>
-      <span className="eyebrow">Logg · Registrering</span>
+      <PrintHeader title="Produksjonslogg" />
+      <div className="sechead" style={{ marginBottom: 0 }}>
+        <span className="eyebrow">Logg · Registrering</span>
+        <PrintButton />
+      </div>
       <div className="hero">Produksjon</div>
       <div className="herosub">Bekreft at målingen er loggført. Historiske målinger kan legges inn i ettertid.</div>
       <div className="rule" />
-      <div className="f2" style={{ alignItems: "start" }}>
-        <div className="card" style={{ padding: "26px 28px" }}>
-          <div className="field">
-            <label>System</label>
-            <select className="select" value={form.system} onChange={set("system")}>
-              {active.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Dato</label>
-            <input className="input" type="date" value={form.date} onChange={set("date")} />
-          </div>
-          <div className="f2">
-            <div className="field">
-              <label>Temperatur (°C)</label>
-              <input className="input" type="number" value={form.temp} onChange={set("temp")} />
-            </div>
-            <div className="field">
-              <label>pH</label>
-              <input className="input" type="number" step="0.1" value={form.ph} onChange={set("ph")} />
-            </div>
-          </div>
-          <div className="f2">
-            <div className="field">
-              <label>Fuktighet (%)</label>
-              <input className="input" type="number" value={form.fukt} onChange={set("fukt")} />
-            </div>
-            <div className="field">
-              <label>Fôr (liter)</label>
-              <input className="input" type="number" value={form.for_l} onChange={set("for_l")} />
-            </div>
-          </div>
-          <div className="field">
-            <label>Notater</label>
-            <textarea className="ta" placeholder="Valgfritt" value={form.notat} onChange={set("notat")} />
-          </div>
-          <button className={"chk " + (form.avvik ? "done" : "")} onClick={() => setForm({ ...form, avvik: !form.avvik })} style={{ marginBottom: 20 }}>
-            <span className="chkbox" />Flagg som avvik (utenfor målområde)
-          </button>
-          <button className="btn" onClick={save} disabled={!canEdit || busy} style={canEdit ? undefined : { opacity: 0.5, cursor: "default" }}>
-            {editingReadingId ? "Oppdater måling" : "Lagre måling"}
-          </button>
-          {editingReadingId ? (
-            <button className="lnk" style={{ marginTop: 10 }} onClick={cancelEditReading}>Avbryt endring</button>
-          ) : null}
-          {canEdit ? null : (
-            <div className="mut" style={{ marginTop: 12 }}>Kun lesing — du kan ikke registrere målinger.</div>
-          )}
-          {toast ? (
-            <div className="toast"><span className="dot" />{toast}</div>
-          ) : null}
-        </div>
-        <div>
-          <div className="charthead">
-            <span className="eyebrow">Historikk · {RANGE_LABEL[loggRange]}</span>
-            <div className="toggle">
-              {RANGES.map((r) => (
-                <button key={r} className={"tbtn " + (loggRange === r ? "on" : "")} onClick={() => setLoggRange(r)}>{r}</button>
-              ))}
-            </div>
-          </div>
-          <Chart series={series} metric="TEMP" range={loggRange} />
-          <div className="legend">
-            {series.map((s) => (
-              <span className="lg" key={s.id}>
-                <span className="sw" style={{ background: s.color, opacity: s.dash ? 0.8 : 1 }} />
-                {s.id}
-              </span>
+      <div className="charthead">
+        <span className="eyebrow">Historikk · {RANGE_LABEL[loggRange]}</span>
+        <span style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <div className="toggle">
+            {METRICS.map(([key, label]) => (
+              <button key={key} className={"tbtn " + (metric === key ? "on" : "")} onClick={() => setMetric(key)}>{label}</button>
             ))}
           </div>
+          <div className="toggle">
+            {RANGES.map((r) => (
+              <button key={r} className={"tbtn " + (loggRange === r ? "on" : "")} onClick={() => setLoggRange(r)}>{r}</button>
+            ))}
+          </div>
+        </span>
+      </div>
+      <Chart series={series} metric={metric} range={loggRange} target={target} />
+      <div className="legend">
+        {series.map((s) => (
+          <span className="lg" key={s.id}>
+            <span className="sw" style={{ background: s.color, opacity: s.dash ? 0.8 : 1 }} />
+            {s.id}
+          </span>
+        ))}
+        {target ? (
+          <span className="lgmeta">
+            <span>Mål <b>{target.min}–{target.max}{metric === "TEMP" ? "°C" : metric === "FUKT" ? "%" : ""}</b></span>
+          </span>
+        ) : null}
+      </div>
+      <div className="rule" />
+      <div className="card no-print" style={{ padding: "26px 28px", maxWidth: 640 }}>
+        <div className="field">
+          <label>System</label>
+          <select className="select" value={form.system} onChange={set("system")}>
+            {active.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
+        <div className="field">
+          <label>Dato</label>
+          <input className="input" type="date" value={form.date} onChange={set("date")} />
+        </div>
+        <div className="f2">
+          <div className="field">
+            <label>Temperatur (°C)</label>
+            <input className="input" type="number" value={form.temp} onChange={set("temp")} />
+          </div>
+          <div className="field">
+            <label>pH</label>
+            <input className="input" type="number" step="0.1" value={form.ph} onChange={set("ph")} />
+          </div>
+        </div>
+        <div className="f2">
+          <div className="field">
+            <label>Fuktighet (%)</label>
+            <input className="input" type="number" value={form.fukt} onChange={set("fukt")} />
+          </div>
+          <div className="field">
+            <label>Fôr (liter)</label>
+            <input className="input" type="number" value={form.for_l} onChange={set("for_l")} />
+          </div>
+        </div>
+        <div className="field">
+          <label>Notater</label>
+          <textarea className="ta" placeholder="Valgfritt" value={form.notat} onChange={set("notat")} />
+        </div>
+        <button className={"chk " + (form.avvik ? "done" : "")} onClick={() => setForm({ ...form, avvik: !form.avvik })} style={{ marginBottom: 20 }}>
+          <span className="chkbox" />Flagg som avvik (utenfor målområde)
+        </button>
+        <button className="btn" onClick={save} disabled={!canEdit || busy} style={canEdit ? undefined : { opacity: 0.5, cursor: "default" }}>
+          {editingReadingId ? "Oppdater måling" : "Lagre måling"}
+        </button>
+        {editingReadingId ? (
+          <button className="lnk" style={{ marginTop: 10 }} onClick={cancelEditReading}>Avbryt endring</button>
+        ) : null}
+        {canEdit ? null : (
+          <div className="mut" style={{ marginTop: 12 }}>Kun lesing — du kan ikke registrere målinger.</div>
+        )}
+        {toast ? (
+          <div className="toast"><span className="dot" />{toast}</div>
+        ) : null}
       </div>
       <div className="rule" />
       <div className="sechead">
-        <span className="eyebrow">Siste registreringer</span>
-        <span className="mut">Viser {recent.length} av {data.readings.length}</span>
+        <span className="eyebrow">Full historikk</span>
+        <span className="mut">Viser {shown.length} av {filtered.length}</span>
+      </div>
+      <div className="chips no-print" style={{ marginBottom: 16, alignItems: "center" }}>
+        <select className="select" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} value={histSys} onChange={(e) => setFilter(setHistSys)(e.target.value)}>
+          <option value="Alle">Alle systemer</option>
+          {allSystems.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <input className="input" type="date" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} value={histFrom} onChange={(e) => setFilter(setHistFrom)(e.target.value)} />
+        <span className="mut">–</span>
+        <input className="input" type="date" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} value={histTo} onChange={(e) => setFilter(setHistTo)(e.target.value)} />
+        <button className={"chip " + (avvikOnly ? "on" : "")} onClick={() => setFilter(setAvvikOnly)(!avvikOnly)}>Kun avvik</button>
       </div>
       <div className="tscroll">
         <table className="dtbl">
@@ -559,11 +628,15 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
             </tr>
           </thead>
           <tbody>
-            {recent.map((r) => (
+            {shown.map((r) => (
               <tr key={r.id}>
                 <td>
                   <span className="sy">{r.system}</span>
-                  <div className="dt">{fmtDate(r.date)}</div>
+                  <div className="dt">
+                    {fmtDate(r.date)}
+                    {r.avvik ? <span style={{ color: "var(--gold)", marginLeft: 6 }}>· avvik</span> : null}
+                  </div>
+                  {r.notat ? <div className="dt" style={{ marginTop: 2, fontStyle: "italic" }}>{r.notat}</div> : null}
                 </td>
                 <td className="num"><b>{r.temp}°</b></td>
                 <td className="num">{r.ph}</td>
@@ -571,20 +644,20 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
                 <td className="num">{r.for_l}L</td>
                 <td className="num rt">
                   {r.logged_by}
-                  {canEdit && r.source !== "sheets" ? (
+                  {canEdit && r.editable ? (
                     <span style={{ display: "block", marginTop: 4 }}>
                       <button className="lnk" onClick={() => startEditReading(r)}>Endre</button>
                       <button
                         className="lnk g"
                         onClick={() => {
-                          if (window.confirm("Slette målingen for " + r.system + " " + fmtDate(r.date) + "?")) deleteReading(r.id);
+                          if (window.confirm("Slette målingen for " + r.system + " " + fmtDate(r.date) + "?")) deleteReading(r);
                         }}
                       >
                         Slett
                       </button>
                     </span>
-                  ) : r.source === "sheets" ? (
-                    <span className="dt" style={{ display: "block" }}>Sheets</span>
+                  ) : r.source === "sheets" || r.source === "app" ? (
+                    <span className="dt" style={{ display: "block" }}>{r.source === "app" ? "App" : "Sheets"}</span>
                   ) : null}
                 </td>
               </tr>
@@ -592,6 +665,13 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
           </tbody>
         </table>
       </div>
+      {shown.length < filtered.length ? (
+        <div className="no-print" style={{ textAlign: "center", marginTop: 20 }}>
+          <button className="btn sm ghost" onClick={() => setVisible(visible + 50)}>
+            Vis flere ({filtered.length - shown.length} gjenstår)
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -611,7 +691,11 @@ function SystemsView({ data, activeSystem, setActiveSystem }) {
 
   return (
     <div>
-      <span className="eyebrow">Systemer · Per benk</span>
+      <PrintHeader title="Systemer" />
+      <div className="sechead" style={{ marginBottom: 0 }}>
+        <span className="eyebrow">Systemer · Per benk</span>
+        <PrintButton />
+      </div>
       <div className="hero">Anlegg</div>
       <div className="herosub">{active.length} aktive systemer · Forkompost via autologger</div>
       <div className="rule" />
@@ -653,11 +737,11 @@ function SystemsView({ data, activeSystem, setActiveSystem }) {
             </div>
           </div>
           <div className="charthead"><span className="eyebrow">Temperatur (°C) · siste 30 dager</span></div>
-          <Chart series={tempSeries} metric="TEMP" range="30D" h={170} />
+          <Chart series={tempSeries} metric="TEMP" range="30D" h={170} target={data.targets.find((t) => t.metric === "temp")} />
           <div className="charthead" style={{ marginTop: 22 }}><span className="eyebrow">pH · siste 30 dager</span></div>
-          <Chart series={phSeries} metric="PH" range="30D" h={140} />
+          <Chart series={phSeries} metric="PH" range="30D" h={140} target={data.targets.find((t) => t.metric === "ph")} />
           <div className="charthead" style={{ marginTop: 22 }}><span className="eyebrow">Fuktighet (%) · siste 30 dager</span></div>
-          <Chart series={fuktSeries} metric="FUKT" range="30D" h={140} />
+          <Chart series={fuktSeries} metric="FUKT" range="30D" h={140} target={data.targets.find((t) => t.metric === "fukt")} />
           <div className="rule tight" />
           <div className="sechead"><span className="eyebrow">Siste registreringer</span></div>
           <table className="dtbl">
@@ -721,7 +805,11 @@ function FilesView({ data, uploadFiles, removeFile, updateFile, canEdit }) {
 
   return (
     <div>
-      <span className="eyebrow">Dokumentasjon</span>
+      <PrintHeader title="SOP og dokumenter" />
+      <div className="sechead" style={{ marginBottom: 0 }}>
+        <span className="eyebrow">Dokumentasjon</span>
+        <PrintButton />
+      </div>
       <div className="hero">SOP · Regelverk · Filer</div>
       <div className="herosub">Last opp SOP-er, sertifiseringer, lab-rapporter og HMS. Alt samlet ett sted — klart å vise ved tilsyn.</div>
       <div className="rule" />
@@ -954,7 +1042,11 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
 
   return (
     <div>
-      <span className="eyebrow">Arbeid · Langsiktig</span>
+      <PrintHeader title="Prosjekter" />
+      <div className="sechead" style={{ marginBottom: 0 }}>
+        <span className="eyebrow">Arbeid · Langsiktig</span>
+        <PrintButton />
+      </div>
       <div className="hero">Prosjekter</div>
       <div className="herosub">Enkel oversikt over prosjekter, store oppgaver og partnere som jobbes over tid. Kryss av stegene på veien.</div>
       <div className="rule" />
@@ -1077,9 +1169,275 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
 /* ------------------------------------------------------------------ */
 
 const TASK_TAGS = ["Ny", "Rutine", "Avklar"];
-const EMPTY_TASK = { title: "", sub: "", tag: "Ny", who: "Mathias" };
+const EMPTY_TASK = { title: "", sub: "", descr: "", tag: "Ny", who: "Mathias" };
 
-function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
+/* Braindump: free text -> proposed task/project operations -> user approves
+   -> applied through the existing CRUD endpoints. Works in two modes:
+   /api/braindump (server-side Claude) when AI is configured, otherwise a
+   copy/paste prompt template + paste-JSON-back flow with the same preview. */
+
+const BRAINDUMP_RULES =
+  "Du oversetter en hjernedump til konkrete operasjoner mot oppgave- og prosjektlisten.\n" +
+  "Gyldige op-verdier: create_task, update_task, complete_task, reopen_task, delete_task, " +
+  "create_project, update_project, delete_project, add_check, toggle_check.\n" +
+  "Felter: id (eksisterende oppgave/prosjekt/sjekkpunkt), project_id, title, sub, descr, " +
+  "tag (Ny/Rutine/Avklar), who (teammedlem), col (Planlagt/Pågår/Fullført), text (sjekkpunkt), " +
+  "done (true/false), checks (liste med sjekkpunkter for nytt prosjekt), note (kort norsk forklaring).\n" +
+  "Bruk KUN id-er fra tilstanden. Slett aldri noe som ikke eksplisitt skal slettes.";
+
+function BraindumpPanel({ data, showToast, refreshAll }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState("");
+  const [pasted, setPasted] = useState("");
+  const [ops, setOps] = useState(null);
+  const [checked, setChecked] = useState(new Set());
+  const [busy, setBusy] = useState(false);
+  const [applying, setApplying] = useState(false);
+
+  const taskById = new Map(data.tasks.map((t) => [t.id, t]));
+  const projectById = new Map(data.projects.map((p) => [p.id, p]));
+  const checkById = new Map(data.checklist.map((c) => [c.id, c]));
+
+  const describe = (o) => {
+    const t = taskById.get(o.id);
+    const p = projectById.get(o.id);
+    const c = checkById.get(o.id);
+    switch (o.op) {
+      case "create_task": return "+ Oppgave: «" + o.title + "»" + (o.who ? " (" + o.who + ")" : "");
+      case "update_task": return "✎ Endre oppgave: «" + (t ? t.title : o.id) + "»";
+      case "complete_task": return "✓ Fullfør: «" + (t ? t.title : o.id) + "»";
+      case "reopen_task": return "↺ Gjenåpne: «" + (t ? t.title : o.id) + "»";
+      case "delete_task": return "− Slett oppgave: «" + (t ? t.title : o.id) + "»";
+      case "create_project": return "+ Prosjekt: «" + o.title + "»" + (o.checks && o.checks.length ? " (" + o.checks.length + " sjekkpunkter)" : "");
+      case "update_project": return "✎ Endre prosjekt: «" + (p ? p.title : o.id) + "»";
+      case "delete_project": return "− Slett prosjekt: «" + (p ? p.title : o.id) + "»";
+      case "add_check": {
+        const proj = projectById.get(o.project_id);
+        return "+ Sjekkpunkt i «" + (proj ? proj.title : o.project_id) + "»: " + o.text;
+      }
+      case "toggle_check": return (o.done === false ? "☐ Fjern kryss: «" : "✓ Kryss av: «") + (c ? c.text : o.id) + "»";
+      default: return o.op;
+    }
+  };
+
+  const showProposal = (list) => {
+    setOps(list);
+    setChecked(new Set(list.map((_, i) => i)));
+  };
+
+  const interpret = async () => {
+    setBusy(true);
+    const res = await api("/api/braindump", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      showToast(await failMsg(res, "Klarte ikke å tolke teksten — prøv igjen."));
+      return;
+    }
+    const body = await res.json();
+    showProposal(body.ops || []);
+  };
+
+  const promptTemplate = () => {
+    const state = {
+      team: data.team.map((t) => t.name),
+      tasks: data.tasks.map(({ id, title, sub, tag, who, open: o }) => ({ id, title, sub, tag, who, open: o })),
+      projects: data.projects.map(({ id, col, tag, title, who }) => ({ id, col, tag, title, who })),
+      checklist: data.checklist,
+    };
+    return BRAINDUMP_RULES +
+      "\n\nNåværende tilstand:\n" + JSON.stringify(state) +
+      "\n\nHjernedump:\n" + text +
+      '\n\nSvar KUN med gyldig JSON på formen {"ops":[{"op":"...","note":"..."}]} — ingen annen tekst.';
+  };
+
+  const copyTemplate = async () => {
+    try {
+      await navigator.clipboard.writeText(promptTemplate());
+      showToast("Prompt-mal kopiert — lim den inn i Claude og lim JSON-svaret inn under");
+    } catch {
+      showToast("Kunne ikke kopiere automatisk — velg teksten manuelt");
+    }
+  };
+
+  const readPasted = () => {
+    try {
+      const cleaned = pasted.trim().replace(/^```(json)?/i, "").replace(/```$/, "").trim();
+      const parsed = JSON.parse(cleaned);
+      const list = (Array.isArray(parsed) ? parsed : parsed.ops || []).filter((o) => o && o.op);
+      showProposal(list);
+    } catch {
+      showToast("Ugyldig JSON — lim inn hele svaret fra Claude");
+    }
+  };
+
+  const post = (path, body) => api(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const put = (path, body) => api(path, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+
+  const applyOne = async (o) => {
+    switch (o.op) {
+      case "create_task":
+        return post("/api/tasks", { title: o.title, sub: o.sub || "", descr: o.descr || "", tag: o.tag || "Ny", who: o.who || "" });
+      case "update_task":
+      case "complete_task":
+      case "reopen_task": {
+        const t = taskById.get(o.id);
+        if (!t) return { ok: false };
+        const open = o.op === "complete_task" ? 0 : o.op === "reopen_task" ? 1 : t.open;
+        return put("/api/tasks", {
+          id: o.id,
+          title: o.title ?? t.title,
+          sub: o.sub ?? t.sub,
+          descr: o.descr ?? t.descr ?? "",
+          tag: o.tag ?? t.tag,
+          who: o.who ?? t.who,
+          open,
+        });
+      }
+      case "delete_task":
+        return api("/api/tasks/" + o.id, { method: "DELETE" });
+      case "create_project": {
+        const res = await post("/api/projects", { col: o.col || "Planlagt", who: o.who || "" });
+        if (!res.ok) return res;
+        const created = await res.json();
+        const upd = await put("/api/projects", {
+          id: created.id,
+          col: o.col || created.col,
+          tag: o.tag || "Nytt",
+          title: o.title,
+          descr: o.descr || "",
+          who: o.who || created.who,
+        });
+        for (const check of o.checks || []) {
+          await post("/api/checks", { project_id: created.id, text: check });
+        }
+        return upd;
+      }
+      case "update_project": {
+        const p = projectById.get(o.id);
+        if (!p) return { ok: false };
+        return put("/api/projects", {
+          id: o.id,
+          col: o.col ?? p.col,
+          tag: o.tag ?? p.tag,
+          title: o.title ?? p.title,
+          descr: o.descr ?? p.descr,
+          who: o.who ?? p.who,
+        });
+      }
+      case "delete_project":
+        return api("/api/projects/" + o.id, { method: "DELETE" });
+      case "add_check":
+        return post("/api/checks", { project_id: o.project_id, text: o.text });
+      case "toggle_check":
+        return post("/api/checks", { id: o.id, done: o.done !== false });
+      default:
+        return { ok: false };
+    }
+  };
+
+  const applyOps = async () => {
+    setApplying(true);
+    let ok = 0;
+    let failed = 0;
+    for (let i = 0; i < ops.length; i++) {
+      if (!checked.has(i)) continue;
+      const res = await applyOne(ops[i]);
+      if (res && res.ok) ok++;
+      else failed++;
+    }
+    setApplying(false);
+    showToast(ok + " endringer utført" + (failed ? " · " + failed + " feilet" : ""));
+    setOps(null);
+    setText("");
+    setPasted("");
+    setOpen(false);
+    refreshAll();
+  };
+
+  const toggleOp = (i) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) next.delete(i); else next.add(i);
+      return next;
+    });
+  };
+
+  return (
+    <div>
+      <div className="sechead">
+        <span className="eyebrow">Hjernedump</span>
+        <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? "Lukk" : "Åpne hjernedump"}</button>
+      </div>
+      {open ? (
+        <div className="card" style={{ padding: "22px 24px", marginBottom: 30 }}>
+          {!ops ? (
+            <div>
+              <div className="field">
+                <label>Skriv fritt — nye oppgaver, prosjekter, endringer, ting som er gjort</label>
+                <textarea
+                  className="ta"
+                  style={{ minHeight: 110 }}
+                  placeholder={"F.eks: Bestill mer strø til CFT2, Mathias tar det. Mattilsynet-oppgaven er ferdig. Nytt prosjekt: nettbutikk-lansering — steg: produktbilder, priser, frakt."}
+                  value={text}
+                  onChange={(e) => setText(e.target.value)}
+                />
+              </div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                {data.aiEnabled ? (
+                  <button className="btn sm" onClick={interpret} disabled={busy || !text.trim()}>
+                    {busy ? "Tolker …" : "Tolk med Claude"}
+                  </button>
+                ) : null}
+                <button className="btn sm ghost" onClick={copyTemplate} disabled={!text.trim()}>Kopier prompt-mal</button>
+              </div>
+              {data.aiEnabled ? null : (
+                <div className="mut" style={{ marginTop: 12 }}>
+                  AI er ikke koblet til i appen ennå — kopier malen, lim den inn i Claude (app eller nettleser), og lim JSON-svaret inn under.
+                </div>
+              )}
+              <div className="field" style={{ marginTop: 16, marginBottom: 0 }}>
+                <label>Lim inn JSON-svar fra Claude</label>
+                <textarea className="ta" style={{ minHeight: 56 }} placeholder='{"ops": [...]}' value={pasted} onChange={(e) => setPasted(e.target.value)} />
+              </div>
+              {pasted.trim() ? (
+                <button className="btn sm ghost" style={{ marginTop: 10 }} onClick={readPasted}>Les inn JSON</button>
+              ) : null}
+            </div>
+          ) : (
+            <div>
+              <div className="sechead" style={{ marginBottom: 8 }}>
+                <span className="eyebrow gold">Foreslåtte endringer</span>
+                <span className="mut">{checked.size} av {ops.length} valgt</span>
+              </div>
+              {ops.length === 0 ? <div className="mut">Fant ingen konkrete operasjoner i teksten — prøv å være mer spesifikk.</div> : null}
+              {ops.map((o, i) => (
+                <button key={i} className={"chk " + (checked.has(i) ? "done" : "")} onClick={() => toggleOp(i)}>
+                  <span className="chkbox" />
+                  <span style={{ textAlign: "left" }}>
+                    {describe(o)}
+                    {o.note ? <span style={{ display: "block", fontSize: 11, color: "var(--muted)" }}>{o.note}</span> : null}
+                  </span>
+                </button>
+              ))}
+              <div style={{ display: "flex", gap: 8, marginTop: 16, alignItems: "center" }}>
+                <button className="btn sm" onClick={applyOps} disabled={applying || checked.size === 0}>
+                  {applying ? "Utfører …" : "Utfør (" + checked.size + ")"}
+                </button>
+                <button className="lnk" onClick={() => setOps(null)}>Tilbake</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function TasksView({ data, addTask, updateTask, deleteTask, canEdit, showToast, refreshAll }) {
   const [form, setForm] = useState(EMPTY_TASK);
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_TASK);
@@ -1098,7 +1456,7 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
 
   const startEdit = (t) => {
     setEditingId(t.id);
-    setEditForm({ title: t.title, sub: t.sub, tag: t.tag, who: t.who });
+    setEditForm({ title: t.title, sub: t.sub, descr: t.descr || "", tag: t.tag, who: t.who });
   };
 
   const saveEdit = async (t) => {
@@ -1118,6 +1476,10 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
             <label>Beskrivelse</label>
             <input className="input" value={editForm.sub} onChange={(e) => setEditForm({ ...editForm, sub: e.target.value })} />
           </div>
+        </div>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Notater / detaljer</label>
+          <textarea className="ta" style={{ minHeight: 72 }} placeholder="Valgfritt — lenker, kontekst, delsteg" value={editForm.descr} onChange={(e) => setEditForm({ ...editForm, descr: e.target.value })} />
         </div>
         <div className="f2" style={{ marginBottom: 12 }}>
           <div className="field" style={{ marginBottom: 0 }}>
@@ -1154,6 +1516,7 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
             {t.title}
           </div>
           <div className="hs">{t.sub}</div>
+          {t.descr ? <div className="hs" style={{ whiteSpace: "pre-wrap", marginTop: 4, opacity: 0.85 }}>{t.descr}</div> : null}
         </td>
         <td className="rt"><span className={"tag " + t.tagcls}>{t.tag}</span></td>
         <td className="assignee">
@@ -1171,10 +1534,15 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
 
   return (
     <div>
-      <span className="eyebrow">Arbeid · Oppgaver</span>
+      <PrintHeader title="Oppgaver" />
+      <div className="sechead" style={{ marginBottom: 0 }}>
+        <span className="eyebrow">Arbeid · Oppgaver</span>
+        <PrintButton />
+      </div>
       <div className="hero">Oppgaver</div>
       <div className="herosub">Alt som krever handling — legg til, kryss av og hold listen kort.</div>
       <div className="rule" />
+      {canEdit ? <BraindumpPanel data={data} showToast={showToast} refreshAll={refreshAll} /> : null}
       {canEdit ? (
         <div className="card" style={{ padding: "22px 24px", marginBottom: 30 }}>
           <div className="f2">
@@ -1186,6 +1554,10 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
               <label>Beskrivelse</label>
               <input className="input" placeholder="Valgfritt" value={form.sub} onChange={(e) => setForm({ ...form, sub: e.target.value })} />
             </div>
+          </div>
+          <div className="field">
+            <label>Notater / detaljer</label>
+            <textarea className="ta" style={{ minHeight: 60 }} placeholder="Valgfritt — lenker, kontekst, delsteg" value={form.descr} onChange={(e) => setForm({ ...form, descr: e.target.value })} />
           </div>
           <div className="f2">
             <div className="field">
@@ -1426,7 +1798,7 @@ function HygieneView({ canEdit }) {
 /* Innstillinger                                                       */
 /* ------------------------------------------------------------------ */
 
-function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsConfigured, lastSync, addSystem, updateSystem, deleteSystem }) {
+function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSystem, updateSystem, deleteSystem }) {
   const systems = data.systems.map((s) => s.id);
   const latest = latestBySystem(data.readings, systems);
   const [adding, setAdding] = useState(false);
@@ -1460,16 +1832,24 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsC
     setPwMsg("Passord oppdatert.");
   };
 
-  const syncNow = async () => {
+  const [inboxLastSync, setInboxLastSync] = useState(data.inboxLastSync || null);
+
+  const syncInboxNow = async () => {
     setSyncMsg("Synkroniserer …");
-    const res = await api("/api/sync", { method: "POST" });
+    const res = await api("/api/inbox/sync", { method: "POST" });
     const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      setSyncMsg(body.error || "Synk feilet.");
+      setSyncMsg(body.error || "Synk feilet — prøv igjen.");
       return;
     }
-    setSyncMsg("Importert: " + body.imported + " · hoppet over: " + body.skipped);
+    setInboxLastSync(body.last_sync);
+    setSyncMsg("Hentet " + body.hentet + " tråder · " + body.nye + " nye · " + body.oppdatert + " oppdatert");
   };
+
+  // Live app data flows in via dash.readings_all — freshness = newest phone log.
+  const newestApp = data.readings.find((r) => r.source === "app");
+  const appFresh = !!newestApp && newestApp.date >= isoDaysAgo(3);
+  const inboxFresh = !!inboxLastSync && Date.now() - Date.parse(inboxLastSync) < 26 * 60 * 60 * 1000;
 
   const targetInput = (metric, field, style) => (
     <input
@@ -1597,24 +1977,32 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsC
               {targetInput("hygiene", "min")}<span className="mut">°C ·</span>{targetInput("hygiene", "max")}<span className="mut">min</span>
             </span>
           </div>
-          <div className="sechead" style={{ marginTop: 36 }}><span className="eyebrow">Datakilde</span></div>
+          <div className="sechead" style={{ marginTop: 36 }}><span className="eyebrow">Datakilder</span></div>
           <div className="setrow">
             <div>
-              <div className="sl">Google Sheets</div>
+              <div className="sl">Produksjonslogg · Verminord-appen</div>
               <div className="ss">
-                Produksjonslogger · synkes automatisk hver time
-                {lastSync ? (
-                  <> · Sist synk {new Date(lastSync).toLocaleString("nb-NO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</>
-                ) : null}
+                Leses direkte fra app-databasen (log.verminord.app)
+                {newestApp ? <> · Siste logg {fmtDate(newestApp.date)}</> : null}
+              </div>
+            </div>
+            <span className={"pill" + (appFresh ? "" : " warn")}>{appFresh ? "Tilkoblet" : newestApp ? "Ingen logg siste 3 dager" : "Ingen data"}</span>
+          </div>
+          <div className="setrow">
+            <div>
+              <div className="sl">Innboks · Gmail</div>
+              <div className="ss">
+                Apps Script-bro · triage ved hver synk
+                {inboxLastSync ? (
+                  <> · Sist synk {new Date(inboxLastSync).toLocaleString("nb-NO", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</>
+                ) : (
+                  <> · aldri synkronisert</>
+                )}
               </div>
             </div>
             <span className="trange">
-              {sheetsConfigured ? (
-                <span className="pill">Tilkoblet</span>
-              ) : (
-                <span className="pill warn">Ikke tilkoblet</span>
-              )}
-              {canEdit ? <button className="btn ghost sm" onClick={syncNow}>Synk nå</button> : null}
+              <span className={"pill" + (inboxFresh ? "" : " warn")}>{inboxFresh ? "Tilkoblet" : "Trenger synk"}</span>
+              {canEdit ? <button className="btn ghost sm" onClick={syncInboxNow}>Synk nå</button> : null}
             </span>
           </div>
           {syncMsg ? <div className="mut" style={{ marginTop: 8 }}>{syncMsg}</div> : null}
@@ -1624,6 +2012,13 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, sheetsC
               <div className="ss">Center 374 · manuell import på Hygienisering-siden</div>
             </div>
             <span className="pill">Manuell import</span>
+          </div>
+          <div className="setrow">
+            <div>
+              <div className="sl">AI-funksjoner</div>
+              <div className="ss">Svar-utkast og hjernedump{data.aiEnabled ? "" : " · legg inn ANTHROPIC_API_KEY på Vercel-prosjektet for å aktivere"}</div>
+            </div>
+            <span className={"pill" + (data.aiEnabled ? "" : " warn")}>{data.aiEnabled ? "Aktivert" : "Ikke konfigurert"}</span>
           </div>
         </div>
       </div>
@@ -1660,6 +2055,10 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
   const [selected, setSelected] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [lastSync, setLastSync] = useState(data.inboxLastSync || null);
+  const [draftOnly, setDraftOnly] = useState(false);
+  const [drafting, setDrafting] = useState(null);
   const searchTimer = useRef(null);
 
   const fetchInbox = async (params = {}) => {
@@ -1668,12 +2067,14 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     const src = params.source ?? source;
     const search = params.q ?? q;
     const off = params.offset ?? 0;
+    const d = params.draft ?? draftOnly;
 
     setLoading(true);
     const qs = new URLSearchParams({ status: s, limit: "50", offset: String(off) });
     if (c && c !== "Alle") qs.set("category", c);
     if (src && src !== "Alle") qs.set("source", src);
     if (search) qs.set("q", search);
+    if (d) qs.set("draft", "1");
 
     const res = await api("/api/inbox?" + qs);
     if (res.ok) {
@@ -1692,10 +2093,11 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
   useEffect(() => { fetchInbox(); }, []);
 
   const applyFilter = (key, val) => {
-    const next = { status, category, source, q, offset: 0, [key]: val };
+    const next = { status, category, source, q, draft: draftOnly, offset: 0, [key]: val };
     if (key === "status") setStatus(val);
     if (key === "category") setCategory(val);
     if (key === "source") setSource(val);
+    if (key === "draft") setDraftOnly(val);
     setSelected(new Set());
     setExpanded(null);
     fetchInbox(next);
@@ -1767,6 +2169,49 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     }
   };
 
+  const syncNow = async () => {
+    if (syncing) return;
+    setSyncing(true);
+    const res = await api("/api/inbox/sync", { method: "POST" });
+    setSyncing(false);
+    if (!res.ok) {
+      if (showToast) showToast(await failMsg(res, "Synk feilet — prøv igjen."));
+      return;
+    }
+    const body = await res.json();
+    setLastSync(body.last_sync);
+    if (showToast) showToast("Synkronisert: " + body.nye + " nye · " + body.oppdatert + " oppdatert");
+    fetchInbox({ offset: 0 });
+  };
+
+  const generateDraft = async (id) => {
+    if (drafting) return;
+    setDrafting(id);
+    const res = await api("/api/inbox/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    setDrafting(null);
+    if (!res.ok) {
+      if (showToast) showToast(await failMsg(res, "Kunne ikke lage utkast."));
+      return;
+    }
+    const updated = await res.json();
+    setItems((prev) => prev.map((m) => (m.id === updated.id ? updated : m)));
+    if (showToast) showToast("Utkast klart — trykk Kopier for å bruke det");
+  };
+
+  const editItem = async (id, fields) => {
+    setItems((prev) => prev.map((m) => (m.id === id ? { ...m, ...fields } : m)));
+    const res = await api("/api/inbox", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "edit", id, ...fields }),
+    });
+    if (!res.ok && showToast) showToast(await failMsg(res, "Kunne ikke lagre endringen."));
+  };
+
   return (
     <div>
       <span className="eyebrow">Innboks · E-posttriage</span>
@@ -1774,7 +2219,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
         Innboks<span className="li"> e-post</span>
       </div>
       <div className="herosub">
-        {openCount} åpne · {urgentCount} krever svar · Triagert av Claude
+        {openCount} åpne · {urgentCount} krever svar · Triage ved hver synk
       </div>
       <div className="rule" />
 
@@ -1813,6 +2258,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
         {INBOX_CATS.map((c) => (
           <button key={c} className={"chip " + (category === c ? "on" : "")} onClick={() => applyFilter("category", c)}>{c}</button>
         ))}
+        <button className={"chip " + (draftOnly ? "on" : "")} onClick={() => applyFilter("draft", !draftOnly)}>Utkast klare</button>
         {sources.length > 1 && (
           <>
             <span style={{ width: 1, height: 24, background: "var(--line)", margin: "0 4px" }} />
@@ -1889,12 +2335,41 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
                         <div><span className="mk">Fra</span><span className="mv">{m.sender}</span></div>
                         <div><span className="mk">Mottatt</span><span className="mv">{fmtReceived(m.received_at)}</span></div>
                         <div><span className="mk">Kilde</span><span className="mv">{m.source || "gmail"}</span></div>
-                        {m.priority && (
-                          <div>
-                            <span className="mk">Prioritet</span>
+                        <div>
+                          <span className="mk">Prioritet</span>
+                          {canEdit ? (
+                            <select
+                              className="select"
+                              style={{ width: "auto", padding: "5px 8px", fontSize: 12 }}
+                              value={m.priority || "medium"}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => editItem(m.id, { priority: e.target.value })}
+                            >
+                              <option value="høy">Høy</option>
+                              <option value="medium">Medium</option>
+                              <option value="lav">Lav</option>
+                            </select>
+                          ) : (
                             <span className={"mv prio-" + m.priority}>{prioLabel(m.priority)}</span>
-                          </div>
-                        )}
+                          )}
+                        </div>
+                        <div>
+                          <span className="mk">Kategori</span>
+                          {canEdit ? (
+                            <select
+                              className="select"
+                              style={{ width: "auto", padding: "5px 8px", fontSize: 12 }}
+                              value={m.category}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) => editItem(m.id, { category: e.target.value })}
+                            >
+                              <option value="Svar kreves">Svar kreves</option>
+                              <option value="Til info">Til info</option>
+                            </select>
+                          ) : (
+                            <span className="mv">{m.category}</span>
+                          )}
+                        </div>
                         {m.severity && m.severity !== "normal" && (
                           <div>
                             <span className="mk">Alvorlighet</span>
@@ -1920,6 +2395,15 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
                       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 16 }}>
                         {m.link && <a className="btn sm ghost" href={m.link} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Åpne i Gmail</a>}
                         {m.draft_url && <a className="btn sm ghost" href={m.draft_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>Åpne utkast i Gmail</a>}
+                        {canEdit && !m.draft_body && data.aiEnabled && (
+                          <button
+                            className="btn sm ghost"
+                            disabled={drafting === m.id}
+                            onClick={(e) => { e.stopPropagation(); generateDraft(m.id); }}
+                          >
+                            {drafting === m.id ? "Skriver utkast …" : "Lag svar-utkast"}
+                          </button>
+                        )}
                         {canEdit && (
                           <>
                             <button className="btn sm ghost" onClick={(e) => { e.stopPropagation(); createTask(m); }}>Lag oppgave</button>
@@ -1961,12 +2445,19 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
 
       <div className="inbox-trustbar">
         <div>
-          <div className="mk">Triage-rutine</div>
-          <div className="mv">Daglig 07:00 · Gmail-connector · martin@verminord.no{sources.includes("post") ? " + post@verminord.no" : ""}</div>
+          <div className="mk">Gmail-synk</div>
+          <div className="mv">
+            Sist oppdatert {lastSync ? fmtReceived(lastSync) : "aldri"} · henter siste 7 dager via Gmail-broen
+            {canEdit ? "" : " · kun lesing"}
+          </div>
         </div>
-        <button className="btn sm ghost" onClick={() => fetchInbox({ offset: 0 })}>
-          Oppdater
-        </button>
+        {canEdit ? (
+          <button className="btn sm ghost" onClick={syncNow} disabled={syncing}>
+            {syncing ? "Synkroniserer …" : "Oppdater"}
+          </button>
+        ) : (
+          <button className="btn sm ghost" onClick={() => fetchInbox({ offset: 0 })}>Last på nytt</button>
+        )}
       </div>
     </div>
   );
@@ -2129,11 +2620,11 @@ export default function App() {
     setForm(EMPTY_READING);
   };
 
-  const deleteReading = async (id) => {
-    const res = await api("/api/readings/" + id, { method: "DELETE" });
+  const deleteReading = async (r) => {
+    const res = await api("/api/readings/" + r.rid, { method: "DELETE" });
     if (!res.ok) return reportError(res, "Sletting feilet.");
-    if (editingReadingId === id) cancelEditReading();
-    setData((d) => ({ ...d, readings: d.readings.filter((r) => r.id !== id) }));
+    if (editingReadingId === r.rid) cancelEditReading();
+    setData((d) => ({ ...d, readings: d.readings.filter((x) => x.id !== r.id) }));
   };
 
   const addTask = async (task) => {
@@ -2338,9 +2829,8 @@ export default function App() {
   };
 
 
-  const syncLine = data.lastSync
-    ? "Sheets synk " + new Date(data.lastSync).toLocaleTimeString("nb-NO", { hour: "2-digit", minute: "2-digit" })
-    : "Skylagring aktiv";
+  const newestApp = data.readings.find((r) => r.source === "app");
+  const syncLine = newestApp ? "App-logg " + fmtDate(newestApp.date) : "Skylagring aktiv";
   const outside = countOutside(data.readings, data.targets);
   const metaRight = view === "sop"
     ? outside.obs + " obs · " + data.readings.filter((r) => r.avvik).length + " avvik"
@@ -2405,7 +2895,7 @@ export default function App() {
               editingReadingId={editingReadingId}
               startEditReading={(r) => {
                 setForm({ system: r.system, date: r.date, temp: r.temp, ph: r.ph, fukt: r.fukt, for_l: r.for_l, notat: r.notat, avvik: !!r.avvik });
-                setEditingReadingId(r.id);
+                setEditingReadingId(r.rid);
               }}
               cancelEditReading={cancelEditReading}
               deleteReading={deleteReading}
@@ -2414,7 +2904,7 @@ export default function App() {
           {view === "systemer" && <SystemsView data={data} activeSystem={activeSystem} setActiveSystem={setActiveSystem} />}
           {view === "hygienisering" && <HygieneView canEdit={editable} />}
           {view === "sop" && <FilesView data={data} uploadFiles={uploadFiles} removeFile={removeFile} updateFile={updateFile} canEdit={editable} />}
-          {view === "oppgaver" && <TasksView data={data} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} canEdit={editable} />}
+          {view === "oppgaver" && <TasksView data={data} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} canEdit={editable} showToast={showToast} refreshAll={boot} />}
           {view === "prosjekter" && (
             <ProjectsView
               data={data}
@@ -2438,8 +2928,6 @@ export default function App() {
               setTargets={setTargets}
               saveTargets={saveTargets}
               canEdit={editable}
-              sheetsConfigured={data.sheetsConfigured}
-              lastSync={data.lastSync}
               addSystem={addSystem}
               updateSystem={updateSystem}
               deleteSystem={deleteSystem}
