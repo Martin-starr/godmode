@@ -102,15 +102,17 @@ export const POST = guarded(
 
     // Server-side sanity filter: drop ops referencing unknown ids or
     // missing required fields, so the preview never offers a no-op.
-    const taskIds = new Set(state.tasks.map((t) => t.id));
-    const projectIds = new Set(state.projects.map((p) => p.id));
-    const checkIds = new Set(state.checklist.map((c) => c.id));
+    // postgres.js returns bigint ids as strings while the AI schema emits
+    // integers — normalize both sides to Number before comparing.
+    const taskIds = new Set(state.tasks.map((t) => Number(t.id)));
+    const projectIds = new Set(state.projects.map((p) => Number(p.id)));
+    const checkIds = new Set(state.checklist.map((c) => Number(c.id)));
     const ops = (parsed.ops || []).filter((o) => {
       if (!OPS.includes(o.op)) return false;
-      if (["update_task", "complete_task", "reopen_task", "delete_task"].includes(o.op)) return taskIds.has(o.id);
-      if (["update_project", "delete_project"].includes(o.op)) return projectIds.has(o.id);
-      if (o.op === "add_check") return projectIds.has(o.project_id) && !!o.text;
-      if (o.op === "toggle_check") return checkIds.has(o.id);
+      if (["update_task", "complete_task", "reopen_task", "delete_task"].includes(o.op)) return taskIds.has(Number(o.id));
+      if (["update_project", "delete_project"].includes(o.op)) return projectIds.has(Number(o.id));
+      if (o.op === "add_check") return projectIds.has(Number(o.project_id)) && !!o.text;
+      if (o.op === "toggle_check") return checkIds.has(Number(o.id));
       if (o.op === "create_task" || o.op === "create_project") return !!(o.title || "").trim();
       return true;
     });
