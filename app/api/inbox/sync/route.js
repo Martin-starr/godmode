@@ -1,9 +1,9 @@
 import { db } from "@/lib/db";
-import { json, guarded } from "@/lib/http";
+import { json, guarded, withWatchdog } from "@/lib/http";
 import { fetchGmailThreads, classifyThread } from "@/lib/bridge";
 
 export const runtime = "nodejs";
-export const maxDuration = 25;
+export const maxDuration = 30;
 
 // Deterministic on-demand Gmail sync: bridge → heuristic triage →
 // upsert dash.inbox. Never deletes, and never overwrites the fields the
@@ -38,7 +38,7 @@ export const POST = guarded(
     let nye = 0;
     let oppdatert = 0;
     if (rows.length) {
-      const res = await sql`insert into dash.inbox ${sql(
+      const res = await withWatchdog(() => sql`insert into dash.inbox ${sql(
         rows,
         "gmail_id",
         "received_at",
@@ -60,16 +60,18 @@ export const POST = guarded(
                               and excluded.received_at > dash.inbox.received_at + interval '2 minutes'
                              then 'open' else dash.inbox.status end
         where excluded.received_at > dash.inbox.received_at
-        returning (xmax = 0) as is_new`;
+        returning (xmax = 0) as is_new`);
       nye = res.filter((r) => r.is_new).length;
       oppdatert = res.length - nye;
     }
 
     const lastSync = new Date().toISOString();
-    await sql`insert into dash.meta (key, value) values ('inbox_last_sync', ${lastSync})
-      on conflict (key) do update set value = excluded.value`;
+    await withWatchdog(() => sql`insert into dash.meta (key, value) values ('inbox_last_sync', ${lastSync})
+      on conflict (key) do update set value = excluded.value`);
 
     return json({ ok: true, nye, oppdatert, hentet: threads.length, last_sync: lastSync });
   },
-  { edit: true }
+  // The bridge call itself can take 20s+ (cold Apps Script); it has its own
+  // timeout, so only the DB statements run under the watchdog.
+  { edit: true, watchdog: false }
 );
