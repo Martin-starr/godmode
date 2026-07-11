@@ -186,7 +186,7 @@ function LoginView({ team, onLogin }) {
 /* Line chart (SVG)                                                    */
 /* ------------------------------------------------------------------ */
 
-function Chart({ series, metric, range, h = 300 }) {
+function Chart({ series, metric, range, h = 300, target }) {
   const base = metric === "TEMP" ? [15, 30] : metric === "PH" ? [6.5, 8.5] : [55, 90];
   let lo = base[0];
   let hi = base[1];
@@ -194,6 +194,10 @@ function Chart({ series, metric, range, h = 300 }) {
     if (v < lo) lo = v;
     if (v > hi) hi = v;
   }));
+  if (target) {
+    if (target.min < lo) lo = target.min;
+    if (target.max > hi) hi = target.max;
+  }
   lo = Math.floor(lo) - 1;
   hi = Math.ceil(hi) + 1;
   const y = (v) => h - 26 - ((v - lo) / (hi - lo)) * (h - 16 - 26);
@@ -235,6 +239,14 @@ function Chart({ series, metric, range, h = 300 }) {
   return (
     <svg viewBox={"0 0 1000 " + h} width="100%" style={{ display: "block", height: "auto", overflow: "visible" }} preserveAspectRatio="none">
       {grid}
+      {target ? (
+        <>
+          <rect x={42} width={946} y={y(target.max)} height={Math.max(0, y(target.min) - y(target.max))} fill="rgba(184,153,58,0.08)" />
+          <line x1={42} x2={988} y1={y(target.min)} y2={y(target.min)} stroke="#B8993A" strokeWidth={1} strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+          <line x1={42} x2={988} y1={y(target.max)} y2={y(target.max)} stroke="#B8993A" strokeWidth={1} strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+          <text x={988} y={y(target.max) - 5} textAnchor="end" fontSize={11} fill="#B8993A">mål {target.min}–{target.max}</text>
+        </>
+      ) : null}
       {lines}
       <text x={42} y={h - 6} fontSize={11} fill="#5A6270">{dateLabel(days - 1)}</text>
       <text x={500} y={h - 6} textAnchor="middle" fontSize={11} fill="#5A6270">{dateLabel(Math.round((days - 1) / 2))}</text>
@@ -362,7 +374,7 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
         <div className="charthead">
           <span className="eyebrow">Produksjonslogger · {RANGE_LABEL[range]}</span>
         </div>
-        <Chart series={series} metric={metric} range={range} />
+        <Chart series={series} metric={metric} range={range} target={data.targets.find((x) => x.metric === METRIC_KEY[metric])} />
         <div className="legend">
           {series.map((s) => (
             <span className="lg" key={s.id}>
@@ -456,9 +468,15 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
 
 function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggRange, canEdit, editingReadingId, startEditReading, cancelEditReading, deleteReading }) {
   const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
-  const series = buildSeries(data.readings, active, "TEMP", loggRange);
-  const recent = data.readings.slice(0, 10);
+  const [metric, setMetric] = useState("TEMP");
+  const series = buildSeries(data.readings, active, metric, loggRange);
+  const target = data.targets.find((t) => t.metric === METRIC_KEY[metric]);
   const [busy, setBusy] = useState(false);
+  const [histSys, setHistSys] = useState("Alle");
+  const [histFrom, setHistFrom] = useState("");
+  const [histTo, setHistTo] = useState("");
+  const [avvikOnly, setAvvikOnly] = useState(false);
+  const [visible, setVisible] = useState(25);
   const set = (key) => (e) => setForm({ ...form, [key]: e.target.value });
   const save = async () => {
     setBusy(true);
@@ -466,90 +484,127 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
     setBusy(false);
   };
 
+  // Every system that has ever been logged — history reaches beyond the
+  // currently active ones (BIN 1/2, retired benches).
+  const allSystems = [...new Set(data.readings.map((r) => r.system))].sort((a, b) => a.localeCompare(b, "nb"));
+  const setFilter = (setter) => (val) => {
+    setter(val);
+    setVisible(25);
+  };
+  const filtered = data.readings.filter(
+    (r) =>
+      (histSys === "Alle" || r.system === histSys) &&
+      (!histFrom || r.date >= histFrom) &&
+      (!histTo || r.date <= histTo) &&
+      (!avvikOnly || r.avvik)
+  );
+  const shown = filtered.slice(0, visible);
+
   return (
     <div>
       <span className="eyebrow">Logg · Registrering</span>
       <div className="hero">Produksjon</div>
       <div className="herosub">Bekreft at målingen er loggført. Historiske målinger kan legges inn i ettertid.</div>
       <div className="rule" />
-      <div className="f2" style={{ alignItems: "start" }}>
-        <div className="card" style={{ padding: "26px 28px" }}>
-          <div className="field">
-            <label>System</label>
-            <select className="select" value={form.system} onChange={set("system")}>
-              {active.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Dato</label>
-            <input className="input" type="date" value={form.date} onChange={set("date")} />
-          </div>
-          <div className="f2">
-            <div className="field">
-              <label>Temperatur (°C)</label>
-              <input className="input" type="number" value={form.temp} onChange={set("temp")} />
-            </div>
-            <div className="field">
-              <label>pH</label>
-              <input className="input" type="number" step="0.1" value={form.ph} onChange={set("ph")} />
-            </div>
-          </div>
-          <div className="f2">
-            <div className="field">
-              <label>Fuktighet (%)</label>
-              <input className="input" type="number" value={form.fukt} onChange={set("fukt")} />
-            </div>
-            <div className="field">
-              <label>Fôr (liter)</label>
-              <input className="input" type="number" value={form.for_l} onChange={set("for_l")} />
-            </div>
-          </div>
-          <div className="field">
-            <label>Notater</label>
-            <textarea className="ta" placeholder="Valgfritt" value={form.notat} onChange={set("notat")} />
-          </div>
-          <button className={"chk " + (form.avvik ? "done" : "")} onClick={() => setForm({ ...form, avvik: !form.avvik })} style={{ marginBottom: 20 }}>
-            <span className="chkbox" />Flagg som avvik (utenfor målområde)
-          </button>
-          <button className="btn" onClick={save} disabled={!canEdit || busy} style={canEdit ? undefined : { opacity: 0.5, cursor: "default" }}>
-            {editingReadingId ? "Oppdater måling" : "Lagre måling"}
-          </button>
-          {editingReadingId ? (
-            <button className="lnk" style={{ marginTop: 10 }} onClick={cancelEditReading}>Avbryt endring</button>
-          ) : null}
-          {canEdit ? null : (
-            <div className="mut" style={{ marginTop: 12 }}>Kun lesing — du kan ikke registrere målinger.</div>
-          )}
-          {toast ? (
-            <div className="toast"><span className="dot" />{toast}</div>
-          ) : null}
-        </div>
-        <div>
-          <div className="charthead">
-            <span className="eyebrow">Historikk · {RANGE_LABEL[loggRange]}</span>
-            <div className="toggle">
-              {RANGES.map((r) => (
-                <button key={r} className={"tbtn " + (loggRange === r ? "on" : "")} onClick={() => setLoggRange(r)}>{r}</button>
-              ))}
-            </div>
-          </div>
-          <Chart series={series} metric="TEMP" range={loggRange} />
-          <div className="legend">
-            {series.map((s) => (
-              <span className="lg" key={s.id}>
-                <span className="sw" style={{ background: s.color, opacity: s.dash ? 0.8 : 1 }} />
-                {s.id}
-              </span>
+      <div className="charthead">
+        <span className="eyebrow">Historikk · {RANGE_LABEL[loggRange]}</span>
+        <span style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <div className="toggle">
+            {METRICS.map(([key, label]) => (
+              <button key={key} className={"tbtn " + (metric === key ? "on" : "")} onClick={() => setMetric(key)}>{label}</button>
             ))}
           </div>
+          <div className="toggle">
+            {RANGES.map((r) => (
+              <button key={r} className={"tbtn " + (loggRange === r ? "on" : "")} onClick={() => setLoggRange(r)}>{r}</button>
+            ))}
+          </div>
+        </span>
+      </div>
+      <Chart series={series} metric={metric} range={loggRange} target={target} />
+      <div className="legend">
+        {series.map((s) => (
+          <span className="lg" key={s.id}>
+            <span className="sw" style={{ background: s.color, opacity: s.dash ? 0.8 : 1 }} />
+            {s.id}
+          </span>
+        ))}
+        {target ? (
+          <span className="lgmeta">
+            <span>Mål <b>{target.min}–{target.max}{metric === "TEMP" ? "°C" : metric === "FUKT" ? "%" : ""}</b></span>
+          </span>
+        ) : null}
+      </div>
+      <div className="rule" />
+      <div className="card no-print" style={{ padding: "26px 28px", maxWidth: 640 }}>
+        <div className="field">
+          <label>System</label>
+          <select className="select" value={form.system} onChange={set("system")}>
+            {active.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </div>
+        <div className="field">
+          <label>Dato</label>
+          <input className="input" type="date" value={form.date} onChange={set("date")} />
+        </div>
+        <div className="f2">
+          <div className="field">
+            <label>Temperatur (°C)</label>
+            <input className="input" type="number" value={form.temp} onChange={set("temp")} />
+          </div>
+          <div className="field">
+            <label>pH</label>
+            <input className="input" type="number" step="0.1" value={form.ph} onChange={set("ph")} />
+          </div>
+        </div>
+        <div className="f2">
+          <div className="field">
+            <label>Fuktighet (%)</label>
+            <input className="input" type="number" value={form.fukt} onChange={set("fukt")} />
+          </div>
+          <div className="field">
+            <label>Fôr (liter)</label>
+            <input className="input" type="number" value={form.for_l} onChange={set("for_l")} />
+          </div>
+        </div>
+        <div className="field">
+          <label>Notater</label>
+          <textarea className="ta" placeholder="Valgfritt" value={form.notat} onChange={set("notat")} />
+        </div>
+        <button className={"chk " + (form.avvik ? "done" : "")} onClick={() => setForm({ ...form, avvik: !form.avvik })} style={{ marginBottom: 20 }}>
+          <span className="chkbox" />Flagg som avvik (utenfor målområde)
+        </button>
+        <button className="btn" onClick={save} disabled={!canEdit || busy} style={canEdit ? undefined : { opacity: 0.5, cursor: "default" }}>
+          {editingReadingId ? "Oppdater måling" : "Lagre måling"}
+        </button>
+        {editingReadingId ? (
+          <button className="lnk" style={{ marginTop: 10 }} onClick={cancelEditReading}>Avbryt endring</button>
+        ) : null}
+        {canEdit ? null : (
+          <div className="mut" style={{ marginTop: 12 }}>Kun lesing — du kan ikke registrere målinger.</div>
+        )}
+        {toast ? (
+          <div className="toast"><span className="dot" />{toast}</div>
+        ) : null}
       </div>
       <div className="rule" />
       <div className="sechead">
-        <span className="eyebrow">Siste registreringer</span>
-        <span className="mut">Viser {recent.length} av {data.readings.length}</span>
+        <span className="eyebrow">Full historikk</span>
+        <span className="mut">Viser {shown.length} av {filtered.length}</span>
+      </div>
+      <div className="chips no-print" style={{ marginBottom: 16, alignItems: "center" }}>
+        <select className="select" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} value={histSys} onChange={(e) => setFilter(setHistSys)(e.target.value)}>
+          <option value="Alle">Alle systemer</option>
+          {allSystems.map((s) => (
+            <option key={s} value={s}>{s}</option>
+          ))}
+        </select>
+        <input className="input" type="date" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} value={histFrom} onChange={(e) => setFilter(setHistFrom)(e.target.value)} />
+        <span className="mut">–</span>
+        <input className="input" type="date" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} value={histTo} onChange={(e) => setFilter(setHistTo)(e.target.value)} />
+        <button className={"chip " + (avvikOnly ? "on" : "")} onClick={() => setFilter(setAvvikOnly)(!avvikOnly)}>Kun avvik</button>
       </div>
       <div className="tscroll">
         <table className="dtbl">
@@ -559,11 +614,15 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
             </tr>
           </thead>
           <tbody>
-            {recent.map((r) => (
+            {shown.map((r) => (
               <tr key={r.id}>
                 <td>
                   <span className="sy">{r.system}</span>
-                  <div className="dt">{fmtDate(r.date)}</div>
+                  <div className="dt">
+                    {fmtDate(r.date)}
+                    {r.avvik ? <span style={{ color: "var(--gold)", marginLeft: 6 }}>· avvik</span> : null}
+                  </div>
+                  {r.notat ? <div className="dt" style={{ marginTop: 2, fontStyle: "italic" }}>{r.notat}</div> : null}
                 </td>
                 <td className="num"><b>{r.temp}°</b></td>
                 <td className="num">{r.ph}</td>
@@ -592,6 +651,13 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
           </tbody>
         </table>
       </div>
+      {shown.length < filtered.length ? (
+        <div className="no-print" style={{ textAlign: "center", marginTop: 20 }}>
+          <button className="btn sm ghost" onClick={() => setVisible(visible + 50)}>
+            Vis flere ({filtered.length - shown.length} gjenstår)
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -653,11 +719,11 @@ function SystemsView({ data, activeSystem, setActiveSystem }) {
             </div>
           </div>
           <div className="charthead"><span className="eyebrow">Temperatur (°C) · siste 30 dager</span></div>
-          <Chart series={tempSeries} metric="TEMP" range="30D" h={170} />
+          <Chart series={tempSeries} metric="TEMP" range="30D" h={170} target={data.targets.find((t) => t.metric === "temp")} />
           <div className="charthead" style={{ marginTop: 22 }}><span className="eyebrow">pH · siste 30 dager</span></div>
-          <Chart series={phSeries} metric="PH" range="30D" h={140} />
+          <Chart series={phSeries} metric="PH" range="30D" h={140} target={data.targets.find((t) => t.metric === "ph")} />
           <div className="charthead" style={{ marginTop: 22 }}><span className="eyebrow">Fuktighet (%) · siste 30 dager</span></div>
-          <Chart series={fuktSeries} metric="FUKT" range="30D" h={140} />
+          <Chart series={fuktSeries} metric="FUKT" range="30D" h={140} target={data.targets.find((t) => t.metric === "fukt")} />
           <div className="rule tight" />
           <div className="sechead"><span className="eyebrow">Siste registreringer</span></div>
           <table className="dtbl">
