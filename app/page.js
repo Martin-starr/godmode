@@ -1143,7 +1143,7 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
 /* ------------------------------------------------------------------ */
 
 const TASK_TAGS = ["Ny", "Rutine", "Avklar"];
-const EMPTY_TASK = { title: "", sub: "", tag: "Ny", who: "Mathias" };
+const EMPTY_TASK = { title: "", sub: "", descr: "", tag: "Ny", who: "Mathias" };
 
 function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
   const [form, setForm] = useState(EMPTY_TASK);
@@ -1164,7 +1164,7 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
 
   const startEdit = (t) => {
     setEditingId(t.id);
-    setEditForm({ title: t.title, sub: t.sub, tag: t.tag, who: t.who });
+    setEditForm({ title: t.title, sub: t.sub, descr: t.descr || "", tag: t.tag, who: t.who });
   };
 
   const saveEdit = async (t) => {
@@ -1184,6 +1184,10 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
             <label>Beskrivelse</label>
             <input className="input" value={editForm.sub} onChange={(e) => setEditForm({ ...editForm, sub: e.target.value })} />
           </div>
+        </div>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Notater / detaljer</label>
+          <textarea className="ta" style={{ minHeight: 72 }} placeholder="Valgfritt — lenker, kontekst, delsteg" value={editForm.descr} onChange={(e) => setEditForm({ ...editForm, descr: e.target.value })} />
         </div>
         <div className="f2" style={{ marginBottom: 12 }}>
           <div className="field" style={{ marginBottom: 0 }}>
@@ -1220,6 +1224,7 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
             {t.title}
           </div>
           <div className="hs">{t.sub}</div>
+          {t.descr ? <div className="hs" style={{ whiteSpace: "pre-wrap", marginTop: 4, opacity: 0.85 }}>{t.descr}</div> : null}
         </td>
         <td className="rt"><span className={"tag " + t.tagcls}>{t.tag}</span></td>
         <td className="assignee">
@@ -1252,6 +1257,10 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit }) {
               <label>Beskrivelse</label>
               <input className="input" placeholder="Valgfritt" value={form.sub} onChange={(e) => setForm({ ...form, sub: e.target.value })} />
             </div>
+          </div>
+          <div className="field">
+            <label>Notater / detaljer</label>
+            <textarea className="ta" style={{ minHeight: 60 }} placeholder="Valgfritt — lenker, kontekst, delsteg" value={form.descr} onChange={(e) => setForm({ ...form, descr: e.target.value })} />
           </div>
           <div className="f2">
             <div className="field">
