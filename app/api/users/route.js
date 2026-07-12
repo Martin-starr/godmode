@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { hashPassword } from "@/lib/auth";
+import { hashPassword, setSession } from "@/lib/auth";
 import { json, err, withWatchdog, guarded } from "@/lib/http";
 
 export const runtime = "nodejs";
@@ -71,11 +71,27 @@ export const PUT = guarded(
     const password = String(body.password || "");
     if (password && password.length < 6) return err("Passord må ha minst 6 tegn.");
 
-    const rows = password
-      ? await sql`update dash.team set name = ${name}, role = ${role}, access = ${access}, pw = ${hashPassword(password)}
-          where id = ${id} returning id, name, role, access`
-      : await sql`update dash.team set name = ${name}, role = ${role}, access = ${access}
-          where id = ${id} returning id, name, role, access`;
+    // Names are the identity key (sessions, tasks.who, projects.who,
+    // partners.who) — a rename must cascade or every reference orphans and
+    // the member's session dies on the next request.
+    const renamed = name !== existing.name;
+    const rows = await sql.begin(async (tx) => {
+      const updated = password
+        ? await tx`update dash.team set name = ${name}, role = ${role}, access = ${access}, pw = ${hashPassword(password)}
+            where id = ${id} returning id, name, role, access`
+        : await tx`update dash.team set name = ${name}, role = ${role}, access = ${access}
+            where id = ${id} returning id, name, role, access`;
+      if (renamed) {
+        await tx`update dash.tasks set who = ${name} where who = ${existing.name}`;
+        await tx`update dash.projects set who = ${name} where who = ${existing.name}`;
+        await tx`update dash.partners set who = ${name} where who = ${existing.name}`;
+      }
+      return updated;
+    });
+    // Renaming yourself: re-issue the session cookie so the very next
+    // request doesn't 401. Renaming someone else logs THEM out — they log
+    // in again with the new name (surfaced in the UI text).
+    if (renamed && existing.name === user.name) setSession(name);
     return json(rows[0]);
   },
   { edit: true }

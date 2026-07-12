@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { json, err, guarded } from "@/lib/http";
-import { clean, validDate } from "@/lib/readings";
+import { clean, validDate, hasContent } from "@/lib/readings";
 
 export const runtime = "nodejs";
 export const maxDuration = 15;
@@ -9,7 +9,7 @@ export const PUT = guarded(
   async (req, { params }) => {
     const r = clean(await req.json());
     if (!r.system || !validDate(r.date)) return err("System og dato må fylles ut.");
-    if (r.temp == null && r.ph == null && r.fukt == null) return err("Fyll ut minst én måling (temp, pH eller fukt).");
+    if (!hasContent(r)) return err("Fyll ut minst én måling, fôrmengde eller notat.");
     const sql = db();
     const rows = await sql`update dash.readings set
         system = ${r.system},
@@ -17,7 +17,7 @@ export const PUT = guarded(
         temp = ${r.temp},
         ph = ${r.ph},
         fukt = ${r.fukt},
-        for_l = ${r.for_l},
+        for_l = ${r.for_l ?? 0},
         notat = ${r.notat},
         avvik = ${r.avvik}
       where id = ${Number(params.id)} and source <> 'sheets'

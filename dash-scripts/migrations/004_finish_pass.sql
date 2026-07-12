@@ -13,3 +13,6 @@ alter table dash.projects add column if not exists due text not null default '';
 alter table dash.readings alter column temp drop not null;
 alter table dash.readings alter column ph drop not null;
 alter table dash.readings alter column fukt drop not null;
+-- 4. Team names are the identity key (sessions + who-references) — enforce
+--    uniqueness at the DB so concurrent adds can't create case-duplicates.
+create unique index if not exists team_name_lower_idx on dash.team (lower(name));

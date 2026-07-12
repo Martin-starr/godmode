@@ -32,8 +32,11 @@ async function failMsg(res, fallback) {
   return body.error || fallback;
 }
 
-const SYS_COLORS = { CFT1: "#1C3A5C", CFT2: "#B8993A", CFT3: "#5A6270", "Wedge 1": "#1C3A5C", "Breeder Bin": "#B8993A" };
-const SYS_DASH = { CFT1: "", CFT2: "", CFT3: "", "Wedge 1": "5 4", "Breeder Bin": "5 4" };
+// Five clearly distinct brand tones (navy/gold/sage/rust/slate) — with the
+// old palette CFT1, CFT3 and Wedge 1 were near-identical blues in the
+// multi-series charts.
+const SYS_COLORS = { CFT1: "#1C3A5C", CFT2: "#B8993A", CFT3: "#6B7544", "Wedge 1": "#A64B2A", "Breeder Bin": "#5A6270" };
+const SYS_DASH = { CFT1: "", CFT2: "", CFT3: "", "Wedge 1": "", "Breeder Bin": "5 4" };
 const METRIC_KEY = { TEMP: "temp", PH: "ph", FUKT: "fukt" };
 const RANGE_LABEL = { "7D": "siste 7 dager", "30D": "siste 30 dager", "60D": "siste 60 dager", YTD: "i år", ALL: "hele historikken" };
 const RANGES = ["7D", "30D", "60D", "YTD", "ALL"];
@@ -99,7 +102,7 @@ function buildSeries(readings, systems, metric, range) {
     const style =
       SYS_COLORS[id] !== undefined
         ? { color: SYS_COLORS[id], dash: SYS_DASH[id] || "" }
-        : { color: ["#1C3A5C", "#B8993A", "#5A6270"][i % 3], dash: i >= 3 ? "5 4" : "" };
+        : { color: ["#1C3A5C", "#B8993A", "#6B7544", "#A64B2A", "#5A6270"][i % 5], dash: i >= 5 ? "5 4" : "" };
     return { id, color: style.color, dash: style.dash, values };
   });
 }
@@ -849,6 +852,11 @@ function SystemsView({ data, activeSystem, setActiveSystem }) {
           <div className="rule tight" />
           <div className="sechead"><span className="eyebrow">Siste registreringer</span></div>
           <table className="dtbl">
+            <thead>
+              <tr>
+                <th>Dato</th><th>Temp</th><th>pH</th><th>Fukt</th><th className="rt">Loggført</th>
+              </tr>
+            </thead>
             <tbody>
               {(recent.length ? recent : [null]).map((r, i) =>
                 r ? (
@@ -1212,6 +1220,9 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
               </span>
             </div>
             {col.cards.map((p) => card(p))}
+            {col.cards.length === 0 ? (
+              <div className="kempty">Ingen prosjekter{canEdit ? " — bruk + Ny" : ""}</div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -2248,6 +2259,9 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
                   <div className="field" style={{ marginBottom: 0 }}>
                     <label>Navn</label>
                     <input className="input" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} />
+                    {memberForm.name.trim() && memberForm.name.trim() !== t.name ? (
+                      <span className="mut" style={{ fontSize: 11 }}>Nytt navn: {t.name === data.user?.name ? "du forblir innlogget" : t.name + " må logge inn på nytt"}.</span>
+                    ) : null}
                   </div>
                   <div className="field" style={{ marginBottom: 0 }}>
                     <label>Rolle</label>
@@ -2506,7 +2520,10 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     if (res.ok) {
       const body = await res.json();
       if (off > 0) {
-        setItems((prev) => [...prev, ...body.items]);
+        setItems((prev) => {
+          const seen = new Set(prev.map((m) => m.id));
+          return [...prev, ...body.items.filter((m) => !seen.has(m.id))];
+        });
       } else {
         setItems(body.items);
       }
@@ -2538,15 +2555,25 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     searchTimer.current = setTimeout(() => fetchInbox({ q: val, offset: 0 }), 350);
   };
 
+  // Optimistic count adjustment covering every header/tab badge, not just
+  // "open" — the server recomputes authoritatively on the next fetch.
+  const countDelta = (m, dir) => (c) => ({
+    open: Math.max(0, c.open + dir),
+    urgent: Math.max(0, c.urgent + (m.category === "Svar kreves" ? dir : 0)),
+    high_priority: Math.max(0, c.high_priority + (m.priority === "høy" ? dir : 0)),
+    drafts: Math.max(0, c.drafts + (m.draft_body ? dir : 0)),
+  });
+
   // Status changes update the row in place; the row leaves the list only if
   // it no longer belongs under the current tab ("Alle" keeps it visible).
   const setItemStatus = async (id, status) => {
+    const item = items.find((m) => m.id === id);
     const keeps = tabDef(tab).status === "all";
     setItems((prev) =>
       keeps ? prev.map((m) => (m.id === id ? { ...m, status } : m)) : prev.filter((m) => m.id !== id)
     );
     if (!keeps) setTotal((t) => Math.max(0, t - 1));
-    setCounts((c) => ({ ...c, open: Math.max(0, c.open + (status === "done" ? -1 : 1)) }));
+    if (item) setCounts(countDelta(item, status === "done" ? -1 : 1));
     const res = await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
     if (!res.ok && showToast) showToast(await failMsg(res, "Kunne ikke oppdatere e-posten — last siden på nytt."));
   };
@@ -2570,9 +2597,10 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
 
   const batchDone = async () => {
     const ids = [...selected];
+    const affected = items.filter((m) => selected.has(m.id));
     setItems((prev) => prev.filter((m) => !selected.has(m.id)));
     setTotal((t) => Math.max(0, t - ids.length));
-    setCounts((c) => ({ ...c, open: Math.max(0, c.open - ids.length) }));
+    setCounts((c) => affected.reduce((acc, m) => countDelta(m, -1)(acc), c));
     setSelected(new Set());
     const res = await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "batch_done", ids }) });
     if (!res.ok && showToast) showToast(await failMsg(res, "Kunne ikke merke alle som ferdige — last siden på nytt."));
@@ -2893,7 +2921,9 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
 
       {items.length < total && !loading && (
         <div style={{ textAlign: "center", marginTop: 20 }}>
-          <button className="btn sm ghost" onClick={() => fetchInbox({ offset: offset + 50 })}>
+          {/* items.length (not offset+50) — locally removed rows shift the
+              server list up; this offset never skips the shifted rows. */}
+          <button className="btn sm ghost" onClick={() => fetchInbox({ offset: items.length })}>
             Last flere ({total - items.length} gjenstår)
           </button>
         </div>
@@ -3296,7 +3326,12 @@ export default function App() {
     });
     if (!res.ok) return reportError(res, "Kunne ikke lagre målområdene.");
     const body = await res.json();
-    if (Array.isArray(body.targets)) setData((d) => ({ ...d, targets: body.targets }));
+    if (Array.isArray(body.targets)) {
+      setData((d) => ({ ...d, targets: body.targets }));
+      // Sync the edit state too — otherwise a skipped half-typed row keeps
+      // showing a value that was never saved.
+      setTargets(body.targets);
+    }
   };
 
 

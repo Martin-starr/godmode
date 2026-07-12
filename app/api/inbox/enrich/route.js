@@ -85,15 +85,16 @@ export const POST = guarded(
     let updated = 0;
     for (const it of parsed.items || []) {
       if (!validIds.has(Number(it.id))) continue;
-      await withWatchdog(
+      const res = await withWatchdog(
         () => sql`update dash.inbox set
             summary = ${String(it.summary).slice(0, 400)},
             category = ${it.category},
             priority = ${it.priority},
             status = ${it.noise ? "done" : "open"}
-          where id = ${Number(it.id)} and status = 'open'`
+          where id = ${Number(it.id)} and status = 'open'
+          returning id`
       );
-      updated++;
+      updated += res.length;
     }
     return json({ oppdatert: updated });
   },
