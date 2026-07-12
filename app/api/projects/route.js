@@ -4,6 +4,8 @@ import { json, err, guarded } from "@/lib/http";
 export const runtime = "nodejs";
 export const maxDuration = 15;
 
+const due = (v) => (/^\d{4}-\d{2}-\d{2}$/.test(String(v || "")) ? v : "");
+
 export const POST = guarded(
   async (req, ctx, user) => {
     const body = await req.json();
@@ -12,7 +14,7 @@ export const POST = guarded(
     const rows = await sql`insert into dash.projects (col, tag, title, descr, who, sort)
       values (${col}, 'Nytt', 'Nytt prosjekt', '', ${String(body.who || user.name)},
               (select coalesce(max(sort), -1) + 1 from dash.projects))
-      returning id, col, tag, title, descr, who`;
+      returning id, col, tag, title, descr, who, due`;
     return json(rows[0]);
   },
   { edit: true }
@@ -27,9 +29,10 @@ export const PUT = guarded(
         tag = ${String(body.tag || "")},
         title = ${String(body.title || "")},
         descr = ${String(body.descr || "")},
-        who = ${String(body.who || "")}
+        who = ${String(body.who || "")},
+        due = ${due(body.due)}
       where id = ${Number(body.id)}
-      returning id, col, tag, title, descr, who`;
+      returning id, col, tag, title, descr, who, due`;
     if (!rows.length) return err("Prosjektet finnes ikke.", 404);
     return json(rows[0]);
   },

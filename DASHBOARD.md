@@ -69,14 +69,29 @@ psql ... -v pw="<scrypt-hash>" -f dash-scripts/seed-local.sql
 DASH_DATABASE_URL=postgresql://... DASH_DB_NO_SSL=1 npm run dev
 ```
 
+## Ferdigstillings-runden 12.07.2026
+
+- **Logg:** høyere trendgraf, «Skriv ut historikk» skriver ut valgfri
+  dato-periode som tett regneark-tabell (tilsynsdokumentasjon). Tomme felt
+  lagres som NULL («—»), aldri som 0.
+- **Systemer:** større grafer i Brief-stil med periodevelger (7D–ALL).
+- **Innboks:** én faneline (Åpne · Svar kreves · Utkast klare · Ferdige ·
+  Alle), tydelig sammendragslinje per e-post, «AI-triage»-knapp
+  (`/api/inbox/enrich`), og heuristikken flagger Verminord-infrafeil som
+  viktige i stedet for å arkivere dem (finn.no/engangskoder arkiveres).
+- **Oppgaver:** prioritet + frist (migrasjon 004), filtrering/sortering,
+  global toast (før var suksess/feil usynlig utenfor Logg-siden).
+- **Prosjekter:** hjernedump også her; kortene åpner et stort detaljvindu;
+  hurtigflytting mellom Planlagt/Pågår/Fullført.
+- **Innstillinger:** team-administrasjon (legg til/endre/slett + passord,
+  kun Admin), AI-oppsettguide og «Test AI» (`/api/ai/test`).
+
 ## Kjente hull etter rekonstruksjon
 
-- **Google Sheets-synk:** logikken er reimplementert (timesynk ved bootstrap +
-  «Synk nå»), og config plukkes opp fra env-variabler med vanlige navn eller en
-  `AIza…`-nøkkel. Sjekk «Innstillinger → Datakilde» etter deploy: står det
-  «Ikke tilkoblet», sett `DASH_SHEETS_ID` (regnearkets ID) og
-  `DASH_SHEETS_API_KEY` på Vercel-prosjektet. Kolonneoverskrifter i arket
-  gjenkjennes på navn (dato/system/temp/ph/fukt/fôr/notat/hvem).
+- **Google Sheets-synk:** den timebaserte synken er pensjonert; app-loggene
+  leses live fra `public.logs` via viewet `dash.readings_all`
+  (migrasjon 001/003). Gmail-innboksen synkes deterministisk via Apps
+  Script-broen (`Synk nå`/`Oppdater` i appen).
 - **Logoene** (`logo-dark.png`/`logo-white.png`) er binærfiler som ikke kunne
   hentes ut herfra; deploy-workflowen kopierer dem fra det kjørende nettstedet.
   Uten dem vises et tekst-ordmerke i samme stil.

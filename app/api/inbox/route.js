@@ -51,7 +51,16 @@ export const GET = guarded(async (req) => {
     [...vals, limit, offset]
   );
 
-  return json({ items, total: countRow[0].total });
+  // Live header counts — the bootstrap snapshot goes stale as soon as a mail
+  // is handled, so every list fetch refreshes them.
+  const counts = (await sql`select
+      count(*) filter (where status = 'open')::int as open,
+      count(*) filter (where status = 'open' and category = 'Svar kreves')::int as urgent,
+      count(*) filter (where status = 'open' and priority = 'høy')::int as high_priority,
+      count(*) filter (where status = 'open' and draft_body <> '')::int as drafts
+    from dash.inbox`)[0];
+
+  return json({ items, total: countRow[0].total, counts });
 });
 
 // Digest rows are written directly to dash.inbox by the daily e-mail triage

@@ -41,7 +41,9 @@ export async function GET() {
     mark("full readings fetch (" + rows.length + " rows)");
     // Whitelisted sync stamps only — this route is unauthenticated, and
     // dash.meta is a general key/value store other processes write to.
-    const meta = await sql`select key, value from dash.meta where key in ('last_sync', 'inbox_last_sync')`;
+    // ('last_sync' was the retired hourly Sheets sync — dead by design, so
+    // exposing its frozen stamp here only caused false alarm.)
+    const meta = await sql`select key, value from dash.meta where key in ('inbox_last_sync')`;
     mark("meta");
     const metaOut = {};
     for (const m of meta) metaOut[m.key] = m.value;

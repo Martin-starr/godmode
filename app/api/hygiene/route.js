@@ -65,17 +65,41 @@ export const POST = guarded(
     } catch (e) {
       return err(e.message);
     }
-    const sql = db();
-    const imp = (await sql`insert into dash.hygiene_imports (filename, imported_by, row_count, note)
-      values (${file.name}, ${user.name}, ${points.length}, '')
-      returning id`)[0];
+    // A real Center 374 export is thousands of points × up to 4 channels.
+    // Row-by-row inserts through the pooler took minutes and tripped the 12s
+    // watchdog halfway through, leaving a corrupt partial import displayed as
+    // the current §19 record. One transaction + unnest keeps it to a single
+    // round-trip and makes the import all-or-nothing.
+    const ts = [];
+    const ch = [];
+    const temp = [];
     for (const p of points) {
       for (let i = 0; i < p.temps.length; i++) {
-        await sql`insert into dash.hygiene_readings (import_id, ts, ch, temp)
-          values (${imp.id}, ${new Date(p.ts)}, ${i + 1}, ${p.temps[i]})`;
+        if (p.temps[i] == null) continue;
+        ts.push(new Date(p.ts).toISOString());
+        ch.push(i + 1);
+        temp.push(p.temps[i]);
       }
     }
+    if (!ts.length) return err("Filen inneholdt ingen gyldige temperaturmålinger.");
+    const sql = db();
+    // Chunked so no single statement risks the 8s statement_timeout on a
+    // multi-day export; still one transaction, so the import is all-or-nothing.
+    const CHUNK = 5000;
+    await sql.begin(async (tx) => {
+      const imp = (await tx`insert into dash.hygiene_imports (filename, imported_by, row_count, note)
+        values (${file.name}, ${user.name}, ${points.length}, '')
+        returning id`)[0];
+      for (let i = 0; i < ts.length; i += CHUNK) {
+        await tx`insert into dash.hygiene_readings (import_id, ts, ch, temp)
+          select ${imp.id}, t::timestamptz, c, tv
+          from unnest(${ts.slice(i, i + CHUNK)}::text[], ${ch.slice(i, i + CHUNK)}::int[], ${temp.slice(i, i + CHUNK)}::real[]) as u(t, c, tv)`;
+      }
+    });
     return json({ ok: true, rows: points.length });
   },
-  { edit: true }
+  // watchdog:false — a big import legitimately outlives the 12s deadline; a
+  // watchdog trip mid-transaction would reset the pool without cancelling
+  // the tx, so a "failed" import could land anyway and a retry duplicate it.
+  { edit: true, watchdog: false }
 );
