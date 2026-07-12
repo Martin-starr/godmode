@@ -65,16 +65,31 @@ export const POST = guarded(
     } catch (e) {
       return err(e.message);
     }
-    const sql = db();
-    const imp = (await sql`insert into dash.hygiene_imports (filename, imported_by, row_count, note)
-      values (${file.name}, ${user.name}, ${points.length}, '')
-      returning id`)[0];
+    // A real Center 374 export is thousands of points × up to 4 channels.
+    // Row-by-row inserts through the pooler took minutes and tripped the 12s
+    // watchdog halfway through, leaving a corrupt partial import displayed as
+    // the current §19 record. One transaction + unnest keeps it to a single
+    // round-trip and makes the import all-or-nothing.
+    const ts = [];
+    const ch = [];
+    const temp = [];
     for (const p of points) {
       for (let i = 0; i < p.temps.length; i++) {
-        await sql`insert into dash.hygiene_readings (import_id, ts, ch, temp)
-          values (${imp.id}, ${new Date(p.ts)}, ${i + 1}, ${p.temps[i]})`;
+        if (p.temps[i] == null) continue;
+        ts.push(new Date(p.ts).toISOString());
+        ch.push(i + 1);
+        temp.push(p.temps[i]);
       }
     }
+    const sql = db();
+    await sql.begin(async (tx) => {
+      const imp = (await tx`insert into dash.hygiene_imports (filename, imported_by, row_count, note)
+        values (${file.name}, ${user.name}, ${points.length}, '')
+        returning id`)[0];
+      await tx`insert into dash.hygiene_readings (import_id, ts, ch, temp)
+        select ${imp.id}, t::timestamptz, c, tv
+        from unnest(${ts}::text[], ${ch}::int[], ${temp}::real[]) as u(t, c, tv)`;
+    });
     return json({ ok: true, rows: points.length });
   },
   { edit: true }

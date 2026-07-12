@@ -51,10 +51,12 @@ function rangeDays(range) {
   return 365;
 }
 
+// Local (Norwegian) calendar date — toISOString() is UTC and puts 00:00–02:00
+// summer-night entries on the wrong day.
 function isoDaysAgo(days) {
   const d = new Date();
   d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 
 function fmtDate(iso) {
@@ -63,9 +65,12 @@ function fmtDate(iso) {
 }
 
 // Phone logs can miss single measurements (NULL in public.logs) — show a
-// dash instead of pretending the value was 0.
+// dash instead of pretending the value was 0. Old Sheets imports carry raw
+// float noise (73.19202) — one decimal is the real measurement precision.
 function fmtVal(v, suffix = "") {
-  return v == null ? "—" : v + suffix;
+  if (v == null) return "—";
+  const n = Number(v);
+  return (Number.isFinite(n) ? Math.round(n * 10) / 10 : v) + suffix;
 }
 
 function fmtPh(v) {
@@ -119,9 +124,22 @@ function countOutside(readings, targets) {
 function latestBySystem(readings, systems) {
   const out = {};
   for (const id of systems) {
-    out[id] = readings.find((r) => r.system === id) || { temp: 0, ph: 0, fukt: 0 };
+    // No readings yet → undefined values render as "—", not a fabricated 0.
+    out[id] = readings.find((r) => r.system === id) || {};
   }
   return out;
+}
+
+// Keep client-side reading state in the same order the bootstrap ships it,
+// so "latest per system" lookups stay correct after backdated entries.
+function sortReadings(rows) {
+  return [...rows].sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
+    const la = String(a.logged_at || "");
+    const lb = String(b.logged_at || "");
+    if (la !== lb) return la < lb ? 1 : -1;
+    return Number(b.rid || 0) - Number(a.rid || 0);
+  });
 }
 
 function PrintButton() {
@@ -338,7 +356,7 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
   }).length;
 
   const kpis = [
-    { label: "Avvik i dag", value: String(avvikToday), cls: "", caption: "0 kritiske · siste 24 t" },
+    { label: "Avvik i dag", value: String(avvikToday), cls: avvikToday ? "gold" : "", caption: today.length + " målinger loggført i dag" },
     { label: "Aktive systemer", value: String(active.length), cls: "", caption: outsideNow + " utenfor målområde" },
     { label: "Aktive prosjekter", value: String(activeProjects), cls: "", caption: runningProjects + " påbegynt · " + doneProjects + " fullført" },
     { label: "Åpne oppgaver", value: String(openTotal), cls: "gold", caption: openTasks.length + " krever handling" },
@@ -348,10 +366,11 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
     <div>
       <span className="eyebrow">Oversikt · Brief</span>
       <div className="hero">
-        {avvikToday} i dag.<span className="li"> 0 kritiske.</span>
+        {avvikToday === 0 ? "Ingen avvik i dag." : avvikToday + (avvikToday === 1 ? " avvik i dag." : " avvik i dag.")}
+        <span className="li"> {outsideNow === 0 ? "Alt innenfor mål." : outsideNow + " utenfor mål."}</span>
       </div>
       <div className="herosub">
-        Aktive: {active.length} systemer · Forfalt: 0 · Backlog: {openTasks.length} · Loggført i dag: {today.length}
+        Aktive: {active.length} systemer · Backlog: {openTasks.length} · Loggført i dag: {today.length}
       </div>
       <div className="rule" />
       <div className="kpirow">
@@ -529,13 +548,40 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
   );
   const shown = filtered.slice(0, visible);
 
+  // Two print modes: the standard button prints the charts + the visible
+  // history; "Skriv ut historikk" prints EVERY filtered row (any date range)
+  // as a dense spreadsheet — the log proof to hand Mattilsynet.
+  const [printHist, setPrintHist] = useState(false);
+  const printHistory = () => {
+    setPrintHist(true);
+    setTimeout(() => {
+      let reset = false;
+      const done = () => {
+        if (reset) return;
+        reset = true;
+        window.removeEventListener("afterprint", done);
+        setPrintHist(false);
+      };
+      window.addEventListener("afterprint", done);
+      window.print();
+      // Fallback for browsers that return from print() without firing afterprint.
+      setTimeout(done, 1500);
+    }, 60);
+  };
+  const histRangeLabel =
+    (histSys === "Alle" ? "Alle systemer" : histSys) +
+    " · " + (histFrom ? fmtDate(histFrom) : "start") + " – " + (histTo ? fmtDate(histTo) : "i dag") +
+    (avvikOnly ? " · kun avvik" : "") +
+    " · " + filtered.length + " målinger";
+
   return (
-    <div>
-      <PrintHeader title="Produksjonslogg" />
+    <div className={printHist ? "print-hist" : ""}>
+      <PrintHeader title={printHist ? "Produksjonslogg · " + histRangeLabel : "Produksjonslogg"} />
       <div className="sechead" style={{ marginBottom: 0 }}>
         <span className="eyebrow">Logg · Registrering</span>
         <PrintButton />
       </div>
+      <div className="std-view">
       <div className="hero">Produksjon</div>
       <div className="herosub">Bekreft at målingen er loggført. Historiske målinger kan legges inn i ettertid.</div>
       <div className="rule" />
@@ -554,7 +600,7 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
           </div>
         </span>
       </div>
-      <Chart series={series} metric={metric} range={loggRange} target={target} />
+      <Chart series={series} metric={metric} range={loggRange} target={target} h={380} />
       <div className="legend">
         {series.map((s) => (
           <span className="lg" key={s.id}>
@@ -618,9 +664,6 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
         {canEdit ? null : (
           <div className="mut" style={{ marginTop: 12 }}>Kun lesing — du kan ikke registrere målinger.</div>
         )}
-        {toast ? (
-          <div className="toast"><span className="dot" />{toast}</div>
-        ) : null}
       </div>
       <div className="rule" />
       <div className="sechead">
@@ -638,6 +681,9 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
         <span className="mut">–</span>
         <input className="input" type="date" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} value={histTo} onChange={(e) => setFilter(setHistTo)(e.target.value)} />
         <button className={"chip " + (avvikOnly ? "on" : "")} onClick={() => setFilter(setAvvikOnly)(!avvikOnly)}>Kun avvik</button>
+        <button className="btn ghost sm" style={{ marginLeft: "auto" }} onClick={printHistory} disabled={!filtered.length}>
+          Skriv ut historikk ({filtered.length})
+        </button>
       </div>
       <div className="tscroll">
         <table className="dtbl">
@@ -691,6 +737,37 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
           </button>
         </div>
       ) : null}
+      </div>
+      {/* Dense spreadsheet print of the full filtered history — log proof for
+          Mattilsynet or any chosen date range. Only rendered while printing. */}
+      {printHist ? (
+        <div className="hist-print">
+          <div className="hp-sub">{histRangeLabel} · skrevet ut {new Date().toLocaleDateString("nb-NO")}</div>
+          <table className="xtbl">
+            <thead>
+              <tr>
+                <th>Dato</th><th>System</th><th>Temp (°C)</th><th>pH</th><th>Fukt (%)</th><th>Fôr (L)</th><th>Avvik</th><th>Notat</th><th>Loggført av</th><th>Kilde</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((r) => (
+                <tr key={r.id}>
+                  <td>{fmtDate(r.date)}</td>
+                  <td>{r.system}</td>
+                  <td className="num">{fmtVal(r.temp)}</td>
+                  <td className="num">{fmtVal(r.ph)}</td>
+                  <td className="num">{fmtVal(r.fukt)}</td>
+                  <td className="num">{fmtVal(r.for_l)}</td>
+                  <td>{r.avvik ? "Avvik" : ""}</td>
+                  <td className="notat">{r.notat}</td>
+                  <td>{r.logged_by}</td>
+                  <td>{r.source === "app" ? "App" : r.source === "sheets" ? "Sheets" : "Dashbord"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -702,10 +779,11 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
 function SystemsView({ data, activeSystem, setActiveSystem }) {
   const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
   const latest = latestBySystem(data.readings, active);
-  const current = latest[activeSystem] || { temp: 0, ph: 0, fukt: 0 };
-  const tempSeries = buildSeries(data.readings, [activeSystem], "TEMP", "30D");
-  const phSeries = buildSeries(data.readings, [activeSystem], "PH", "30D");
-  const fuktSeries = buildSeries(data.readings, [activeSystem], "FUKT", "30D");
+  const current = latest[activeSystem] || {};
+  const [sysRange, setSysRange] = useState("30D");
+  const tempSeries = buildSeries(data.readings, [activeSystem], "TEMP", sysRange);
+  const phSeries = buildSeries(data.readings, [activeSystem], "PH", sysRange);
+  const fuktSeries = buildSeries(data.readings, [activeSystem], "FUKT", sysRange);
   const recent = data.readings.filter((r) => r.system === activeSystem).slice(0, 5);
 
   return (
@@ -755,12 +833,19 @@ function SystemsView({ data, activeSystem, setActiveSystem }) {
               <div className="v">{fmtVal(current.fukt)}<small>%</small></div>
             </div>
           </div>
-          <div className="charthead"><span className="eyebrow">Temperatur (°C) · siste 30 dager</span></div>
-          <Chart series={tempSeries} metric="TEMP" range="30D" h={170} target={data.targets.find((t) => t.metric === "temp")} />
-          <div className="charthead" style={{ marginTop: 22 }}><span className="eyebrow">pH · siste 30 dager</span></div>
-          <Chart series={phSeries} metric="PH" range="30D" h={140} target={data.targets.find((t) => t.metric === "ph")} />
-          <div className="charthead" style={{ marginTop: 22 }}><span className="eyebrow">Fuktighet (%) · siste 30 dager</span></div>
-          <Chart series={fuktSeries} metric="FUKT" range="30D" h={140} target={data.targets.find((t) => t.metric === "fukt")} />
+          <div className="charthead">
+            <span className="eyebrow">Temperatur (°C) · {RANGE_LABEL[sysRange]}</span>
+            <div className="toggle">
+              {RANGES.map((r) => (
+                <button key={r} className={"tbtn " + (sysRange === r ? "on" : "")} onClick={() => setSysRange(r)}>{r}</button>
+              ))}
+            </div>
+          </div>
+          <Chart series={tempSeries} metric="TEMP" range={sysRange} h={300} target={data.targets.find((t) => t.metric === "temp")} />
+          <div className="charthead" style={{ marginTop: 26 }}><span className="eyebrow">pH · {RANGE_LABEL[sysRange]}</span></div>
+          <Chart series={phSeries} metric="PH" range={sysRange} h={240} target={data.targets.find((t) => t.metric === "ph")} />
+          <div className="charthead" style={{ marginTop: 26 }}><span className="eyebrow">Fuktighet (%) · {RANGE_LABEL[sysRange]}</span></div>
+          <Chart series={fuktSeries} metric="FUKT" range={sysRange} h={240} target={data.targets.find((t) => t.metric === "fukt")} />
           <div className="rule tight" />
           <div className="sechead"><span className="eyebrow">Siste registreringer</span></div>
           <table className="dtbl">
@@ -937,7 +1022,7 @@ function FilesView({ data, uploadFiles, removeFile, updateFile, canEdit }) {
 const PROJECT_COLS = ["Planlagt", "Pågår", "Fullført"];
 const PARTNER_STATUSES = ["Pågår", "Avklar", "Dialog", "Løpende"];
 
-function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, deleteProject, addCheckItem, renameCheckItem, deleteCheckItem, addPartner, updatePartner, deletePartner }) {
+function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, deleteProject, addCheckItem, renameCheckItem, deleteCheckItem, addPartner, updatePartner, deletePartner, showToast, refreshAll }) {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(null);
   const [partnerId, setPartnerId] = useState(null);
@@ -947,7 +1032,13 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
 
   const startEdit = (p) => {
     setEditingId(p.id);
-    setEditForm({ col: p.col, tag: p.tag, title: p.title, descr: p.descr, who: p.who });
+    setEditForm({ col: p.col, tag: p.tag, title: p.title, descr: p.descr, who: p.who, due: p.due || "" });
+  };
+
+  const move = (p, dir) => {
+    const i = PROJECT_COLS.indexOf(p.col) + dir;
+    if (i < 0 || i >= PROJECT_COLS.length) return;
+    updateProject({ id: p.id, col: PROJECT_COLS[i], tag: p.tag, title: p.title, descr: p.descr, who: p.who, due: p.due || "" });
   };
 
   const save = async (id) => {
@@ -973,19 +1064,26 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
       }),
   }));
 
+  // The whole card opens the detail view; checkboxes and move-arrows stay
+  // directly clickable on the card.
   const card = (p) => (
-    <div className="pcard" key={p.id}>
+    <div
+      className={"pcard clickable" + (p.col === "Fullført" ? " donecard" : "")}
+      key={p.id}
+      onClick={() => startEdit(p)}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => { if (e.key === "Enter") startEdit(p); }}
+    >
       <div className="ptag" style={{ display: "flex", justifyContent: "space-between" }}>
         <span>{p.tag}</span>
-        {canEdit ? (
-          <button className="lnk" style={{ padding: 0, fontSize: 10.5 }} onClick={() => startEdit(p)}>Endre</button>
-        ) : null}
+        {dueBadge(p.due, p.col !== "Fullført")}
       </div>
       <div className="ptitle">{p.title}</div>
       <div className="pdesc">{p.descr}</div>
       <div className="checks">
         {p.checks.map((c) => (
-          <button key={c.id} className={"chk " + (c.done ? "done" : "")} onClick={() => canEdit && toggleCheck(c.id, !c.done)}>
+          <button key={c.id} className={"chk " + (c.done ? "done" : "")} onClick={(e) => { e.stopPropagation(); if (canEdit) toggleCheck(c.id, !c.done); }}>
             <span className="chkbox" />{c.text}
           </button>
         ))}
@@ -994,67 +1092,96 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
         <span className="pbar"><i style={{ width: p.pct + "%" }} /></span>
         <span className="pav">{p.who} · {p.done}/{p.checks.length}</span>
       </div>
+      {canEdit ? (
+        <div className="pmove no-print" onClick={(e) => e.stopPropagation()}>
+          <button className="lnk" disabled={p.col === PROJECT_COLS[0]} onClick={() => move(p, -1)} title="Flytt til forrige kolonne">←</button>
+          <span className="mut" style={{ fontSize: 10.5 }}>{p.col}</span>
+          <button className="lnk" disabled={p.col === PROJECT_COLS[PROJECT_COLS.length - 1]} onClick={() => move(p, 1)} title="Flytt til neste kolonne">→</button>
+        </div>
+      ) : null}
     </div>
   );
 
-  const editCard = (p) => (
-    <div className="pcard" key={p.id}>
-      <div className="field" style={{ marginBottom: 12 }}>
-        <label>Tag</label>
-        <input className="input" value={editForm.tag} onChange={(e) => setEditForm({ ...editForm, tag: e.target.value })} />
-      </div>
-      <div className="field" style={{ marginBottom: 12 }}>
-        <label>Tittel</label>
-        <input className="input" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
-      </div>
-      <div className="field" style={{ marginBottom: 12 }}>
-        <label>Beskrivelse</label>
-        <textarea className="ta" style={{ minHeight: 56 }} value={editForm.descr} onChange={(e) => setEditForm({ ...editForm, descr: e.target.value })} />
-      </div>
-      <div className="f2" style={{ gap: 12, marginBottom: 12 }}>
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label>Kolonne</label>
-          <select className="select" value={editForm.col} onChange={(e) => setEditForm({ ...editForm, col: e.target.value })}>
-            {PROJECT_COLS.map((c) => (
-              <option key={c} value={c}>{c}</option>
-            ))}
-          </select>
+  // Enlarged card view — opens when a kanban card is clicked. All fields are
+  // optional; read-only users can look but not touch.
+  const detailModal = (p) => (
+    <div className="modal-backdrop" onClick={() => setEditingId(null)}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="sechead" style={{ marginBottom: 16 }}>
+          <span className="eyebrow gold">Prosjekt · {editForm.col}</span>
+          <button className="lnk" onClick={() => setEditingId(null)}>Lukk ✕</button>
         </div>
-        <div className="field" style={{ marginBottom: 0 }}>
-          <label>Ansvarlig</label>
-          <select className="select" value={editForm.who} onChange={(e) => setEditForm({ ...editForm, who: e.target.value })}>
-            {team.map((n) => (
-              <option key={n} value={n}>{n}</option>
-            ))}
-            {team.includes(editForm.who) ? null : <option value={editForm.who}>{editForm.who}</option>}
-          </select>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Tittel</label>
+          <input className="input" value={editForm.title} disabled={!canEdit} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
         </div>
-      </div>
-      <div className="field" style={{ marginBottom: 12 }}>
-        <label>Sjekkliste</label>
-        {p.checks.map((c) => (
-          <div key={c.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
-            <input
-              className="input"
-              style={{ padding: "8px 10px", fontSize: 12.5 }}
-              defaultValue={c.text}
-              onBlur={(e) => { if (e.target.value !== c.text) renameCheckItem(c.id, e.target.value); }}
-            />
-            <button className="lnk g" style={{ flex: "none" }} onClick={() => deleteCheckItem(c.id)}>Fjern</button>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Beskrivelse (valgfritt)</label>
+          <textarea className="ta" style={{ minHeight: 80 }} value={editForm.descr} disabled={!canEdit} onChange={(e) => setEditForm({ ...editForm, descr: e.target.value })} />
+        </div>
+        <div className="f2" style={{ gap: 12, marginBottom: 12 }}>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Status</label>
+            <select className="select" value={editForm.col} disabled={!canEdit} onChange={(e) => setEditForm({ ...editForm, col: e.target.value })}>
+              {PROJECT_COLS.map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
           </div>
-        ))}
-        <button className="lnk" style={{ textAlign: "left", paddingLeft: 0 }} onClick={() => addCheckItem(p.id)}>+ Legg til punkt</button>
-      </div>
-      <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
-        <button className="btn sm" onClick={() => save(p.id)}>Lagre</button>
-        <button className="lnk" onClick={() => setEditingId(null)}>Avbryt</button>
-        <button
-          className="lnk g"
-          style={{ marginLeft: "auto" }}
-          onClick={() => { if (window.confirm("Slette prosjektet «" + p.title + "»?")) { deleteProject(p.id); setEditingId(null); } }}
-        >
-          Slett
-        </button>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Ansvarlig</label>
+            <select className="select" value={editForm.who} disabled={!canEdit} onChange={(e) => setEditForm({ ...editForm, who: e.target.value })}>
+              {team.map((n) => (
+                <option key={n} value={n}>{n}</option>
+              ))}
+              {team.includes(editForm.who) ? null : <option value={editForm.who}>{editForm.who}</option>}
+            </select>
+          </div>
+        </div>
+        <div className="f2" style={{ gap: 12, marginBottom: 12 }}>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Kategori/tag (valgfritt)</label>
+            <input className="input" value={editForm.tag} disabled={!canEdit} onChange={(e) => setEditForm({ ...editForm, tag: e.target.value })} />
+          </div>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Frist (valgfritt)</label>
+            <input className="input" type="date" value={editForm.due} disabled={!canEdit} onChange={(e) => setEditForm({ ...editForm, due: e.target.value })} />
+          </div>
+        </div>
+        <div className="field" style={{ marginBottom: 12 }}>
+          <label>Sjekkliste</label>
+          {p.checks.map((c) => (
+            <div key={c.id} style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button className={"chk " + (c.done ? "done" : "")} style={{ width: "auto", flex: "none" }} onClick={() => canEdit && toggleCheck(c.id, !c.done)}>
+                <span className="chkbox" />
+              </button>
+              <input
+                className="input"
+                style={{ padding: "8px 10px", fontSize: 12.5 }}
+                defaultValue={c.text}
+                disabled={!canEdit}
+                onBlur={(e) => { if (e.target.value !== c.text) renameCheckItem(c.id, e.target.value); }}
+              />
+              {canEdit ? <button className="lnk g" style={{ flex: "none" }} onClick={() => deleteCheckItem(c.id)}>Fjern</button> : null}
+            </div>
+          ))}
+          {canEdit ? (
+            <button className="lnk" style={{ textAlign: "left", paddingLeft: 0 }} onClick={() => addCheckItem(p.id)}>+ Legg til punkt</button>
+          ) : null}
+        </div>
+        {canEdit ? (
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            <button className="btn sm" onClick={() => save(p.id)}>Lagre</button>
+            <button className="lnk" onClick={() => setEditingId(null)}>Avbryt</button>
+            <button
+              className="lnk g"
+              style={{ marginLeft: "auto" }}
+              onClick={() => { if (window.confirm("Slette prosjektet «" + p.title + "»?")) { deleteProject(p.id); setEditingId(null); } }}
+            >
+              Slett
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -1067,8 +1194,9 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
         <PrintButton />
       </div>
       <div className="hero">Prosjekter</div>
-      <div className="herosub">Enkel oversikt over prosjekter, store oppgaver og partnere som jobbes over tid. Kryss av stegene på veien.</div>
+      <div className="herosub">Enkel oversikt over prosjekter, store oppgaver og partnere som jobbes over tid. Klikk på et kort for detaljer.</div>
       <div className="rule" />
+      {canEdit ? <BraindumpPanel data={data} showToast={showToast} refreshAll={refreshAll} /> : null}
       <div className="kanban">
         {cols.map((col) => (
           <div className="kcol" key={col.title}>
@@ -1083,10 +1211,15 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
                 ) : null}
               </span>
             </div>
-            {col.cards.map((p) => (editingId === p.id ? editCard(p) : card(p)))}
+            {col.cards.map((p) => card(p))}
           </div>
         ))}
       </div>
+      {(() => {
+        if (editingId == null || !editForm) return null;
+        const p = cols.flatMap((c) => c.cards).find((x) => x.id === editingId);
+        return p ? detailModal(p) : null;
+      })()}
       <div className="rule" />
       <div className="sechead">
         <span className="eyebrow gold">Partnere · Pipeline</span>
@@ -1188,7 +1321,25 @@ function ProjectsView({ data, canEdit, toggleCheck, addProject, updateProject, d
 /* ------------------------------------------------------------------ */
 
 const TASK_TAGS = ["Ny", "Rutine", "Avklar"];
-const EMPTY_TASK = { title: "", sub: "", descr: "", tag: "Ny", who: "Mathias" };
+const TASK_PRIOS = [["", "Ingen"], ["kritisk", "Kritisk"], ["høy", "Høy"], ["medium", "Medium"], ["lav", "Lav"]];
+const PRIO_ORDER = { kritisk: 0, ["høy"]: 1, medium: 2, lav: 3, "": 4 };
+const EMPTY_TASK = { title: "", sub: "", descr: "", tag: "Ny", who: "Mathias", prio: "", due: "" };
+
+function prioBadge(p) {
+  if (!p) return null;
+  const cls = p === "kritisk" || p === "høy" ? "tag gold" : "tag";
+  return <span className={cls} style={{ marginLeft: 6 }}>{p}</span>;
+}
+
+function dueBadge(due, open) {
+  if (!due) return null;
+  const overdue = open && due < isoDaysAgo(0);
+  return (
+    <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: overdue ? "var(--gold)" : "var(--muted)" }}>
+      {overdue ? "Forfalt " : "Frist "}{fmtDate(due)}
+    </span>
+  );
+}
 
 /* Braindump: free text -> proposed task/project operations -> user approves
    -> applied through the existing CRUD endpoints. Works in two modes:
@@ -1205,7 +1356,6 @@ const BRAINDUMP_RULES =
   "Bruk KUN id-er fra tilstanden. Slett aldri noe som ikke eksplisitt skal slettes.";
 
 function BraindumpPanel({ data, showToast, refreshAll }) {
-  const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [pasted, setPasted] = useState("");
   const [ops, setOps] = useState(null);
@@ -1302,7 +1452,7 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
   const applyOne = async (o) => {
     switch (o.op) {
       case "create_task":
-        return post("/api/tasks", { title: o.title, sub: o.sub || "", descr: o.descr || "", tag: o.tag || "Ny", who: o.who || "" });
+        return post("/api/tasks", { title: o.title, sub: o.sub || "", descr: o.descr || "", tag: o.tag || "Ny", who: o.who || "", prio: o.prio || "", due: o.due || "" });
       case "update_task":
       case "complete_task":
       case "reopen_task": {
@@ -1316,6 +1466,8 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
           descr: o.descr ?? t.descr ?? "",
           tag: o.tag ?? t.tag,
           who: o.who ?? t.who,
+          prio: o.prio ?? t.prio ?? "",
+          due: o.due ?? t.due ?? "",
           open,
         });
       }
@@ -1376,7 +1528,6 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
     setOps(null);
     setText("");
     setPasted("");
-    setOpen(false);
     refreshAll();
   };
 
@@ -1390,44 +1541,41 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
 
   return (
     <div className="no-print">
-      <div className="sechead">
-        <span className="eyebrow">Hjernedump</span>
-        <button className="btn ghost sm" onClick={() => setOpen(!open)}>{open ? "Lukk" : "Åpne hjernedump"}</button>
-      </div>
-      {open ? (
-        <div className="card" style={{ padding: "22px 24px", marginBottom: 30 }}>
+      <div className="card" style={{ padding: "22px 24px", marginBottom: 30, borderLeft: "3px solid var(--gold)" }}>
+          <div className="sechead" style={{ marginBottom: 14 }}>
+            <span className="eyebrow gold">Hjernedump</span>
+            <span className="mut" style={{ fontSize: 11 }}>Skriv alt i én tekst — appen foreslår, du godkjenner</span>
+          </div>
           {!ops ? (
             <div>
-              <div className="field">
-                <label>Skriv fritt — nye oppgaver, prosjekter, endringer, ting som er gjort</label>
+              <div className="field" style={{ marginBottom: 12 }}>
                 <textarea
                   className="ta"
-                  style={{ minHeight: 110 }}
-                  placeholder={"F.eks.: Bestill mer strø til CFT2, Mathias tar det. Mattilsynet-oppgaven er ferdig. Nytt prosjekt: nettbutikk-lansering — steg: produktbilder, priser, frakt."}
+                  style={{ minHeight: 90 }}
+                  placeholder={"F.eks.: Bestill mer strø til CFT2, Mathias tar det innen fredag. Mattilsynet-oppgaven er ferdig. Nytt prosjekt: nettbutikk-lansering — steg: produktbilder, priser, frakt."}
                   value={text}
                   onChange={(e) => setText(e.target.value)}
                 />
               </div>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                {data.aiEnabled ? (
-                  <button className="btn sm" onClick={interpret} disabled={busy || !text.trim()}>
-                    {busy ? "Tolker …" : "Tolk med Claude"}
-                  </button>
-                ) : null}
-                <button className="btn sm ghost" onClick={copyTemplate} disabled={!text.trim()}>Kopier prompt-mal</button>
-              </div>
-              {data.aiEnabled ? null : (
-                <div className="mut" style={{ marginTop: 12 }}>
-                  AI er ikke koblet til i appen ennå — kopier malen, lim den inn i Claude (app eller nettleser), og lim JSON-svaret inn under.
+              {data.aiEnabled ? (
+                <button className="btn sm" onClick={interpret} disabled={busy || !text.trim()}>
+                  {busy ? "Tolker …" : "Foreslå endringer"}
+                </button>
+              ) : (
+                <div>
+                  <button className="btn sm ghost" onClick={copyTemplate} disabled={!text.trim()}>Kopier prompt-mal</button>
+                  <div className="mut" style={{ marginTop: 12 }}>
+                    AI er ikke koblet til i appen ennå (se Innstillinger → AI-funksjoner) — kopier malen, lim den inn i Claude, og lim JSON-svaret inn under.
+                  </div>
+                  <div className="field" style={{ marginTop: 16, marginBottom: 0 }}>
+                    <label>Lim inn JSON-svar fra Claude</label>
+                    <textarea className="ta" style={{ minHeight: 56 }} placeholder='{"ops": [...]}' value={pasted} onChange={(e) => setPasted(e.target.value)} />
+                  </div>
+                  {pasted.trim() ? (
+                    <button className="btn sm ghost" style={{ marginTop: 10 }} onClick={readPasted}>Les inn JSON</button>
+                  ) : null}
                 </div>
               )}
-              <div className="field" style={{ marginTop: 16, marginBottom: 0 }}>
-                <label>Lim inn JSON-svar fra Claude</label>
-                <textarea className="ta" style={{ minHeight: 56 }} placeholder='{"ops": [...]}' value={pasted} onChange={(e) => setPasted(e.target.value)} />
-              </div>
-              {pasted.trim() ? (
-                <button className="btn sm ghost" style={{ marginTop: 10 }} onClick={readPasted}>Les inn JSON</button>
-              ) : null}
             </div>
           ) : (
             <div>
@@ -1453,8 +1601,7 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
               </div>
             </div>
           )}
-        </div>
-      ) : null}
+      </div>
     </div>
   );
 }
@@ -1464,9 +1611,31 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit, showToast, 
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState(EMPTY_TASK);
   const [busy, setBusy] = useState(false);
+  const [filterWho, setFilterWho] = useState("Alle");
+  const [filterPrio, setFilterPrio] = useState("Alle");
+  const [sortBy, setSortBy] = useState("nyeste");
   const team = data.team.map((t) => t.name);
-  const open = data.tasks.filter((t) => t.open);
-  const done = data.tasks.filter((t) => !t.open);
+
+  const matches = (t) =>
+    (filterWho === "Alle" || t.who === filterWho) &&
+    (filterPrio === "Alle" || (filterPrio === "hast" ? t.prio === "kritisk" || t.prio === "høy" : (t.prio || "") === filterPrio));
+  const order = (a, b) => {
+    if (sortBy === "frist") {
+      if ((a.due || "") !== (b.due || "")) {
+        if (!a.due) return 1;
+        if (!b.due) return -1;
+        return a.due < b.due ? -1 : 1;
+      }
+    }
+    if (sortBy === "prioritet" || sortBy === "frist") {
+      const d = PRIO_ORDER[a.prio || ""] - PRIO_ORDER[b.prio || ""];
+      if (d) return d;
+    }
+    return Number(b.id) - Number(a.id);
+  };
+  const open = data.tasks.filter((t) => t.open && matches(t)).sort(order);
+  const done = data.tasks.filter((t) => !t.open && matches(t)).sort(order);
+  const filtering = filterWho !== "Alle" || filterPrio !== "Alle";
 
   const submit = async () => {
     if (!form.title.trim() || busy) return;
@@ -1478,7 +1647,7 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit, showToast, 
 
   const startEdit = (t) => {
     setEditingId(t.id);
-    setEditForm({ title: t.title, sub: t.sub, descr: t.descr || "", tag: t.tag, who: t.who });
+    setEditForm({ title: t.title, sub: t.sub, descr: t.descr || "", tag: t.tag, who: t.who, prio: t.prio || "", due: t.due || "" });
   };
 
   const saveEdit = async (t) => {
@@ -1521,6 +1690,20 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit, showToast, 
             </select>
           </div>
         </div>
+        <div className="f2" style={{ marginBottom: 12 }}>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Prioritet</label>
+            <select className="select" value={editForm.prio} onChange={(e) => setEditForm({ ...editForm, prio: e.target.value })}>
+              {TASK_PRIOS.map(([v, l]) => (
+                <option key={v} value={v}>{l}</option>
+              ))}
+            </select>
+          </div>
+          <div className="field" style={{ marginBottom: 0 }}>
+            <label>Frist (valgfritt)</label>
+            <input className="input" type="date" value={editForm.due} onChange={(e) => setEditForm({ ...editForm, due: e.target.value })} />
+          </div>
+        </div>
         <button className="btn sm" onClick={() => saveEdit(t)}>Lagre</button>
         <button className="lnk" onClick={() => setEditingId(null)}>Avbryt</button>
       </td>
@@ -1536,6 +1719,8 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit, showToast, 
         <td>
           <div className="ht" style={isOpen ? undefined : { textDecoration: "line-through", textDecorationColor: "var(--line)", color: "var(--muted)" }}>
             {t.title}
+            {prioBadge(t.prio)}
+            {dueBadge(t.due, isOpen)}
           </div>
           <div className="hs">{t.sub}</div>
           {t.descr ? <div className="hs" style={{ whiteSpace: "pre-wrap", marginTop: 4, opacity: 0.85 }}>{t.descr}</div> : null}
@@ -1599,16 +1784,55 @@ function TasksView({ data, addTask, updateTask, deleteTask, canEdit, showToast, 
               </select>
             </div>
           </div>
-          <button className="btn ghost sm" onClick={submit} disabled={busy}>+ Legg til oppgave</button>
+          <div className="f2">
+            <div className="field">
+              <label>Prioritet</label>
+              <select className="select" value={form.prio} onChange={(e) => setForm({ ...form, prio: e.target.value })}>
+                {TASK_PRIOS.map(([v, l]) => (
+                  <option key={v} value={v}>{l}</option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label>Frist (valgfritt)</label>
+              <input className="input" type="date" value={form.due} onChange={(e) => setForm({ ...form, due: e.target.value })} />
+            </div>
+          </div>
+          <button className="btn ghost sm" onClick={submit} disabled={busy || !form.title.trim()}>
+            {busy ? "Lagrer …" : "+ Legg til oppgave"}
+          </button>
         </div>
       ) : null}
+      <div className="chips no-print" style={{ marginBottom: 18, alignItems: "center" }}>
+        <select className="select" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} value={filterWho} onChange={(e) => setFilterWho(e.target.value)}>
+          <option value="Alle">Alle ansvarlige</option>
+          {team.map((n) => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+        <button className={"chip " + (filterPrio === "Alle" ? "on" : "")} onClick={() => setFilterPrio("Alle")}>Alle</button>
+        <button className={"chip " + (filterPrio === "hast" ? "on" : "")} onClick={() => setFilterPrio("hast")}>Haster</button>
+        {TASK_PRIOS.filter(([v]) => v).map(([v, l]) => (
+          <button key={v} className={"chip " + (filterPrio === v ? "on" : "")} onClick={() => setFilterPrio(v)}>{l}</button>
+        ))}
+        <select className="select" style={{ width: "auto", padding: "9px 11px", fontSize: 12, marginLeft: "auto" }} value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+          <option value="nyeste">Nyeste først</option>
+          <option value="frist">Frist først</option>
+          <option value="prioritet">Prioritet først</option>
+        </select>
+      </div>
       <div className="sechead">
         <span className="eyebrow gold">Krever handling</span>
-        <span className="mut">{open.length} åpne</span>
+        <span className="mut">{open.length} åpne{filtering ? " (filtrert)" : ""}</span>
       </div>
       <div className="tscroll">
         <table className="htbl"><tbody>{open.map((t, i) => row(t, i, true))}</tbody></table>
       </div>
+      {open.length === 0 ? (
+        <div className="mut" style={{ padding: "18px 0" }}>
+          {filtering ? "Ingen oppgaver matcher filteret." : "Ingen åpne oppgaver — bra jobba."}
+        </div>
+      ) : null}
       {done.length ? (
         <div>
           <div className="rule" />
@@ -1700,7 +1924,20 @@ function HygieneView({ canEdit }) {
   const [message, setMessage] = useState("");
   const inputRef = useRef(null);
 
-  const load = () => api("/api/hygiene").then((r) => r.json()).then(setData).catch(() => {});
+  const [loadError, setLoadError] = useState(false);
+  // A DB hiccup must show as an error with retry — not as the misleading
+  // "Ingen logger importert ennå" empty state.
+  const load = async () => {
+    setLoadError(false);
+    const r = await api("/api/hygiene");
+    if (!r.ok) {
+      setLoadError(true);
+      return;
+    }
+    const body = await r.json().catch(() => null);
+    if (body && !body.error) setData(body);
+    else setLoadError(true);
+  };
   useEffect(() => { load(); }, []);
 
   const upload = async (files) => {
@@ -1710,7 +1947,8 @@ function HygieneView({ canEdit }) {
     setMessage("Leser fil …");
     const form = new FormData();
     form.append("file", file);
-    const res = await api("/api/hygiene", { method: "POST", body: form });
+    // Large logger exports legitimately take a while — don't abort at 15s.
+    const res = await api("/api/hygiene", { method: "POST", body: form, timeoutMs: 30000 });
     const body = await res.json().catch(() => ({}));
     setImporting(false);
     if (!res.ok) {
@@ -1807,6 +2045,11 @@ function HygieneView({ canEdit }) {
             </tbody>
           </table>
         </div>
+      ) : loadError ? (
+        <div className="mut" style={{ marginTop: 10 }}>
+          Fikk ikke lastet hygieniseringsdataene.{" "}
+          <button className="lnk" style={{ padding: 0 }} onClick={load}>Prøv igjen</button>
+        </div>
       ) : data ? (
         <div className="mut" style={{ marginTop: 10 }}>
           Ingen logger importert ennå. Koble Center 374 til PC-en, eksporter siste periode, og last opp filen her.
@@ -1820,7 +2063,14 @@ function HygieneView({ canEdit }) {
 /* Innstillinger                                                       */
 /* ------------------------------------------------------------------ */
 
-function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSystem, updateSystem, deleteSystem }) {
+function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSystem, updateSystem, deleteSystem, addMember, updateMember, deleteMember }) {
+  const isAdmin = data.user?.access === "Admin";
+  const [memberAdding, setMemberAdding] = useState(false);
+  const EMPTY_MEMBER = { name: "", role: "", access: "Redigering", password: "" };
+  const [memberForm, setMemberForm] = useState(EMPTY_MEMBER);
+  const [memberEditId, setMemberEditId] = useState(null);
+  const [memberBusy, setMemberBusy] = useState(false);
+  const [aiTest, setAiTest] = useState("");
   const systems = data.systems.map((s) => s.id);
   const latest = latestBySystem(data.readings, systems);
   const [adding, setAdding] = useState(false);
@@ -1943,16 +2193,126 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
               </div>
             );
           })}
-          <div className="sechead" style={{ marginTop: 36 }}><span className="eyebrow">Team</span></div>
-          {data.team.map((t) => (
-            <div className="setrow" key={t.id}>
-              <div>
-                <div className="sl">{t.name}</div>
-                <div className="ss">{t.role}</div>
+          <div className="sechead" style={{ marginTop: 36 }}>
+            <span className="eyebrow">Team</span>
+            {isAdmin ? (
+              <button className="btn ghost sm" onClick={() => { setMemberAdding(!memberAdding); setMemberEditId(null); setMemberForm(EMPTY_MEMBER); }}>
+                {memberAdding ? "Avbryt" : "+ Nytt medlem"}
+              </button>
+            ) : null}
+          </div>
+          {memberAdding ? (
+            <div className="card" style={{ padding: "18px 20px", marginBottom: 16 }}>
+              <div className="f2" style={{ gap: 12, marginBottom: 12 }}>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Navn</label>
+                  <input className="input" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Rolle (fritekst)</label>
+                  <input className="input" placeholder="F.eks. Drift · helg" value={memberForm.role} onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })} />
+                </div>
               </div>
-              <span className="mut" style={{ fontSize: 11 }}>{t.access}</span>
+              <div className="f2" style={{ gap: 12, marginBottom: 12 }}>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Tilgang</label>
+                  <select className="select" value={memberForm.access} onChange={(e) => setMemberForm({ ...memberForm, access: e.target.value })}>
+                    <option>Admin</option>
+                    <option>Redigering</option>
+                    <option>Kun lesing</option>
+                  </select>
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Passord (minst 6 tegn)</label>
+                  <input className="input" type="password" value={memberForm.password} onChange={(e) => setMemberForm({ ...memberForm, password: e.target.value })} />
+                </div>
+              </div>
+              <button
+                className="btn sm"
+                disabled={memberBusy || !memberForm.name.trim() || memberForm.password.length < 6}
+                onClick={async () => {
+                  setMemberBusy(true);
+                  const ok = await addMember(memberForm);
+                  setMemberBusy(false);
+                  if (ok) { setMemberAdding(false); setMemberForm(EMPTY_MEMBER); }
+                }}
+              >
+                {memberBusy ? "Lagrer …" : "Legg til medlem"}
+              </button>
             </div>
-          ))}
+          ) : null}
+          {data.team.map((t) =>
+            memberEditId === t.id ? (
+              <div className="card" style={{ padding: "18px 20px", marginBottom: 12 }} key={t.id}>
+                <div className="f2" style={{ gap: 12, marginBottom: 12 }}>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Navn</label>
+                    <input className="input" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} />
+                  </div>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Rolle</label>
+                    <input className="input" value={memberForm.role} onChange={(e) => setMemberForm({ ...memberForm, role: e.target.value })} />
+                  </div>
+                </div>
+                <div className="f2" style={{ gap: 12, marginBottom: 12 }}>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Tilgang</label>
+                    <select className="select" value={memberForm.access} onChange={(e) => setMemberForm({ ...memberForm, access: e.target.value })}>
+                      <option>Admin</option>
+                      <option>Redigering</option>
+                      <option>Kun lesing</option>
+                    </select>
+                  </div>
+                  <div className="field" style={{ marginBottom: 0 }}>
+                    <label>Nytt passord (valgfritt)</label>
+                    <input className="input" type="password" placeholder="La stå tomt for å beholde" value={memberForm.password} onChange={(e) => setMemberForm({ ...memberForm, password: e.target.value })} />
+                  </div>
+                </div>
+                <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                  <button
+                    className="btn sm"
+                    disabled={memberBusy}
+                    onClick={async () => {
+                      setMemberBusy(true);
+                      const ok = await updateMember({ id: t.id, ...memberForm });
+                      setMemberBusy(false);
+                      if (ok) setMemberEditId(null);
+                    }}
+                  >
+                    Lagre
+                  </button>
+                  <button className="lnk" onClick={() => setMemberEditId(null)}>Avbryt</button>
+                  <button
+                    className="lnk g"
+                    style={{ marginLeft: "auto" }}
+                    onClick={() => {
+                      if (window.confirm("Slette «" + t.name + "» fra teamet? Vedkommende mister tilgang til dashbordet.")) {
+                        deleteMember(t.id);
+                        setMemberEditId(null);
+                      }
+                    }}
+                  >
+                    Slett
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="setrow" key={t.id}>
+                <div>
+                  <div className="sl">{t.name}</div>
+                  <div className="ss">{t.role}</div>
+                </div>
+                <span className="trange">
+                  <span className="mut" style={{ fontSize: 11 }}>{t.access}</span>
+                  {isAdmin ? (
+                    <button className="lnk" onClick={() => { setMemberEditId(t.id); setMemberAdding(false); setMemberForm({ name: t.name, role: t.role, access: t.access, password: "" }); }}>
+                      Endre
+                    </button>
+                  ) : null}
+                </span>
+              </div>
+            )
+          )}
           <div className="sechead" style={{ marginTop: 36 }}><span className="eyebrow">Bytt passord</span></div>
           <div className="field">
             <label>Nåværende passord</label>
@@ -2039,12 +2399,40 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
             </div>
             <span className="pill">Manuell import</span>
           </div>
-          <div className="setrow">
-            <div>
+          <div className="setrow" style={{ alignItems: "flex-start" }}>
+            <div style={{ flex: 1 }}>
               <div className="sl">AI-funksjoner</div>
-              <div className="ss">Svar-utkast og hjernedump{data.aiEnabled ? "" : " · legg inn ANTHROPIC_API_KEY på Vercel-prosjektet for å aktivere"}</div>
+              <div className="ss">
+                Hjernedump-tolking · AI-triage av innboksen · svar-utkast
+                {data.aiEnabled ? <> · modell {data.aiModel}</> : null}
+              </div>
+              {data.aiEnabled ? null : (
+                <div className="ss" style={{ marginTop: 10, lineHeight: 1.7 }}>
+                  <b>Slik aktiverer du (5 min, én gang):</b><br />
+                  1. Lag en API-nøkkel på <b>console.anthropic.com</b> → API keys (sett gjerne en månedlig kostnadsgrense).<br />
+                  2. Åpne <b>vercel.com</b> → prosjektet <b>verminord-dash</b> → Settings → Environment Variables.<br />
+                  3. Legg til <b>ANTHROPIC_API_KEY</b> = nøkkelen (Production) og trykk Save.<br />
+                  4. Gå til Deployments → «…» på øverste deploy → <b>Redeploy</b>. Ferdig — denne raden viser «Aktivert».
+                </div>
+              )}
+              {aiTest ? <div className="ss" style={{ marginTop: 8, color: "var(--navy)" }}>{aiTest}</div> : null}
             </div>
-            <span className={"pill" + (data.aiEnabled ? "" : " warn")}>{data.aiEnabled ? "Aktivert" : "Ikke konfigurert"}</span>
+            <span className="trange">
+              <span className={"pill" + (data.aiEnabled ? "" : " warn")}>{data.aiEnabled ? "Aktivert" : "Ikke konfigurert"}</span>
+              {data.aiEnabled && canEdit ? (
+                <button
+                  className="btn ghost sm"
+                  onClick={async () => {
+                    setAiTest("Tester …");
+                    const res = await api("/api/ai/test", { method: "POST", timeoutMs: 35000 });
+                    const body = await res.json().catch(() => ({}));
+                    setAiTest(res.ok ? "✓ " + body.svar : body.error || "Testen feilet.");
+                  }}
+                >
+                  Test AI
+                </button>
+              ) : null}
+            </span>
           </div>
         </div>
       </div>
@@ -2056,8 +2444,15 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
 /* Innboks                                                             */
 /* ------------------------------------------------------------------ */
 
-const INBOX_STATUSES = [["open", "Åpne"], ["done", "Ferdige"], ["all", "Alle"]];
-const INBOX_CATS = ["Alle", "Svar kreves", "Til info"];
+// One flat tab row — the old status-toggle + category-chips + draft-chip
+// combination made three controls out of one decision.
+const INBOX_TABS = [
+  ["apne", "Åpne", { status: "open", category: "", draft: false }],
+  ["svar", "Svar kreves", { status: "open", category: "Svar kreves", draft: false }],
+  ["utkast", "Utkast klare", { status: "open", category: "", draft: true }],
+  ["ferdige", "Ferdige", { status: "done", category: "", draft: false }],
+  ["alle", "Alle", { status: "all", category: "", draft: false }],
+];
 
 function prioColor(p) {
   if (p === "høy") return "var(--gold)";
@@ -2073,8 +2468,13 @@ function prioLabel(p) {
 function InboxView({ data, canEdit, addTask, setView, showToast }) {
   const [items, setItems] = useState(data.inbox || []);
   const [total, setTotal] = useState(data.inboxCounts?.total || 0);
-  const [status, setStatus] = useState("open");
-  const [category, setCategory] = useState("Alle");
+  const [counts, setCounts] = useState({
+    open: data.inboxCounts?.total || 0,
+    urgent: data.inboxCounts?.urgent || 0,
+    high_priority: data.inboxCounts?.high_priority || 0,
+    drafts: 0,
+  });
+  const [tab, setTab] = useState("apne");
   const [source, setSource] = useState("Alle");
   const [q, setQ] = useState("");
   const [expanded, setExpanded] = useState(null);
@@ -2082,25 +2482,25 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
   const [loading, setLoading] = useState(false);
   const [offset, setOffset] = useState(0);
   const [syncing, setSyncing] = useState(false);
+  const [enriching, setEnriching] = useState(false);
   const [lastSync, setLastSync] = useState(data.inboxLastSync || null);
-  const [draftOnly, setDraftOnly] = useState(false);
   const [drafting, setDrafting] = useState(null);
   const searchTimer = useRef(null);
 
+  const tabDef = (key) => INBOX_TABS.find(([k]) => k === key)[2];
+
   const fetchInbox = async (params = {}) => {
-    const s = params.status ?? status;
-    const c = params.category ?? category;
+    const t = tabDef(params.tab ?? tab);
     const src = params.source ?? source;
     const search = params.q ?? q;
     const off = params.offset ?? 0;
-    const d = params.draft ?? draftOnly;
 
     setLoading(true);
-    const qs = new URLSearchParams({ status: s, limit: "50", offset: String(off) });
-    if (c && c !== "Alle") qs.set("category", c);
+    const qs = new URLSearchParams({ status: t.status, limit: "50", offset: String(off) });
+    if (t.category) qs.set("category", t.category);
+    if (t.draft) qs.set("draft", "1");
     if (src && src !== "Alle") qs.set("source", src);
     if (search) qs.set("q", search);
-    if (d) qs.set("draft", "1");
 
     const res = await api("/api/inbox?" + qs);
     if (res.ok) {
@@ -2111,6 +2511,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
         setItems(body.items);
       }
       setTotal(body.total);
+      if (body.counts) setCounts(body.counts);
       setOffset(off);
     }
     setLoading(false);
@@ -2118,15 +2519,17 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
 
   useEffect(() => { fetchInbox(); }, []);
 
-  const applyFilter = (key, val) => {
-    const next = { status, category, source, q, draft: draftOnly, offset: 0, [key]: val };
-    if (key === "status") setStatus(val);
-    if (key === "category") setCategory(val);
-    if (key === "source") setSource(val);
-    if (key === "draft") setDraftOnly(val);
+  const applyTab = (key) => {
+    setTab(key);
     setSelected(new Set());
     setExpanded(null);
-    fetchInbox(next);
+    fetchInbox({ tab: key, offset: 0 });
+  };
+
+  const applySource = (val) => {
+    setSource(val);
+    setSelected(new Set());
+    fetchInbox({ source: val, offset: 0 });
   };
 
   const handleSearch = (val) => {
@@ -2135,16 +2538,21 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     searchTimer.current = setTimeout(() => fetchInbox({ q: val, offset: 0 }), 350);
   };
 
-  const markDone = async (id) => {
-    setItems((prev) => prev.filter((m) => m.id !== id));
-    setTotal((t) => t - 1);
-    await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: "done" }) });
+  // Status changes update the row in place; the row leaves the list only if
+  // it no longer belongs under the current tab ("Alle" keeps it visible).
+  const setItemStatus = async (id, status) => {
+    const keeps = tabDef(tab).status === "all";
+    setItems((prev) =>
+      keeps ? prev.map((m) => (m.id === id ? { ...m, status } : m)) : prev.filter((m) => m.id !== id)
+    );
+    if (!keeps) setTotal((t) => Math.max(0, t - 1));
+    setCounts((c) => ({ ...c, open: Math.max(0, c.open + (status === "done" ? -1 : 1)) }));
+    const res = await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status }) });
+    if (!res.ok && showToast) showToast(await failMsg(res, "Kunne ikke oppdatere e-posten — last siden på nytt."));
   };
 
-  const reopen = async (id) => {
-    setItems((prev) => prev.filter((m) => m.id !== id));
-    await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, status: "open" }) });
-  };
+  const markDone = (id) => setItemStatus(id, "done");
+  const reopen = (id) => setItemStatus(id, "open");
 
   const toggleStar = async (id) => {
     const item = items.find((m) => m.id === id);
@@ -2163,9 +2571,11 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
   const batchDone = async () => {
     const ids = [...selected];
     setItems((prev) => prev.filter((m) => !selected.has(m.id)));
-    setTotal((t) => t - ids.length);
+    setTotal((t) => Math.max(0, t - ids.length));
+    setCounts((c) => ({ ...c, open: Math.max(0, c.open - ids.length) }));
     setSelected(new Set());
-    await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "batch_done", ids }) });
+    const res = await api("/api/inbox", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "batch_done", ids }) });
+    if (!res.ok && showToast) showToast(await failMsg(res, "Kunne ikke merke alle som ferdige — last siden på nytt."));
   };
 
   const createTask = async (m) => {
@@ -2181,10 +2591,22 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     });
   };
 
-  const openCount = data.inboxCounts?.total || 0;
-  const urgentCount = data.inboxCounts?.urgent || 0;
-  const highPrio = data.inboxCounts?.high_priority || items.filter((m) => m.priority === "høy").length;
   const sources = [...new Set(items.map((m) => m.source || "gmail"))];
+  const selectable = canEdit && tabDef(tab).status === "open";
+
+  const enrichNow = async () => {
+    if (enriching) return;
+    setEnriching(true);
+    const res = await api("/api/inbox/enrich", { method: "POST", timeoutMs: 55000 });
+    setEnriching(false);
+    if (!res.ok) {
+      if (showToast) showToast(await failMsg(res, "AI-triage feilet — prøv igjen."));
+      return;
+    }
+    const body = await res.json();
+    if (showToast) showToast("AI-triage ferdig: " + body.oppdatert + " e-poster vurdert på nytt");
+    fetchInbox({ offset: 0 });
+  };
 
   const copyDraft = async (text) => {
     try {
@@ -2246,56 +2668,60 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
         Innboks<span className="li"> e-post</span>
       </div>
       <div className="herosub">
-        {openCount} åpne · {urgentCount} krever svar · Triage ved hver synk
+        {counts.open} åpne · {counts.urgent} krever svar · {counts.drafts} utkast klare
       </div>
       <div className="rule" />
 
       <div className="metrics3">
         <div className="m3">
           <div className="k">Åpne</div>
-          <div className="v">{openCount}</div>
+          <div className="v">{counts.open}</div>
         </div>
         <div className="m3">
           <div className="k">Høy prioritet</div>
-          <div className="v gold">{highPrio}</div>
+          <div className="v gold">{counts.high_priority}</div>
         </div>
         <div className="m3">
           <div className="k">Svar kreves</div>
-          <div className="v">{urgentCount}</div>
+          <div className="v">{counts.urgent}</div>
         </div>
       </div>
       <div className="rule" />
 
-      <div className="sechead">
+      <div className="sechead" style={{ flexWrap: "wrap", gap: 10 }}>
         <div className="toggle">
-          {INBOX_STATUSES.map(([key, label]) => (
-            <button key={key} className={"tbtn " + (status === key ? "on" : "")} onClick={() => applyFilter("status", key)}>{label}</button>
+          {INBOX_TABS.map(([key, label]) => (
+            <button key={key} className={"tbtn " + (tab === key ? "on" : "")} onClick={() => applyTab(key)}>
+              {label}
+              {key === "svar" && counts.urgent ? " (" + counts.urgent + ")" : ""}
+              {key === "utkast" && counts.drafts ? " (" + counts.drafts + ")" : ""}
+            </button>
           ))}
         </div>
-        <input
-          className="input"
-          placeholder="Søk i e-post..."
-          value={q}
-          onChange={(e) => handleSearch(e.target.value)}
-          style={{ maxWidth: 220, padding: "9px 14px", fontSize: 13 }}
-        />
+        <span style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          {canEdit && data.aiEnabled ? (
+            <button className="btn sm ghost" onClick={enrichNow} disabled={enriching} title="Claude leser de åpne e-postene på nytt: bedre sammendrag, riktig prioritet, støy arkiveres.">
+              {enriching ? "Vurderer …" : "AI-triage"}
+            </button>
+          ) : null}
+          <input
+            className="input"
+            placeholder="Søk i e-post..."
+            value={q}
+            onChange={(e) => handleSearch(e.target.value)}
+            style={{ maxWidth: 220, padding: "9px 14px", fontSize: 13 }}
+          />
+        </span>
       </div>
 
-      <div className="chips" style={{ marginBottom: 16 }}>
-        {INBOX_CATS.map((c) => (
-          <button key={c} className={"chip " + (category === c ? "on" : "")} onClick={() => applyFilter("category", c)}>{c}</button>
-        ))}
-        <button className={"chip " + (draftOnly ? "on" : "")} onClick={() => applyFilter("draft", !draftOnly)}>Utkast klare</button>
-        {sources.length > 1 && (
-          <>
-            <span style={{ width: 1, height: 24, background: "var(--line)", margin: "0 4px" }} />
-            <button className={"chip " + (source === "Alle" ? "on" : "")} onClick={() => applyFilter("source", "Alle")}>Alle kilder</button>
-            {sources.map((s) => (
-              <button key={s} className={"chip " + (source === s ? "on" : "")} onClick={() => applyFilter("source", s)}>{s}</button>
-            ))}
-          </>
-        )}
-      </div>
+      {sources.length > 1 && (
+        <div className="chips" style={{ marginBottom: 16 }}>
+          <button className={"chip " + (source === "Alle" ? "on" : "")} onClick={() => applySource("Alle")}>Alle kilder</button>
+          {sources.map((s) => (
+            <button key={s} className={"chip " + (source === s ? "on" : "")} onClick={() => applySource(s)}>{s}</button>
+          ))}
+        </div>
+      )}
 
       {selected.size > 0 && canEdit && (
         <div className="inbox-batch">
@@ -2308,10 +2734,10 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
       <div className="tscroll">
         <table className="htbl">
           <tbody>
-            {items.map((m, i) => (
+            {items.map((m) => (
               <Fragment key={m.id}>
                 <tr style={{ cursor: "pointer" }} onClick={() => setExpanded(expanded === m.id ? null : m.id)}>
-                  {canEdit && status === "open" && (
+                  {selectable && (
                     <td style={{ width: 28, paddingRight: 0 }} onClick={(e) => e.stopPropagation()}>
                       <input
                         type="checkbox"
@@ -2327,8 +2753,8 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
                     </button>
                   </td>
                   <td style={{ width: 4, padding: 0, background: prioColor(m.priority) }} />
-                  <td className="hn">{String(i + 1).padStart(2, "0")}</td>
-                  <td>
+                  <td style={{ paddingLeft: 14 }}>
+                    <div className="hs" style={{ marginTop: 0, marginBottom: 3 }}>{m.sender} · {fmtReceived(m.received_at)}</div>
                     <div className="ht">
                       {m.link ? (
                         <a href={m.link} target="_blank" rel="noreferrer" style={{ color: "inherit", textDecoration: "none" }} onClick={(e) => e.stopPropagation()}>
@@ -2338,7 +2764,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
                         m.subject
                       )}
                     </div>
-                    <div className="hs">{m.sender} · {fmtReceived(m.received_at)} — {m.summary}</div>
+                    {m.summary ? <div className="inbox-summary">{m.summary}</div> : null}
                   </td>
                   <td className="rt">
                     {m.source && m.source !== "gmail" && <span className="tag" style={{ marginRight: 6, fontSize: 8, padding: "3px 6px" }}>{m.source}</span>}
@@ -2357,7 +2783,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
                 </tr>
                 {expanded === m.id && (
                   <tr>
-                    <td colSpan={canEdit && status === "open" ? 7 : 6} className="inbox-detail">
+                    <td colSpan={selectable ? 6 : 5} className="inbox-detail">
                       <div className="inbox-meta">
                         <div><span className="mk">Fra</span><span className="mv">{m.sender}</span></div>
                         <div><span className="mk">Mottatt</span><span className="mv">{fmtReceived(m.received_at)}</span></div>
@@ -2454,7 +2880,10 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
 
       {items.length === 0 && !loading && (
         <div style={{ textAlign: "center", padding: "40px 0", color: "var(--muted)", fontSize: 13 }}>
-          {status === "open" ? "Ingen åpne e-poster — alt er håndtert." : "Ingen e-poster funnet."}
+          {tab === "apne" ? "Ingen åpne e-poster — alt er håndtert." :
+           tab === "svar" ? "Ingen e-poster venter på svar." :
+           tab === "utkast" ? "Ingen ferdige utkast — åpne en e-post og trykk «Lag svar-utkast»." :
+           "Ingen e-poster funnet."}
         </div>
       )}
 
@@ -2518,7 +2947,9 @@ function todayLine() {
   );
 }
 
-const EMPTY_READING = { system: "CFT1", date: isoDaysAgo(0), temp: 22, ph: 7.5, fukt: 65, for_l: 0, notat: "", avvik: false };
+// Computed per call: a module-level constant froze "today" at page load, so a
+// tab left open overnight silently logged readings on yesterday's date.
+const emptyReading = (system = "CFT1") => ({ system, date: isoDaysAgo(0), temp: 22, ph: 7.5, fukt: 65, for_l: 0, notat: "", avvik: false });
 
 export default function App() {
   const [data, setData] = useState(null);
@@ -2535,7 +2966,7 @@ export default function App() {
   const [clock, setClock] = useState("");
   const [loadFailed, setLoadFailed] = useState(false);
   const toastTimer = useRef(null);
-  const [form, setForm] = useState(EMPTY_READING);
+  const [form, setForm] = useState(emptyReading());
 
   const boot = () => {
     setLoadFailed(false);
@@ -2555,6 +2986,9 @@ export default function App() {
         setNeedsLogin(false);
         setData(payload);
         setTargets(payload.targets);
+        // The Logg form must never point at a retired/renamed system.
+        const active = payload.systems.filter((s) => s.status === "I drift").map((s) => s.id);
+        setForm((f) => (active.length && !active.includes(f.system) ? { ...f, system: active[0] } : f));
       })
       .catch(() => setLoadFailed(true));
   };
@@ -2608,13 +3042,15 @@ export default function App() {
   };
 
   const saveReading = async () => {
+    // Blank fields go through as-is — the API stores them as NULL ("not
+    // measured"), never as a fabricated 0.
     const payload = {
       system: form.system,
       date: form.date,
-      temp: Number(form.temp),
-      ph: Number(form.ph),
-      fukt: Number(form.fukt),
-      for_l: Number(form.for_l),
+      temp: form.temp,
+      ph: form.ph,
+      fukt: form.fukt,
+      for_l: form.for_l,
       notat: form.notat,
       avvik: form.avvik,
     };
@@ -2626,7 +3062,7 @@ export default function App() {
       });
       if (!res.ok) return reportError(res, "Kunne ikke oppdatere målingen.");
       const updated = await res.json();
-      setData((d) => ({ ...d, readings: d.readings.map((r) => (r.id === updated.id ? updated : r)) }));
+      setData((d) => ({ ...d, readings: sortReadings(d.readings.map((r) => (r.id === updated.id ? updated : r))) }));
       setEditingReadingId(null);
       showToast("Måling oppdatert for " + form.system + " · " + fmtDate(form.date));
       return;
@@ -2638,13 +3074,16 @@ export default function App() {
     });
     if (!res.ok) return reportError(res, "Kunne ikke lagre målingen.");
     const created = await res.json();
-    setData((d) => ({ ...d, readings: [created, ...d.readings] }));
+    // Insert in sort order — a backdated entry prepended at index 0 would be
+    // mistaken for the newest value in every "latest per system" panel.
+    setData((d) => ({ ...d, readings: sortReadings([created, ...d.readings]) }));
     showToast("Måling loggført for " + form.system + " · " + fmtDate(form.date));
   };
 
   const cancelEditReading = () => {
     setEditingReadingId(null);
-    setForm(EMPTY_READING);
+    const firstActive = data?.systems?.find((s) => s.status === "I drift")?.id || "CFT1";
+    setForm(emptyReading(firstActive));
   };
 
   const deleteReading = async (r) => {
@@ -2666,6 +3105,7 @@ export default function App() {
     }
     const created = await res.json();
     setData((d) => ({ ...d, tasks: [...d.tasks, created] }));
+    showToast("Oppgave lagt til: «" + created.title + "»");
     return true;
   };
 
@@ -2709,6 +3149,7 @@ export default function App() {
     if (!res.ok) return reportError(res, "Kunne ikke lagre prosjektet.");
     const updated = await res.json();
     setData((d) => ({ ...d, projects: d.projects.map((p) => (p.id === updated.id ? updated : p)) }));
+    showToast("Prosjekt lagret: «" + updated.title + "» · " + updated.col);
   };
 
   const deleteProject = async (id) => {
@@ -2846,15 +3287,61 @@ export default function App() {
   };
 
   const saveTargets = async () => {
-    const clean = targets.map((t) => ({ metric: t.metric, min: Number(t.min), max: Number(t.max) }));
-    setData((d) => ({ ...d, targets: clean }));
-    await api("/api/targets", {
+    // Half-typed rows (a blank min/max mid-edit) are skipped by the server;
+    // it returns the authoritative set so the UI never shows a 0-target.
+    const res = await api("/api/targets", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ targets: clean }),
+      body: JSON.stringify({ targets }),
     });
+    if (!res.ok) return reportError(res, "Kunne ikke lagre målområdene.");
+    const body = await res.json();
+    if (Array.isArray(body.targets)) setData((d) => ({ ...d, targets: body.targets }));
   };
 
+
+  const addMember = async (member) => {
+    const res = await api("/api/users", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(member),
+    });
+    if (!res.ok) {
+      await reportError(res, "Kunne ikke legge til teammedlemmet.");
+      return false;
+    }
+    const created = await res.json();
+    setData((d) => ({ ...d, team: [...d.team, created] }));
+    showToast(created.name + " er lagt til i teamet");
+    return true;
+  };
+
+  const updateMember = async (member) => {
+    const res = await api("/api/users", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(member),
+    });
+    if (!res.ok) {
+      await reportError(res, "Kunne ikke lagre teammedlemmet.");
+      return false;
+    }
+    const updated = await res.json();
+    setData((d) => ({ ...d, team: d.team.map((t) => (t.id === updated.id ? updated : t)) }));
+    showToast("Team oppdatert");
+    return true;
+  };
+
+  const deleteMember = async (id) => {
+    const res = await api("/api/users", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    if (!res.ok) return reportError(res, "Kunne ikke slette teammedlemmet.");
+    setData((d) => ({ ...d, team: d.team.filter((t) => t.id !== id) }));
+    showToast("Teammedlem fjernet");
+  };
 
   const newestApp = data.readings.find((r) => r.source === "app");
   const syncLine = newestApp ? "App-logg " + fmtDate(newestApp.date) : "Skylagring aktiv";
@@ -2946,6 +3433,8 @@ export default function App() {
               addPartner={addPartner}
               updatePartner={updatePartner}
               deletePartner={deletePartner}
+              showToast={showToast}
+              refreshAll={boot}
             />
           )}
           {view === "innstillinger" && (
@@ -2958,10 +3447,19 @@ export default function App() {
               addSystem={addSystem}
               updateSystem={updateSystem}
               deleteSystem={deleteSystem}
+              addMember={addMember}
+              updateMember={updateMember}
+              deleteMember={deleteMember}
+              refreshAll={boot}
             />
           )}
         </div>
       </main>
+      {/* Global toast — success/error feedback must be visible on every view,
+          not only inside the Logg card. */}
+      {toast ? (
+        <div className="toast global no-print"><span className="dot" />{toast}</div>
+      ) : null}
     </div>
   );
 }

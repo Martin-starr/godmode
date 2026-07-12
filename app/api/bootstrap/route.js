@@ -42,8 +42,8 @@ export const GET = guarded(async (req, ctx, user) => {
   const systems = await sql`select id, status from dash.systems order by sort`;
   const readings = await sql`select id, rid, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source, logged_at, editable
     from dash.readings_all order by date desc, logged_at desc nulls last, rid desc nulls last, id desc`;
-  const tasks = await sql`select id, title, sub, descr, tag, tagcls, who, open from dash.tasks order by id`;
-  const projects = await sql`select id, col, tag, title, descr, who from dash.projects order by sort, id`;
+  const tasks = await sql`select id, title, sub, descr, tag, tagcls, who, open, prio, due from dash.tasks order by id`;
+  const projects = await sql`select id, col, tag, title, descr, who, due from dash.projects order by sort, id`;
   const checklist = await sql`select id, project_id, text, done from dash.checklist order by sort, id`;
   const partners = await sql`select id, name, type, status, tagcls, next_step, who from dash.partners order by id`;
   const files = await sql`select id, name, cat, ver, date, size, (content is not null) as stored from dash.files order by id desc`;
@@ -76,5 +76,6 @@ export const GET = guarded(async (req, ctx, user) => {
     inboxCounts: inboxCounts[0] || { total: 0, urgent: 0 },
     inboxLastSync,
     aiEnabled: !!process.env.ANTHROPIC_API_KEY,
+    aiModel: process.env.ANTHROPIC_API_KEY ? process.env.DASH_AI_MODEL || "claude-opus-4-8" : null,
   });
 });

@@ -1,22 +1,25 @@
 import { db } from "@/lib/db";
 import { json, err, guarded } from "@/lib/http";
+import { clean, validDate } from "@/lib/readings";
 
 export const runtime = "nodejs";
 export const maxDuration = 15;
 
 export const PUT = guarded(
   async (req, { params }) => {
-    const body = await req.json();
+    const r = clean(await req.json());
+    if (!r.system || !validDate(r.date)) return err("System og dato må fylles ut.");
+    if (r.temp == null && r.ph == null && r.fukt == null) return err("Fyll ut minst én måling (temp, pH eller fukt).");
     const sql = db();
     const rows = await sql`update dash.readings set
-        system = ${String(body.system || "")},
-        date = ${String(body.date || "").slice(0, 10)},
-        temp = ${Number(body.temp) || 0},
-        ph = ${Number(body.ph) || 0},
-        fukt = ${Number(body.fukt) || 0},
-        for_l = ${Number(body.for_l) || 0},
-        notat = ${String(body.notat || "")},
-        avvik = ${body.avvik ? 1 : 0}
+        system = ${r.system},
+        date = ${r.date},
+        temp = ${r.temp},
+        ph = ${r.ph},
+        fukt = ${r.fukt},
+        for_l = ${r.for_l},
+        notat = ${r.notat},
+        avvik = ${r.avvik}
       where id = ${Number(params.id)} and source <> 'sheets'
       returning id, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source`;
     if (!rows.length) return err("Målingen finnes ikke, eller kommer fra Sheets og kan ikke endres.", 404);

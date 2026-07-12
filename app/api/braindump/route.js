@@ -43,6 +43,8 @@ const OPS_SCHEMA = {
           tag: { type: "string", enum: ["Ny", "Rutine", "Avklar"] },
           who: { type: "string" },
           col: { type: "string", enum: ["Planlagt", "Pågår", "Fullført"] },
+          prio: { type: "string", enum: ["kritisk", "høy", "medium", "lav"] },
+          due: { type: "string" },
           text: { type: "string" },
           done: { type: "boolean" },
           checks: { type: "array", items: { type: "string" } },
@@ -58,7 +60,7 @@ function buildSystem(state) {
     "Du oversetter en hjernedump fra brukeren til konkrete operasjoner mot oppgave- og prosjektlisten.\n\n" +
     "Regler:\n" +
     "- Bruk KUN id-er som finnes i tilstanden under når du endrer/fullfører/sletter noe.\n" +
-    "- Nye oppgaver: op create_task med title (kort), evt. sub (én linje), descr (detaljer), tag (Ny/Rutine/Avklar) og who.\n" +
+    "- Nye oppgaver: op create_task med title (kort), evt. sub (én linje), descr (detaljer), tag (Ny/Rutine/Avklar), who, prio (kritisk/høy/medium/lav) og due (ISO-dato) når teksten antyder hast eller frist.\n" +
     "- Nye prosjekter: op create_project med title, descr, col og evt. checks (liste med sjekkpunkter).\n" +
     "- update_task/update_project: oppgi id og bare feltene som skal endres.\n" +
     "- complete_task/reopen_task/delete_task: oppgi id. add_check: project_id + text. toggle_check: id + done.\n" +

@@ -11,11 +11,17 @@ export const PUT = guarded(
     const sql = db();
     for (const t of body.targets) {
       if (!t.metric) continue;
+      const min = Number(t.min);
+      const max = Number(t.max);
+      // A half-typed target (blank field mid-edit) must not become 0 and
+      // flag every reading as a deviation — skip until both ends are numbers.
+      if (!Number.isFinite(min) || !Number.isFinite(max) || t.min === "" || t.max === "") continue;
       await sql`insert into dash.targets (metric, min, max)
-        values (${String(t.metric)}, ${Number(t.min) || 0}, ${Number(t.max) || 0})
+        values (${String(t.metric)}, ${min}, ${max})
         on conflict (metric) do update set min = excluded.min, max = excluded.max`;
     }
-    return json({ ok: true });
+    const targets = await sql`select metric, min, max from dash.targets`;
+    return json({ ok: true, targets });
   },
   { edit: true }
 );
