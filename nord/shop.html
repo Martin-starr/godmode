@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop — NORD Coffee</title>
+<meta name="description" content="Everything we are roasting right now. Each coffee is roasted to order and shipped within 48 hours.">
+<link rel="stylesheet" href="css/nord.css">
+</head>
+<body>
+
+<header class="site-head">
+  <div class="wrap site-head__inner">
+    <a href="index.html" class="brand">NORD</a>
+    <button class="nav-toggle" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    <nav class="nav">
+      <a href="shop.html" aria-current="page">Shop</a>
+      <a href="our-craft.html">Our Craft</a>
+      <a href="wholesale.html">Wholesale</a>
+      <a href="journal.html">Journal</a>
+      <a href="contact.html">Contact</a>
+      <a href="shop.html" class="nav__cart">CART <sup>0</sup></a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="wrap" style="padding-top:clamp(48px,7vw,96px)">
+    <span class="mono eyebrow reveal">ALL COFFEE</span>
+    <h1 class="reveal" data-d="1">The current lineup.</h1>
+    <p class="lede reveal" data-d="2" style="margin-top:1.4rem">Everything we are roasting right now. Each coffee is roasted to order and shipped within 48 hours.</p>
+  </section>
+
+  <section class="wrap section--tight" style="padding-bottom:0">
+    <div class="filter-row hair-top hair-bot" data-filter>
+      <div class="filter-row__set">
+        <button data-cat="all" class="is-active">All</button>
+        <button data-cat="single">Single Origin</button>
+        <button data-cat="blend">Blends</button>
+        <button data-cat="decaf">Decaf</button>
+        <button data-cat="sub">Subscriptions</button>
+      </div>
+      <span class="mono">SORT: ROAST · PRICE · ORIGIN</span>
+    </div>
+
+    <div class="coffee-grid" style="border-top:none;margin-top:0">
+      <article class="card reveal" data-cat="single">
+        <div class="frame r-1x1" data-ph="KONGA · 1:1"><img src="assets/img/coffee-konga.jpg" alt="Konga" onerror="NORDph(this)"></div>
+        <span class="mono card__spec">ETHIOPIA · WASHED</span>
+        <h3><a href="product.html">Konga</a></h3>
+        <span class="roast card__roast">ROAST <span class="dot">●</span><span class="dot">●</span><span class="dot off">○</span> MEDIUM</span>
+        <div class="card__foot"><span class="card__price">190 kr</span><button class="add" data-add>Add to cart</button></div>
+      </article>
+      <article class="card reveal" data-d="1" data-cat="single">
+        <div class="frame r-1x1" data-ph="HUILA · 1:1"><img src="assets/img/coffee-huila.jpg" alt="Huila" onerror="NORDph(this)"></div>
+        <span class="mono card__spec">COLOMBIA · WASHED</span>
+        <h3>Huila</h3>
+        <span class="roast card__roast">ROAST <span class="dot">●</span><span class="dot">●</span><span class="dot off">○</span> MEDIUM</span>
+        <div class="card__foot"><span class="card__price">175 kr</span><button class="add" data-add>Add to cart</button></div>
+      </article>
+      <article class="card reveal" data-d="2" data-cat="single">
+        <div class="frame r-1x1" data-ph="NYERI AA · 1:1"><img src="assets/img/coffee-nyeri.jpg" alt="Nyeri AA" onerror="NORDph(this)"></div>
+        <span class="mono card__spec">KENYA · WASHED</span>
+        <h3>Nyeri AA</h3>
+        <span class="roast card__roast">ROAST <span class="dot">●</span><span class="dot off">○</span><span class="dot off">○</span> LIGHT</span>
+        <div class="card__foot"><span class="card__price">205 kr</span><button class="add" data-add>Add to cart</button></div>
+      </article>
+      <article class="card reveal" data-cat="single">
+        <div class="frame r-1x1" data-ph="CERRADO · 1:1"><img src="assets/img/coffee-cerrado.jpg" alt="Cerrado" onerror="NORDph(this)"></div>
+        <span class="mono card__spec">BRAZIL · NATURAL</span>
+        <h3>Cerrado</h3>
+        <span class="roast card__roast">ROAST <span class="dot">●</span><span class="dot">●</span><span class="dot">●</span> DARK</span>
+        <div class="card__foot"><span class="card__price">165 kr</span><button class="add" data-add>Add to cart</button></div>
+      </article>
+      <article class="card reveal" data-d="1" data-cat="blend sub">
+        <div class="frame r-1x1" data-ph="DAGLIG · 1:1"><img src="assets/img/coffee-daglig.jpg" alt="Daglig House Blend" onerror="NORDph(this)"></div>
+        <span class="mono card__spec">BLEND · HOUSE</span>
+        <h3>Daglig <span style="color:var(--ink-40);font-size:0.8em">(House Blend)</span></h3>
+        <span class="roast card__roast">ROAST <span class="dot">●</span><span class="dot">●</span><span class="dot">●</span> DARK</span>
+        <div class="card__foot"><span class="card__price">155 kr</span><button class="add" data-add>Add to cart</button></div>
+      </article>
+      <article class="card reveal" data-d="2" data-cat="decaf">
+        <div class="frame r-1x1" data-ph="DECAF · 1:1"><img src="assets/img/coffee-decaf.jpg" alt="Sugarcane Decaf" onerror="NORDph(this)"></div>
+        <span class="mono card__spec">COLOMBIA · EA</span>
+        <h3>Sugarcane Decaf</h3>
+        <span class="roast card__roast">ROAST <span class="dot">●</span><span class="dot">●</span><span class="dot off">○</span> MEDIUM</span>
+        <div class="card__foot"><span class="card__price">175 kr</span><button class="add" data-add>Add to cart</button></div>
+      </article>
+    </div>
+  </section>
+
+  <!-- SUBSCRIPTION BAND -->
+  <section class="wrap section--tight">
+    <div class="sub-band hair-top hair-bot reveal">
+      <p>Subscribe and save 10% — fresh coffee, on your schedule.</p>
+      <a href="#" class="tlink">See subscriptions <span class="arrow">→</span></a>
+    </div>
+  </section>
+</main>
+
+<footer class="site-foot">
+  <div class="wrap">
+    <div class="site-foot__grid">
+      <div><span class="site-foot__brand">NORD</span><p>Small-batch specialty coffee, roasted fresh each week in Oslo.</p></div>
+      <div><h4>Shop</h4><ul><li><a href="shop.html">All coffee</a></li><li><a href="shop.html">Single origin</a></li><li><a href="shop.html">Blends</a></li><li><a href="shop.html">Subscriptions</a></li></ul></div>
+      <div><h4>Company</h4><ul><li><a href="our-craft.html">Our craft</a></li><li><a href="wholesale.html">Wholesale</a></li><li><a href="journal.html">Journal</a></li><li><a href="contact.html">Contact</a></li></ul></div>
+      <div><h4>Follow</h4><ul><li><a href="#">Instagram</a></li><li><a href="#">Newsletter</a></li><li><a href="contact.html">hello@nordcoffee.no</a></li></ul></div>
+    </div>
+    <div class="site-foot__base"><p>© 2026 NORD Coffee · Oslo</p><p>Roasted to order · Shipped within 48h</p></div>
+  </div>
+</footer>
+
+<script src="js/nord.js"></script>
+</body>
+</html>
