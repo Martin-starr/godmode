@@ -1,0 +1,13 @@
+{
+  "extraKnownMarketplaces": {
+    "firecrawl": {
+      "source": {
+        "source": "github",
+        "repo": "firecrawl/firecrawl-claude-plugin"
+      }
+    }
+  },
+  "enabledPlugins": {
+    "firecrawl@firecrawl": true
+  }
+}
