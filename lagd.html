@@ -1798,39 +1798,50 @@ const PX_TYPES = {pxhero:1, pximg:1, pxhscroll:1, pinreveal:1, velmarquee:1};
 const SECTION_DEFS = {
   /* ===== v15 Phase 2 — premium GSAP blocks (real, exportable section types) ===== */
   pxhero:{ label:"Premium Hero (GSAP)", ico:"✦",
-    make:()=>({type:"pxhero",kicker:"Studio",title:"We build the *unforgettable*",sub:"Scroll-driven, cinematic, deliberately slow.",img:IMG("pxhero"),align:"left"}),
+    make:()=>({type:"pxhero",kicker:"Studio",title:"We build the *unforgettable*",sub:"Scroll-driven, cinematic, deliberately slow.",img:IMG("pxhero"),align:"left",reveal:"words",speed:"med",depth:"medium"}),
     fields:[
       ["kicker","Kicker (small line above)","text"],
-      ["title","Headline","textarea","Each word reveals upward on scroll. Wrap a word in *stars* for accent."],
+      ["title","Headline","textarea","Reveals on scroll. Wrap a word in *stars* for accent."],
       ["sub","Subline","textarea"],
       ["align","Alignment","select",[["left","Left"],["center","Centered"]]],
+      ["reveal","Reveal by","select",[["words","Words"],["characters","Characters"],["lines","Lines"]]],
+      ["speed","Reveal speed","select",[["slow","Slow"],["med","Medium"],["fast","Fast"]]],
+      ["depth","Background parallax","select",[["none","None"],["subtle","Subtle"],["medium","Medium"],["deep","Deep"]]],
       ["img","Background image","img","Drifts with a Lenis-driven parallax as you scroll."],
     ]},
   pximg:{ label:"Parallax Image (GSAP)", ico:"▦",
-    make:()=>({type:"pximg",img:IMG("pximg"),caption:"Shot on location",height:"tall"}),
+    make:()=>({type:"pximg",img:IMG("pximg"),caption:"Shot on location",height:"tall",depth:"medium",zoom:false}),
     fields:[
       ["img","Image","img","Drifts with multi-layer depth as the section scrolls past."],
       ["caption","Caption (optional)","text"],
       ["height","Height","select",[["tall","Tall"],["full","Full screen"],["compact","Compact"]]],
+      ["depth","Parallax depth","select",[["subtle","Subtle"],["medium","Medium"],["deep","Deep"]]],
+      ["zoom","Zoom on scroll","toggle"],
     ]},
   pxhscroll:{ label:"Horizontal Scroll (GSAP)", ico:"⇄",
-    make:()=>({type:"pxhscroll",heading:"Selected work",imgs:IMG("hx1")+" | Northern light\n"+IMG("hx2")+" | Coastal house\n"+IMG("hx3")+" | Concrete & oak\n"+IMG("hx4")+" | Long shadow\n"+IMG("hx5")+" | Quiet interior"}),
+    make:()=>({type:"pxhscroll",heading:"Selected work",imgs:IMG("hx1")+" | Northern light\n"+IMG("hx2")+" | Coastal house\n"+IMG("hx3")+" | Concrete & oak\n"+IMG("hx4")+" | Long shadow\n"+IMG("hx5")+" | Quiet interior",scrub:"smooth",panelW:"medium"}),
     fields:[
       ["heading","Heading (optional)","text"],
       ["imgs","Panels — one per line","imglist","Format:  image-url | caption"],
+      ["scrub","Scrub feel","select",[["tight","Tight"],["smooth","Smooth"],["loose","Loose"]]],
+      ["panelW","Panel width","select",[["narrow","Narrow"],["medium","Medium"],["wide","Wide"]]],
     ]},
   pinreveal:{ label:"Pinned Text Reveal (GSAP)", ico:"❋",
-    make:()=>({type:"pinreveal",kicker:"Manifesto",text:"Every detail earns its place, or it is *cut*."}),
+    make:()=>({type:"pinreveal",kicker:"Manifesto",text:"Every detail earns its place, or it is *cut*.",reveal:"words",scrubLen:"medium"}),
     fields:[
       ["kicker","Kicker (small line above)","text"],
-      ["text","Reveal text","textarea","The section pins and the words light up one by one as you scroll. Use *stars* for accent."],
+      ["text","Reveal text","textarea","The section pins and the copy lights up as you scroll. Use *stars* for accent."],
+      ["reveal","Reveal by","select",[["words","Words"],["characters","Characters"]]],
+      ["scrubLen","Scrub length","select",[["short","Short"],["medium","Medium"],["long","Long"]]],
     ]},
   velmarquee:{ label:"Velocity Marquee (GSAP)", ico:"↻",
-    make:()=>({type:"velmarquee",text:"CREATIVE STUDIO",sep:"✦",dir:"fwd"}),
+    make:()=>({type:"velmarquee",text:"CREATIVE STUDIO",sep:"✦",dir:"fwd",speed:"med",sensitivity:"normal"}),
     fields:[
       ["text","Marquee text","text"],
       ["sep","Separator","text"],
       ["dir","Direction","select",[["fwd","Left"],["rev","Right"]]],
+      ["speed","Base speed","select",[["slow","Slow"],["med","Medium"],["fast","Fast"]]],
+      ["sensitivity","Velocity sensitivity","select",[["subtle","Subtle"],["normal","Normal"],["strong","Strong"]]],
     ]},
   hero:{ label:"Hero", ico:"◆",
     make:()=>({type:"hero",kicker:"Established on the coast",title:"Design that *breathes*",sub:"A small studio for people who believe restraint is a form of ambition.",align:"left",height:"full",img:"",anim:"words",fadeout:true,variant:"editorial"}),
@@ -3791,6 +3802,41 @@ const letters = s => {
 const pxWords = s => esc(String(s||"").replace(/\*/g,"")).split(/\s+/).filter(Boolean)
   .map(w=>'<span class="wmask"><span class="w">'+w+'</span></span>').join(' ');
 
+/* v15 Phase 3: per-CHARACTER splitter (SplitText-style) for premium blocks. Mirrors pxWords but
+   wraps each glyph in the same masked .w structure the runtime already drives; escapes per-char
+   (so entities never split), keeps whole words together via .pxl-word, and caps at ~120 animated
+   glyphs for DOM/a11y (the tail renders plain). */
+const pxLetters = s => {
+  let n=0;
+  return String(s||"").replace(/\*/g,"").split(/\s+/).filter(Boolean).map(word=>{
+    let out="";
+    for(const ch of word){ out += (n<120) ? '<span class="wmask"><span class="w">'+esc(ch)+'</span></span>' : esc(ch); n++; }
+    return '<span class="pxl-word">'+out+'</span>';
+  }).join(' ');
+};
+/* v15 Phase 3: reveal splitter — words | characters | lines. Lines wrap each line in a block mask. */
+const pxSplit = (str,mode) => {
+  if(mode==="characters") return pxLetters(str);
+  if(mode==="lines") return esc(String(str||"").replace(/\*/g,"")).split(/\n/).map(l=>l.trim()).filter(Boolean)
+    .map(l=>'<span class="wmask" style="display:block"><span class="w" style="display:block">'+l+'</span></span>').join("");
+  return pxWords(str);
+};
+/* v15 Phase 3: serialize a premium block's resolved motion params into a data-pxo attribute the
+   runtime parses (same single-quote escape as data-ux). */
+const pxoAttr = o => " data-pxo='"+esc(JSON.stringify(o)).replace(/'/g,"&#39;")+"'";
+/* v15 Phase 3: named option → number maps, so the render cases (which emit data-pxo) and the
+   inspector option labels stay in one place. */
+const PX_MAP = {
+  revealSpeed:{slow:1.25, med:0.9, fast:0.6},
+  stagger:    {slow:0.09, med:0.05, fast:0.03},
+  depth:      {none:0, subtle:8, medium:15, deep:24},
+  scrubFeel:  {tight:0.35, smooth:0.7, loose:1.3},
+  panelW:     {narrow:34, medium:46, wide:60},
+  scrubLen:   {short:80, medium:120, long:180},
+  speed:      {slow:34, med:22, fast:14},
+  sensitivity:{subtle:520, normal:260, strong:150},
+};
+
 /* ---------- site generator (used for BOTH live preview and export) ---------- */
 
 /* v9 phase 3 → v14 P12: ONE effects registry. Every image/hover effect declares its label and
@@ -4868,6 +4914,7 @@ html.g-grid #ed-guides .egg{display:grid}
 .pxhero.center .pxh-sub{margin-left:auto;margin-right:auto}
 .wmask{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.08em}
 .pxh-title .w,.pxr-title .w{display:inline-block;will-change:transform,opacity}
+.pxl-word{display:inline-block}   /* v15 Phase 3: keep a word's characters together when reveal=Characters */
 
 .pximg{padding:9vh 0}
 .pximg .pximg-frame{position:relative;overflow:hidden;border-radius:var(--r-img,4px)}
@@ -5101,46 +5148,53 @@ function renderSectionBase(s,i,st){
        (progressive enhancement); the data-pxblock hook lets the exported GSAP runtime enhance it
        in Preview + Export only. Transforms target the block's own inner nodes, never .wrap. ===== */
     case "pxhero":{
+      const _o={rs:PX_MAP.revealSpeed[s.speed]||0.9, sg:PX_MAP.stagger[s.speed]||0.05, d:(PX_MAP.depth[s.depth]==null?15:PX_MAP.depth[s.depth])};
       const bg = s.img ? '<div class="pxh-bg" data-pxlayer style="background-image:url('+esc(s.img)+')"></div><div class="pxh-veil"></div>' : '';
-      return '<header class="pxhero'+(s.align==="center"?" center":"")+'" data-i="'+i+'" data-pxblock="hero">'
+      return '<header class="pxhero'+(s.align==="center"?" center":"")+'" data-i="'+i+'" data-pxblock="hero"'+pxoAttr(_o)+'>'
         +bg
         +'<div class="wrap pxh-in">'
         +(s.kicker?'<p class="pxh-kick" data-t="kicker" data-tf="b">'+esc(s.kicker)+'</p>':'')
-        +'<h1 class="pxh-title" data-t="title" data-tf="h">'+pxWords(s.title)+'</h1>'
+        +'<h1 class="pxh-title" data-t="title" data-tf="h">'+pxSplit(s.title,s.reveal||"words")+'</h1>'
         +(s.sub?'<p class="pxh-sub" data-t="sub" data-tf="b">'+acc(s.sub)+'</p>':'')
         +'</div></header>';
     }
 
     case "pximg":{
       const h = s.height||"tall";
-      return '<section class="pximg pximg-'+h+'" data-i="'+i+'" data-pxblock="pximg"><div class="wrap">'
+      const _o={d:(PX_MAP.depth[s.depth]==null?15:PX_MAP.depth[s.depth]), zoom:!!s.zoom};
+      return '<section class="pximg pximg-'+h+'" data-i="'+i+'" data-pxblock="pximg"'+pxoAttr(_o)+'><div class="wrap">'
         +'<div class="pximg-frame"><div class="pximg-media" data-pxlayer'+(s.img?' style="background-image:url('+esc(s.img)+')"':'')+'></div></div>'
         +(s.caption?'<figcaption class="pximg-cap" data-t="caption" data-tf="b">'+esc(s.caption)+'</figcaption>':'')
         +'</div></section>';
     }
 
     case "pxhscroll":{
+      const _pw = PX_MAP.panelW[s.panelW]||46;
+      const _o={scrub:PX_MAP.scrubFeel[s.scrub]||0.7};
       const panels = String(s.imgs||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{
         const bar=l.split("|"); const u=(bar[0]||"").trim(), cap=(bar[1]||"").trim();
-        return '<figure class="pxhs-panel"><div class="pxhs-media"'+(u?' style="background-image:url('+esc(u)+')"':'')+'></div>'
+        return '<figure class="pxhs-panel" style="width:min('+_pw+'vw,620px)"><div class="pxhs-media"'+(u?' style="background-image:url('+esc(u)+')"':'')+'></div>'
           +(cap?'<figcaption>'+esc(cap)+'</figcaption>':'')+'</figure>';
       }).join("");
-      return '<section class="pxhscroll" data-i="'+i+'" data-pxblock="hscrollx">'
+      return '<section class="pxhscroll" data-i="'+i+'" data-pxblock="hscrollx"'+pxoAttr(_o)+'>'
         +(s.heading?'<div class="pxhs-head"><div class="wrap"><h2 data-t="heading" data-tf="h">'+esc(s.heading)+'</h2></div></div>':'')
         +'<div class="pxhs-track">'+panels+'</div></section>';
     }
 
-    case "pinreveal":
-      return '<section class="pinreveal" data-i="'+i+'" data-pxblock="pinreveal"><div class="wrap pxr-in">'
+    case "pinreveal":{
+      const _o={len:PX_MAP.scrubLen[s.scrubLen]||120};
+      return '<section class="pinreveal" data-i="'+i+'" data-pxblock="pinreveal"'+pxoAttr(_o)+'><div class="wrap pxr-in">'
         +(s.kicker?'<p class="pxr-kick" data-t="kicker" data-tf="b">'+esc(s.kicker)+'</p>':'')
-        +'<h2 class="pxr-title" data-t="text" data-tf="h">'+pxWords(s.text)+'</h2>'
+        +'<h2 class="pxr-title" data-t="text" data-tf="h">'+pxSplit(s.text,s.reveal==="characters"?"characters":"words")+'</h2>'
         +'</div></section>';
+    }
 
     case "velmarquee":{
       const txt=esc(s.text||"CREATIVE STUDIO"), sep=esc(s.sep||"✦");
+      const _o={dur:PX_MAP.speed[s.speed]||22, sens:PX_MAP.sensitivity[s.sensitivity]||260};
       const unit='<span class="pxm-item">'+txt+'</span><span class="pxm-sep">'+sep+'</span>';
       const seg='<span class="pxm-seg">'+unit.repeat(6)+'</span>';
-      return '<section class="velmarquee" data-i="'+i+'" data-pxblock="velmarquee" data-dir="'+(s.dir==="rev"?"rev":"fwd")+'">'
+      return '<section class="velmarquee" data-i="'+i+'" data-pxblock="velmarquee" data-dir="'+(s.dir==="rev"?"rev":"fwd")+'"'+pxoAttr(_o)+'>'
         +'<div class="pxm-track">'+seg+seg+'</div></section>';
     }
 
@@ -5688,7 +5742,7 @@ function renderSection(s,i,editMode,st){
   if(s.scroll && !PX_TYPES[s.type]){
     const _sc=s.scroll, _on=(_sc.anim&&_sc.anim!=="none")||(+_sc.parallax>0)||_sc.pin;
     if(_on){
-      const _cfg={anim:_sc.anim||"none",parallax:+_sc.parallax||0,dur:+_sc.dur||1,delay:+_sc.delay||0,ease:_sc.ease||"power2.out",pin:!!_sc.pin};
+      const _cfg={anim:_sc.anim||"none",parallax:+_sc.parallax||0,dur:+_sc.dur||1,delay:+_sc.delay||0,ease:_sc.ease||"power2.out",pin:!!_sc.pin,scrub:!!_sc.scrub,stagger:!!_sc.stagger};
       const _ux=esc(JSON.stringify(_cfg)).replace(/'/g,"&#39;");
       html=html.replace(/^<(header|section|footer|div)([^>]*)>/, m => m.slice(0,-1)+" data-ux='"+_ux+"'>");
       if(_cfg.anim!=="none") html=html.replace(/\sdata-anim="[^"]*"/g,"");   // don't double-animate with the legacy IO reveal
@@ -7863,56 +7917,87 @@ try{ if(!reduced && window.gsap){
     if(_ST){ _ln.on('scroll',_ST.update); _G.ticker.add(function(tm){ _ln.raf(tm*1000); }); _G.ticker.lagSmoothing(0); }
     else { (function _lr(tm){ _ln.raf(tm); requestAnimationFrame(_lr); })(0); }
   }
-  function _uxParse(el){ try{ return JSON.parse(el.getAttribute('data-ux')); }catch(e){ return null; } }
-  if(_ST) [].forEach.call(document.querySelectorAll('[data-ux]'), function(el){
-    var c=_uxParse(el); if(!c) return;
-    if(c.anim && c.anim!=='none'){
-      var fr={autoAlpha:0}, d=48;
-      if(c.anim==='fade-up') fr.y=d;
-      else if(c.anim==='scale-in') fr.scale=0.92;
-      else if(c.anim==='slide-left') fr.x=-64;
-      else if(c.anim==='slide-right') fr.x=64;
-      else if(c.anim==='reveal'){ fr.y=d; fr.clipPath='inset(0 0 100% 0)'; }
-      var opt={duration:c.dur||1,delay:c.delay||0,ease:c.ease||'power2.out',scrollTrigger:{trigger:el,start:'top 84%',once:true}};
-      for(var kk in fr) opt[kk]=fr[kk];
-      _G.from(el,opt);
-    }
-    if(+c.parallax>0){ var a=(+c.parallax/100)*70;
-      _G.fromTo(el,{y:-a},{y:a,ease:'none',scrollTrigger:{trigger:el,start:'top bottom',end:'bottom top',scrub:true}}); }
-    if(c.pin){ _ST.create({trigger:el,start:'top top',end:'+=90%',pin:true,pinSpacing:true}); }
+  var _pj=function(el,a){ try{ return JSON.parse(el.getAttribute(a)); }catch(e){ return null; } };
+
+  /* ---- LIGHT layer: entrances + hero/marquee reveal — run at ALL widths ---- */
+  [].forEach.call(document.querySelectorAll('[data-ux]'), function(el){
+    var c=_pj(el,'data-ux'); if(!c || !c.anim || c.anim==='none') return;
+    var fr={autoAlpha:0}, d=48;
+    if(c.anim==='fade-up') fr.y=d;
+    else if(c.anim==='scale-in') fr.scale=0.92;
+    else if(c.anim==='slide-left') fr.x=-64;
+    else if(c.anim==='slide-right') fr.x=64;
+    else if(c.anim==='reveal'){ fr.y=d; fr.clipPath='inset(0 0 100% 0)'; }
+    else if(c.anim==='rotate'){ fr.rotation=-5; fr.y=d; fr.transformOrigin='left top'; }
+    else if(c.anim==='clip-wipe'){ fr.clipPath='inset(0 100% 0 0)'; }
+    var tg = c.stagger ? (el.children.length?el.children:[el]) : el;
+    var strig = c.scrub ? {trigger:el,start:'top 90%',end:'top 42%',scrub:true} : {trigger:el,start:'top 84%',once:true};
+    var opt={duration:c.dur||1,delay:c.scrub?0:(c.delay||0),ease:c.ease||'power2.out',stagger:(c.stagger?0.09:0),scrollTrigger:strig};
+    for(var kk in fr) opt[kk]=fr[kk];
+    _G.from(tg,opt);
   });
-  if(_ST) [].forEach.call(document.querySelectorAll('[data-pxblock]'), function(el){
-    var kind=el.getAttribute('data-pxblock');
+  [].forEach.call(document.querySelectorAll('[data-pxblock]'), function(el){
+    var kind=el.getAttribute('data-pxblock'), o=_pj(el,'data-pxo')||{};
     if(kind==='hero'){
       var ws=el.querySelectorAll('.pxh-title .w');
-      if(ws.length) _G.from(ws,{yPercent:120,autoAlpha:0,duration:0.9,ease:'power3.out',stagger:0.05,delay:0.1});
-      var bgl=el.querySelector('[data-pxlayer]');
-      if(bgl) _G.fromTo(bgl,{yPercent:-10},{yPercent:14,ease:'none',scrollTrigger:{trigger:el,start:'top top',end:'bottom top',scrub:true}});
-    } else if(kind==='pximg'){
-      var m=el.querySelector('[data-pxlayer]');
-      if(m) _G.fromTo(m,{yPercent:-16},{yPercent:16,ease:'none',scrollTrigger:{trigger:el,start:'top bottom',end:'bottom top',scrub:true}});
-    } else if(kind==='hscrollx'){
-      var tr=el.querySelector('.pxhs-track');
-      if(tr){ el.style.overflow='hidden';
-        var dist=function(){ return Math.max(0,tr.scrollWidth-window.innerWidth); };
-        _G.to(tr,{x:function(){ return -dist(); },ease:'none',scrollTrigger:{trigger:el,start:'top top',end:function(){ return '+='+dist(); },pin:true,scrub:0.6,invalidateOnRefresh:true,anticipatePin:1}});
-      }
-    } else if(kind==='pinreveal'){
-      var wr=el.querySelectorAll('.pxr-title .w');
-      if(wr.length){ _G.set(wr,{autoAlpha:0.14});
-        _G.to(wr,{autoAlpha:1,ease:'none',stagger:0.4,scrollTrigger:{trigger:el,start:'top top',end:'+=120%',pin:true,scrub:0.5}});
-      }
+      if(ws.length) _G.from(ws,{yPercent:120,autoAlpha:0,duration:(o.rs!=null?o.rs:0.9),ease:'power3.out',stagger:(o.sg!=null?o.sg:0.05),delay:0.1});
     } else if(kind==='velmarquee'){
       var mt=el.querySelector('.pxm-track'); if(!mt) return;
-      var tl;
-      if(el.getAttribute('data-dir')==='rev'){ _G.set(mt,{xPercent:-50}); tl=_G.to(mt,{xPercent:0,duration:24,ease:'none',repeat:-1}); }
-      else { tl=_G.to(mt,{xPercent:-50,duration:24,ease:'none',repeat:-1}); }
-      _ST.create({trigger:el,start:'top bottom',end:'bottom top',
-        onUpdate:function(self){ var v=Math.abs(self.getVelocity()); var ts=1+Math.min(v/260,7); _G.to(tl,{timeScale:ts,duration:0.4,overwrite:true}); },
+      var dur=(o.dur!=null?o.dur:22), sens=(o.sens!=null?o.sens:260), tl;
+      if(el.getAttribute('data-dir')==='rev'){ _G.set(mt,{xPercent:-50}); tl=_G.to(mt,{xPercent:0,duration:dur,ease:'none',repeat:-1}); }
+      else { tl=_G.to(mt,{xPercent:-50,duration:dur,ease:'none',repeat:-1}); }
+      if(_ST) _ST.create({trigger:el,start:'top bottom',end:'bottom top',
+        onUpdate:function(self){ var v=Math.abs(self.getVelocity()); var ts=1+Math.min(v/sens,7); _G.to(tl,{timeScale:ts,duration:0.4,overwrite:true}); },
         onLeave:function(){ _G.to(tl,{timeScale:1,duration:0.6}); }, onLeaveBack:function(){ _G.to(tl,{timeScale:1,duration:0.6}); }});
     }
   });
-  if(_ST) setTimeout(function(){ _ST.refresh(); },80);
+
+  /* ---- HEAVY layer: pins + horizontal scroll + full parallax — desktop/tablet only.
+         gsap.matchMedia() auto-kills these below 761px and recreates + refreshes above. ---- */
+  if(_ST){
+    var _mm=_G.matchMedia();
+    _mm.add('(min-width:761px)', function(){
+      [].forEach.call(document.querySelectorAll('[data-ux]'), function(el){
+        var c=_pj(el,'data-ux'); if(!c) return;
+        if(+c.parallax>0){ var a=(+c.parallax/100)*70;
+          _G.fromTo(el,{y:-a},{y:a,ease:'none',scrollTrigger:{trigger:el,start:'top bottom',end:'bottom top',scrub:true}}); }
+        if(c.pin) _ST.create({trigger:el,start:'top top',end:'+=90%',pin:true,pinSpacing:true});
+      });
+      [].forEach.call(document.querySelectorAll('[data-pxblock]'), function(el){
+        var kind=el.getAttribute('data-pxblock'), o=_pj(el,'data-pxo')||{};
+        if(kind==='hero'){ var bgl=el.querySelector('[data-pxlayer]'), d=(o.d!=null?o.d:12);
+          if(bgl && d>0) _G.fromTo(bgl,{yPercent:-d},{yPercent:d*1.15,ease:'none',scrollTrigger:{trigger:el,start:'top top',end:'bottom top',scrub:true}});
+        } else if(kind==='pximg'){ var m=el.querySelector('[data-pxlayer]'), d2=(o.d!=null?o.d:15);
+          if(m) _G.fromTo(m,{yPercent:-d2},{yPercent:d2,ease:'none',scrollTrigger:{trigger:el,start:'top bottom',end:'bottom top',scrub:true}});
+          if(m && o.zoom) _G.fromTo(m,{scale:1.05},{scale:1.16,ease:'none',scrollTrigger:{trigger:el,start:'top bottom',end:'bottom top',scrub:true}});
+        } else if(kind==='hscrollx'){ var tr=el.querySelector('.pxhs-track');
+          if(tr){ el.style.overflow='hidden';
+            var dist=function(){ return Math.max(0,tr.scrollWidth-window.innerWidth); };
+            _G.to(tr,{x:function(){ return -dist(); },ease:'none',scrollTrigger:{trigger:el,start:'top top',end:function(){ return '+='+dist(); },pin:true,scrub:(o.scrub!=null?o.scrub:0.6),invalidateOnRefresh:true,anticipatePin:1}});
+          }
+        } else if(kind==='pinreveal'){ var wr=el.querySelectorAll('.pxr-title .w'), len=(o.len!=null?o.len:120);
+          if(wr.length){ _G.set(wr,{autoAlpha:0.14});
+            _G.to(wr,{autoAlpha:1,ease:'none',stagger:0.4,scrollTrigger:{trigger:el,start:'top top',end:'+='+len+'%',pin:true,scrub:0.5}});
+          }
+        }
+      });
+    });
+    /* ---- MOBILE (<=760px): graceful downgrade — light parallax, simple fades, native swipe ---- */
+    _mm.add('(max-width:760px)', function(){
+      [].forEach.call(document.querySelectorAll('[data-ux]'), function(el){
+        var c=_pj(el,'data-ux'); if(!c || !(+c.parallax>0)) return;
+        var a=(+c.parallax/100)*70*0.4;
+        _G.fromTo(el,{y:-a},{y:a,ease:'none',scrollTrigger:{trigger:el,start:'top bottom',end:'bottom top',scrub:true}});
+      });
+      [].forEach.call(document.querySelectorAll('[data-pxblock="pinreveal"]'), function(el){
+        var wr=el.querySelectorAll('.pxr-title .w');
+        if(wr.length) _G.from(wr,{autoAlpha:0,y:20,duration:0.5,stagger:0.03,ease:'power2.out',scrollTrigger:{trigger:el,start:'top 82%',once:true}});
+      });
+      [].forEach.call(document.querySelectorAll('[data-pxblock="hscrollx"]'), function(el){ el.style.overflowX='auto'; el.style.overflowY='hidden'; });
+    });
+  }
+
+  if(_ST) setTimeout(function(){ _ST.refresh(); },120);
 }}catch(_e){ if(window.console)console.warn('premium motion',_e); }
 `}
 })();`;
@@ -9004,7 +9089,7 @@ function renderSectionInspector(box,s,d,html){
   let tScroll = '<div class="pgroup">';
   tScroll += '<div class="p2note"><b>GSAP · ScrollTrigger.</b> How this section moves as it scrolls into view. Hit <b>Preview</b> (or export) to feel it — the editing canvas stays still on purpose.</div>';
   tScroll += '<div class="field"><label>Entrance</label><select data-scroll-anim>'
-    + [["none","None"],["fade-up","Fade up"],["fade-in","Fade in"],["reveal","Clip reveal"],["scale-in","Scale in"],["slide-left","Slide from left"],["slide-right","Slide from right"]]
+    + [["none","None"],["fade-up","Fade up"],["fade-in","Fade in"],["reveal","Clip reveal"],["scale-in","Scale in"],["slide-left","Slide from left"],["slide-right","Slide from right"],["rotate","Rotate in"],["clip-wipe","Clip wipe"]]
         .map(o=>'<option value="'+o[0]+'"'+((_sa.anim||"none")===o[0]?' selected':'')+'>'+o[1]+'</option>').join("")
     + '</select></div>';
   tScroll += '<div class="field"><label>Parallax depth <span style="color:var(--faint);letter-spacing:0;text-transform:none;font-size:10px">— 0 = none</span></label>'
@@ -9017,6 +9102,11 @@ function renderSectionInspector(box,s,d,html){
     + [["power2.out","Smooth (power2.out)"],["power3.out","Strong (power3.out)"],["power4.out","Dramatic (power4.out)"],["expo.out","Expo out"],["back.out","Overshoot (back.out)"],["none","Linear"]]
         .map(o=>'<option value="'+o[0]+'"'+((_sa.ease||"power2.out")===o[0]?' selected':'')+'>'+o[1]+'</option>').join("")
     + '</select></div>';
+  tScroll += '<div class="field"><label>Playback</label><select data-scroll-scrub>'
+    + [["","One-shot — plays once"],["1","Scrubbed — tied to scroll"]]
+        .map(o=>'<option value="'+o[0]+'"'+(((_sa.scrub?"1":""))===o[0]?' selected':'')+'>'+o[1]+'</option>').join("")
+    + '</select></div>';
+  tScroll += '<div class="tgl'+(_sa.stagger?' on':'')+'" data-scroll-stagger><span>Stagger children<i class="tgl-sub">animate the section\'s items one after another, not all at once</i></span><div class="knob"></div></div>';
   tScroll += '<div class="tgl'+(_sa.pin?' on':'')+'" data-scroll-pin><span>Pin while scrolling<i class="tgl-sub">hold this section in place as its contents animate (GSAP pin)</i></span><div class="knob"></div></div>';
   tScroll += '<div class="tgl'+(state.lenis?' on':'')+'" data-scroll-lenis><span>Smooth scroll — Lenis <span style="color:var(--faint);font-size:9px;letter-spacing:0;text-transform:none">site-wide</span><i class="tgl-sub">momentum smooth-scrolling across the whole exported site'+(state.snap?' — turn Snap off to use it':'')+'</i></span><div class="knob"></div></div>';
   tScroll += '</div>';
@@ -9046,6 +9136,9 @@ function renderSectionInspector(box,s,d,html){
     bind("[data-scroll-dur]","onchange",e=>{ ens().dur=+e.target.value||1; update(true,true); });
     bind("[data-scroll-delay]","onchange",e=>{ ens().delay=+e.target.value||0; update(true,true); });
     bind("[data-scroll-ease]","onchange",e=>{ ens().ease=e.target.value; update(true,true); });
+    bind("[data-scroll-scrub]","onchange",e=>{ pushUndo("scroll:scrub"); ens().scrub=!!e.target.value; update(true,true); });
+    const stg=box.querySelector("[data-scroll-stagger]");
+    if(stg) stg.onclick=()=>{ pushUndo("scroll:stagger"); const o=ens(); o.stagger=!o.stagger; stg.classList.toggle("on",o.stagger); update(true,true); };
     const pin=box.querySelector("[data-scroll-pin]");
     if(pin) pin.onclick=()=>{ pushUndo("scroll:pin"); const o=ens(); o.pin=!o.pin; pin.classList.toggle("on",o.pin); update(true,true); };
     const lz=box.querySelector("[data-scroll-lenis]");
