@@ -1587,6 +1587,9 @@ function normalize(st){
     if(s.type==="layers"){ if(s.height==null)s.height="tall"; if(s.heading==null)s.heading=""; }  // v14 P11
     if(s.type==="orbit"){ if(s.spin==null)s.spin="40"; if(s.heading==null)s.heading=""; if(s.wobble==null)s.wobble=false; if(s.float==null)s.float=false; }  // v14 P11 + P12; float v16 P4
     if(s.type==="converge"){ if(s.heading==null)s.heading=""; if(s.names==null)s.names=""; if(s.drift==null)s.drift="med"; }  // v16 P4
+    if(s.type==="ticker"){ if(s.items==null)s.items=""; if(s.speed==null)s.speed="40"; if(s.dir==null)s.dir="fwd"; }  // v17 P5
+    if(s.type==="testimonials"){ if(s.heading==null)s.heading=""; if(s.items==null)s.items=""; if(s.cols==null)s.cols="3"; if(s.layout==null)s.layout="grid"; }  // v17 P5
+    if((s.type==="hero"||s.type==="statement"||s.type==="cta"||s.type==="pxhero")&&s.grad==null)s.grad=false;  // v17 P5 gradient text
     if(LIQUID_OK[s.type]){
       /* v14 P11 → P12 migration: boolean liquid becomes the tri-state override.
          true -> explicit melt/calm (whatever liquidMode said); false/absent -> inherit. */
@@ -1662,9 +1665,19 @@ const FX_OK = t => !(t==="hscroll"||t==="zoom"||t==="spacer"||t==="pinned"||t===
 /* ---------- image library ---------- */
 
 const U = id => "https://images.unsplash.com/photo-"+id+"?auto=format&fit=crop&w=2000&q=80";
+/* v17 P5: Higgsfield-generated premium assets (Recraft V4.1). Hosted on the Higgsfield CDN. */
+const HF = p => "https://d8j0ntlcm91z4.cloudfront.net/user_3F7VRh1v22Oprb61Ysc9ZVbmxWM/"+p;
 /* v14 P10: rebuilt — 14 English categories, ~190 curated entries, every URL HEAD-verified by
    scratchpad/p10/build-pool.js before entry. No placeholders; descriptions live in the pool file. */
 const IMAGE_LIB = {
+  "AI · Generated":[
+    HF("hf_20260718_170503_ca325118-75a6-4a13-a54d-e9397491ce35.png"),
+    HF("hf_20260718_170506_29fd603f-32e4-47bd-b202-c5153462e570.png"),
+    HF("hf_20260718_170508_27b459aa-a5e8-4184-84e9-c74346f9848f.png"),
+    HF("hf_20260718_170512_9a0e3e50-35bb-4e5b-875d-0d55826abcbd.png"),
+    HF("hf_20260718_170517_a81a314d-9441-40e7-9edf-1062d22a39f1.png"),
+    HF("hf_20260718_170521_bc2fb483-4fea-4b83-8af0-5ba88e590886.png"),
+  ],
   "Architecture":[
     U("1449824913935-59a10b8d2000"), U("1518005020951-eccb494ad742"),
     U("1511818966892-d7d671e672a2"), U("1493397212122-2b85dda8106b"),
@@ -1816,6 +1829,7 @@ const SECTION_DEFS = {
       ["depth","Background parallax","select",[["none","None"],["subtle","Subtle"],["medium","Medium"],["deep","Deep"]]],
       ["img","Background image","img","Drifts with a Lenis-driven parallax as you scroll."],
       ["glitch","RGB glitch on the headline","toggle","A subtle chromatic-aberration flicker on the display type. Off for Reduce Motion.",2],
+      ["grad","Gradient headline — accent-clipped display text","toggle","Fills the headline with a gradient of your accent colour.",2],
     ]},
   pximg:{ label:"Parallax Image (GSAP)", ico:"▦",
     make:()=>({type:"pximg",img:IMG("pximg"),caption:"Shot on location",height:"tall",depth:"medium",zoom:false}),
@@ -1863,6 +1877,7 @@ const SECTION_DEFS = {
       ["img","Background image (optional)","img","Gets a slow parallax drift."],
       ["anim","Entrance animation","select",ANIMS_HERO],
       ["fadeout","Fade out while scrolling away","toggle"],
+      ["grad","Gradient headline — accent-clipped display text","toggle","Fills the headline with a gradient of your accent colour. Great for fintech / SaaS.",2],
     ]},
   statement:{ label:"Statement", ico:"¶",
     make:()=>({type:"statement",text:"We make fewer things, *slower*, and stand behind every one of them.",align:"left",anim:"rise"}),
@@ -1870,6 +1885,7 @@ const SECTION_DEFS = {
       ["text","Statement text","textarea","Big manifesto-style type. Use *stars* for accent colour."],
       ["align","Alignment","select",[["left","Left"],["center","Centered"]]],
       ["anim","Animation","select",ANIMS_BIG],
+      ["grad","Gradient text — accent-clipped display type","toggle","Fills the statement with a gradient of your accent colour.",2],
     ]},
   /* v14 P10: truly blank freeform section — background + padding + the free-object layer, nothing else */
   canvas:{ label:"Blank canvas", ico:"☐",
@@ -2040,6 +2056,23 @@ const SECTION_DEFS = {
       ["names","Names — one per line","textarea","Format:  NAME | note (optional). Split into two columns that drift toward the centre as visitors scroll past. 8–16 names read best."],
       ["drift","Convergence strength","select",[["subtle","Subtle"],["med","Medium"],["strong","Strong"]]],
     ]},
+  /* v17 P5: numeric ticker-tape (fintech) — auto-scrolling row of labelled values with signed deltas */
+  ticker:{ label:"Ticker tape (numbers)", ico:"$",
+    make:()=>({type:"ticker",items:"BTC | 68,420 | +2.4%\nS&P 500 | 5,918 | +0.6%\nEUR/USD | 1.084 | -0.2%\nGOLD | 2,412 | +1.1%\nNASDAQ | 18,743 | +0.9%\nBRENT | 78.20 | -0.8%\nETH | 3,560 | +3.1%\nUSD/NOK | 10.62 | +0.4%",speed:"40",dir:"fwd"}),
+    fields:[
+      ["items","Rows — one per line","textarea","Format:  LABEL | value | +/-delta. A green ▴ or red ▾ is added automatically from the sign of the delta."],
+      ["speed","Speed","select",[["60","Slow"],["40","Medium"],["24","Fast"]]],
+      ["dir","Direction","select",[["fwd","Left"],["rev","Right"]]],
+    ]},
+  /* v17 P5: testimonials (grid or auto-scrolling marquee) — quote / name / role / avatar */
+  testimonials:{ label:"Testimonials", ico:"❞",
+    make:()=>({type:"testimonials",heading:"Loved by teams *everywhere*",items:"They shipped what three agencies couldn't, in half the time. | Ada Vik | VP Product, Northwind | "+U("1494790108377-be9c29b29330")+"\nThe cleanest, fastest rollout we've ever run — nothing broke. | Jonas Lie | CTO, Solstice | "+U("1500648767791-00dcc994a43e")+"\nOur numbers went up and, for once, they stayed up. | Mari Sund | Head of Growth, Meridian | "+U("1580489944761-15a19d654956"),cols:"3",layout:"grid"}),
+    fields:[
+      ["heading","Heading (optional)","textarea","Use *stars* for accent colour."],
+      ["items","Testimonials — one per line","textarea","Format:  Quote | Name | Role | avatar-url  (avatar optional)."],
+      ["cols","Columns","select",[["2","Two"],["3","Three"]]],
+      ["layout","Layout","select",[["grid","Grid"],["marquee","Marquee — auto-scrolling row"]]],
+    ]},
   spacer:{ label:"Whitespace", ico:"⌷",
     make:()=>({type:"spacer",size:"m"}),
     fields:[
@@ -2166,6 +2199,7 @@ dashboard:{ label:"Dashboard", ico:"▦",
       ["sub","Supporting line (optional)","textarea"],
       ["btn","Button — Label → url","text"],
       ["anim","Animation","select",ANIMS],
+      ["grad","Gradient heading — accent-clipped display text","toggle","Fills the heading with a gradient of your accent colour.",2],
     ]},
   footer:{ label:"Footer / contact", ico:"⌁",
     make:()=>({type:"footer",heading:"Let's talk",links:"Email → mailto:hello@studio.no\nInstagram → https://instagram.com\nLinkedIn → https://linkedin.com",note:"© 2026 — Made by hand on the west coast",variant:"minimal"}),
@@ -2539,11 +2573,14 @@ const TEMPLATES = {
   /* 3 — Tigerpress · bold agency (papertiger): giant poster hero + velocity marquee + horizontal-scroll
      chapters + converging client columns. Mono + one accent. */
   tigerpress:()=>{const t=tpl("monokrom","poster","display",[
-    S("pxhero",{kicker:"TIGERPRESS® — INDEPENDENT AGENCY",title:"Big ideas, loudly *made*",sub:"Brand, campaign and motion for companies that want to be seen from across the room.",align:"left",reveal:"words",speed:"fast",depth:"medium",img:U("1552346154-21d32810aba3")}),
+    S("pxhero",{kicker:"TIGERPRESS® — INDEPENDENT AGENCY",title:"Big ideas, loudly *made*",sub:"Brand, campaign and motion for companies that want to be seen from across the room.",align:"left",reveal:"words",speed:"fast",depth:"medium",img:HF("hf_20260718_170508_27b459aa-a5e8-4184-84e9-c74346f9848f.png")}),
     S("velmarquee",{text:"STRATEGY / IDENTITY / MOTION / CAMPAIGN",sep:"—",dir:"fwd",speed:"fast",sensitivity:"strong"}),
+    S("statement",{text:"We don't do *quiet*.",align:"left",anim:"words"}),
     S("pxhscroll",{heading:"Selected work",imgs:U("1558655146-9f40138edfeb")+" | Northwind — rebrand\n"+U("1600607687939-ce8a6c25118c")+" | Solstice — campaign\n"+U("1618005182384-a83a8bd57fbe")+" | Halcyon — identity\n"+U("1620121692029-d088224ddc74")+" | Meridian — motion\n"+U("1634017839464-5c339ebe3cb4")+" | Dusk — packaging",scrub:"smooth",panelW:"wide"}),
+    S("split",{kicker:"How we work",heading:"Loud on the outside, *rigorous* underneath",body:"Every campaign starts with a week of arguing about the idea and ends with obsessive craft. The noise is always earned.",img:HF("hf_20260718_170512_9a0e3e50-35bb-4e5b-875d-0d55826abcbd.png"),side:"right",parallax:true,anim:"rise"}),
     S("converge",{heading:"Clients who *shout*",names:"NIKE |\nSPOTIFY | 2023\nADIDAS |\nMEDIUM | 2021\nMONZO |\nDROPBOX | 2022\nFIGMA |\nNOTION | 2024\nARC |\nLINEAR | 2023",drift:"strong"}),
     S("stats",{kicker:"Since 2014",items:"12 | People, no more\n300+ | Projects shipped\n40 | Awards, unbragged",cols:"3"}),
+    S("testimonials",{heading:"What clients *say*",items:"They made us impossible to ignore. | Ada Vik | CMO, Northwind | "+U("1544005313-94ddf0286df2")+"\nThree agencies pitched — Tigerpress just got it. | Jonas Lie | Founder, Solstice | "+U("1506794778202-cad84cf45f1d")+"\nOur launch trended for a week straight. | Mari Sund | Head of Brand, Meridian | "+U("1573497019940-1c28c88b4f3e"),cols:"3",layout:"marquee"}),
     S("cta",{kicker:"Brief us",heading:"Let's make some *noise*",sub:"Tell us what you're launching.",btn:"studio@tigerpress.co → mailto:studio@tigerpress.co",anim:"rise"}),
     S("footer",{heading:"Tigerpress®",links:"Instagram → #\nLinkedIn → #\nContact → mailto:studio@tigerpress.co",note:"© 2026 Tigerpress — an independent agency",variant:"mega"}),
   ],"Tigerpress",{radius:"sharp",grain:false});
@@ -2576,15 +2613,18 @@ const TEMPLATES = {
   /* 6 — Foundry · SaaS/product: clean cool grid, scale-in + stagger cards, pinned feature reveal,
      minimal parallax screenshot. */
   foundry:()=>{const t=tpl("kobolt","sveitsisk","balansert",[
-    S("hero",{kicker:"Foundry — the product platform",title:"Ship product, not *busywork*",sub:"The workspace where design, code and docs finally live in one place.",align:"left",height:"full",img:U("1551288049-bebda4e38f71"),anim:"words",variant:"editorial",fadeout:true}),
-    S("logos",{heading:"Teams building on Foundry",imgs:IMG("fdry1")+" | Northwind\n"+IMG("fdry2")+" | Solstice\n"+IMG("fdry3")+" | Meridian\n"+IMG("fdry4")+" | Halcyon\n"+IMG("fdry5")+" | Kinfolk",speed:"32"}),
-    S("cards",{kicker:"Why teams switch",heading:"Everything on one surface",items:"Plan | Roadmaps that update themselves as the work moves.\nBuild | Design and code side by side, always in sync.\nShip | One-click releases with notes written for you.",cols:"3",variant:"numbered",scroll:{anim:"scale-in",dur:.9,stagger:true,ease:"power2.out"}}),
+    S("hero",{kicker:"FOUNDRY — THE PRODUCT PLATFORM",title:"Ship product, not *busywork*",sub:"The workspace where design, code and docs finally live in one place — and stay in sync.",align:"center",height:"full",img:HF("hf_20260718_170517_a81a314d-9441-40e7-9edf-1062d22a39f1.png"),anim:"words",variant:"cinematic",fadeout:true,grad:true}),
+    S("logos",{heading:"Teams building on Foundry",imgs:IMG("fdry1")+" | Northwind\n"+IMG("fdry2")+" | Solstice\n"+IMG("fdry3")+" | Meridian\n"+IMG("fdry4")+" | Halcyon\n"+IMG("fdry5")+" | Kinfolk\n"+IMG("fdry6")+" | Vestland",speed:"32"}),
+    S("cards",{kicker:"Why teams switch",heading:"Everything on *one surface*",items:"Plan | Roadmaps that update themselves as the work moves.\nBuild | Design and code side by side, always in sync.\nShip | One-click releases with notes written for you.",cols:"3",variant:"numbered",scroll:{anim:"scale-in",dur:.9,stagger:true,ease:"power2.out"}}),
+    S("alternate",{kicker:"How it works",items:"Plan without the busywork | Drag a roadmap once; every doc, ticket and release note stays in lockstep automatically. | "+U("1454165804606-c3d57bc86b40")+"\nBuild in the open | Designers and engineers work on the same canvas — no more handoff, no more 'final_v3'. | "+U("1531403009284-440f080d1e12")+"\nShip with confidence | Cut a release in one click; Foundry writes the changelog and pings the channel. | "+U("1517245386807-bb43f82c33c4")}),
+    S("dashboard",{kicker:"The workspace",heading:"Everything the team needs, *one screen*.",frame:"browser",url:"app.foundry.dev/overview",brand:"Foundry",nav:["grid:Overview*","chart:Insights","doc:Docs","repeat:Releases~2","users:Team","-- Workspace","inbox:Inbox~5","settings:Settings"].join("\n"),title:"Overview",search:"Search projects, docs…",user:"Ada Vik",widgets:["kpi | Cycle time | 2.4d | -18% | 4 4 3 3 3 2 2 2","kpi | Active projects | 28 | +3 | 20 21 23 24 25 26 27 28","kpi | Ship rate | 94% | +6% | 80 82 85 88 90 91 93 94","kpi | Open bugs | 12 | -9 | 30 27 24 20 18 16 14 12","chart.8 | area | Releases — 12 weeks | 3 4 4 5 6 5 7 6 8 7 9 8","chart.4 | donut | Work by type | 46 32 22 | Features;Fixes;Docs","table | Recent releases | Project;Version;Owner;Status | Atlas;v2.4;Ada;[ok]Shipped | Nimbus;v1.9;Jonas;[warn]Staging | Harbor;v3.1;Mari;[ok]Shipped | Relay;v0.8;Ola;[mute]Draft","progress.6 | Release checklist | Coded;100 | Reviewed;80 | Tested;60 | Shipped;30"].join("\n"),anim:"rise"}),
     S("pinreveal",{kicker:"The idea",text:"One workspace. Every discipline. *Zero* handoffs.",reveal:"words",scrubLen:"medium"}),
-    S("pximg",{img:U("1460925895917-afdab827c52f"),caption:"The Foundry dashboard",height:"tall",depth:"subtle",zoom:false}),
+    S("testimonials",{heading:"Product teams *love* Foundry",items:"We cut our release cycle from two weeks to two days. | Ada Vik | Head of Product, Northwind | "+U("1494790108377-be9c29b29330")+"\nThe first tool design and eng both actually open. | Jonas Lie | Eng Lead, Solstice | "+U("1500648767791-00dcc994a43e")+"\nOnboarding new hires went from weeks to hours. | Mari Sund | COO, Meridian | "+U("1580489944761-15a19d654956"),cols:"3",layout:"grid"}),
     S("pricing",{kicker:"Pricing",heading:"Simple, honest tiers",items:"Solo | 0 kr | One workspace · Core features · Community\nTeam | 90 kr | Unlimited projects · Sync · Priority support | ★\nScale | 240 kr | SSO · Audit log · A dedicated partner",cols:"3"}),
-    S("cta",{kicker:"Start free",heading:"Build your first *release* today",sub:"No card required.",btn:"Get started → #",anim:"rise"}),
+    S("faq",{kicker:"Questions",heading:"Asked, answered",items:"Is there a free plan? | Yes — Solo is free forever, no card required.\nCan we self-host? | Scale customers can deploy Foundry in their own cloud.\nHow long is onboarding? | Most teams are shipping from Foundry the same day."}),
+    S("cta",{kicker:"Start free",heading:"Build your first *release* today",sub:"No card required.",btn:"Get started → #",anim:"rise",grad:true}),
     S("footer",{heading:"Foundry",links:"Docs → #\nChangelog → #\nContact → mailto:hello@foundry.dev",note:"© 2026 Foundry Inc.",variant:"mega"}),
-  ],"Foundry",{radius:"soft",grain:false});
+  ],"Foundry",{radius:"soft",grain:false,extra:{lenis:true}});
   t.header={on:true,text:"▦ Foundry",logo:"",links:"Product → #\nPricing → #\nDocs → #\nSign in → #"};return t;},
 
   /* 7 — Meridian · photography: dark, restrained, full-bleed parallax images (pximg ×2) + pinned
@@ -2648,14 +2688,18 @@ const TEMPLATES = {
   /* 12 — Signal · fintech: confident dark navy + electric accent, count-up stats + scale-in cards +
      subtle parallax console. */
   signal:()=>{const t=tpl("havblaa","sveitsisk","balansert",[
-    S("hero",{kicker:"Signal — modern treasury",title:"Money that moves at the *speed of now*",sub:"Real-time treasury and payments for companies that outgrew the spreadsheet.",align:"left",height:"full",img:U("1620325867502-221cfb5faa5f"),anim:"words",variant:"editorial",fadeout:true}),
-    S("stats",{kicker:"Trusted with",items:"$4.2B | Moved in 2025\n99.99% | Uptime, measured\n38 | Currencies, one API",cols:"3"}),
-    S("cards",{kicker:"Why Signal",heading:"Built for the finance team",items:"See | Every balance, every account, one live view.\nMove | Payments that clear in seconds, not days.\nControl | Approvals, limits and audit trails by default.",cols:"3",variant:"numbered",scroll:{anim:"scale-in",dur:.9,stagger:true,ease:"power2.out"}}),
-    S("pximg",{img:U("1551288049-bebda4e38f71"),caption:"The Signal treasury console",height:"tall",depth:"subtle",zoom:false}),
-    S("logos",{heading:"Finance teams on Signal",imgs:IMG("sig1")+" | Northwind\n"+IMG("sig2")+" | Meridian\n"+IMG("sig3")+" | Solstice\n"+IMG("sig4")+" | Halcyon\n"+IMG("sig5")+" | Kinfolk",speed:"30"}),
-    S("cta",{kicker:"Book a demo",heading:"See Signal *live*",sub:"Fifteen minutes, no slides.",btn:"Book a demo → #",anim:"rise"}),
-    S("footer",{heading:"Signal",links:"Product → #\nSecurity → #\nContact → mailto:sales@signal.money",note:"© 2026 Signal Technologies",variant:"mega"}),
-  ],"Signal",{radius:"soft",grain:false,extra:{counters:true}});
+    S("hero",{kicker:"SIGNAL — MODERN TREASURY",title:"Money that moves at the *speed of now*",sub:"Real-time treasury, payments and FX for companies that outgrew the spreadsheet.",align:"left",height:"full",img:HF("hf_20260718_170503_ca325118-75a6-4a13-a54d-e9397491ce35.png"),anim:"words",variant:"cinematic",fadeout:true,grad:true}),
+    S("ticker",{items:"USD/EUR | 1.084 | +0.2%\nBTC | 68,420 | +2.4%\nS&P 500 | 5,918 | +0.6%\nGOLD | 2,412 | +1.1%\nUSD/NOK | 10.62 | -0.3%\nETH | 3,560 | +3.1%\nNASDAQ | 18,743 | +0.9%\nBRENT | 78.20 | -0.8%\nEUR/GBP | 0.842 | +0.1%\nUSD/JPY | 156.3 | +0.5%",speed:"36",dir:"fwd"}),
+    S("logos",{heading:"Trusted by finance teams at",imgs:IMG("sig1")+" | Northwind\n"+IMG("sig2")+" | Meridian\n"+IMG("sig3")+" | Solstice\n"+IMG("sig4")+" | Halcyon\n"+IMG("sig5")+" | Kinfolk\n"+IMG("sig6")+" | Vestland",speed:"30"}),
+    S("stats",{kicker:"Trusted with",items:"$4.2B | Moved in 2025\n99.99% | Uptime, measured\n38 | Currencies, one API\n0 | Hidden fees",cols:"4"}),
+    S("cards",{kicker:"Why Signal",heading:"The treasury stack, *reimagined*",items:"See | Every balance across every account in one live view.\nMove | Payments that clear in seconds, not days.\nControl | Approvals, limits and audit trails on by default.\nForecast | Cash projections that update as money moves.\nConnect | One API for 38 currencies and 60+ banks.\nProtect | SOC 2, SSO and encryption end to end.",cols:"3",variant:"bento",scroll:{anim:"scale-in",dur:.8,stagger:true,ease:"power2.out"}}),
+    S("dashboard",{kicker:"Live console",heading:"Your whole treasury, *one screen*.",frame:"browser",url:"app.signal.money/treasury",brand:"Signal",nav:["grid:Overview*","chart:Cash flow","card:Accounts","repeat:Payments~4","users:Approvals","-- Company","doc:Reports","settings:Settings"].join("\n"),title:"Treasury overview",search:"Search accounts, payments…",user:"Ada Vik",widgets:["kpi | Total balance | $128.4M | +2.1% | 110 112 115 118 120 123 126 128","kpi | In transit | $6.2M | +8 | 3 4 5 4 6 5 6 6","kpi | FX exposure | $18.9M | -1.2% | 22 21 21 20 19 19 19 18","kpi | Runway | 34 mo | +2 | 28 29 30 31 32 33 33 34","chart.8 | area | Net cash — 12 weeks | 60 64 62 70 68 75 73 82 80 90 88 96","chart.4 | donut | Balance by currency | 48 26 16 10 | USD;EUR;GBP;NOK","table | Recent payments | Counterparty;Method;Amount;Status | Fjord AS;SEPA;€1.29M;[ok]Cleared | Nord Media;Wire;$490K;[warn]Pending | Vestland Co;ACH;$1.29M;[ok]Cleared | Ljós Studio;FX;€820K;[mute]Queued | Bjerk & Co;Wire;$210K;[bad]Failed","progress.6 | Month-end close | Reconciled;100 | Reviewed;74 | Approved;52 | Filed;20"].join("\n"),anim:"rise"}),
+    S("pximg",{img:HF("hf_20260718_170506_29fd603f-32e4-47bd-b202-c5153462e570.png"),caption:"Signal moves $4.2B a year across 38 currencies",height:"tall",depth:"medium",zoom:false}),
+    S("testimonials",{heading:"Finance leaders *trust* Signal",items:"We closed the month in two days instead of ten. | Ada Vik | CFO, Northwind | "+U("1494790108377-be9c29b29330")+"\nOur FX losses basically disappeared. | Jonas Lie | VP Finance, Solstice | "+U("1500648767791-00dcc994a43e")+"\nThe only treasury tool our auditors actually liked. | Mari Sund | Controller, Meridian | "+U("1580489944761-15a19d654956"),cols:"3",layout:"grid"}),
+    S("pricing",{kicker:"Pricing",heading:"Priced for every stage",items:"Starter | 0 kr | 2 accounts · Core payments · Community\nGrowth | 490 kr | Unlimited accounts · FX · Approvals | ★\nEnterprise | Custom | SSO · Audit log · Dedicated partner",cols:"3"}),
+    S("cta",{kicker:"Book a demo",heading:"See Signal *live*",sub:"Fifteen minutes, no slides.",btn:"Book a demo → #",anim:"rise",grad:true}),
+    S("footer",{heading:"Signal",links:"Product → #\nSecurity → #\nPricing → #\nContact → mailto:sales@signal.money",note:"© 2026 Signal Technologies — regulated where it counts",variant:"mega"}),
+  ],"Signal",{radius:"soft",grain:false,extra:{counters:true,lenis:true}});
   t.header={on:true,text:"◈ Signal",logo:"",links:"Product → #\nSecurity → #\nPricing → #\nSign in → #"};return t;},
 
   /* 13 — Kinship · cause / nonprofit: emotive human palette, pinned promise reveal + deep parallax
@@ -3941,11 +3985,49 @@ html.g-grid #ed-guides .egg{display:grid}
   88%{text-shadow:0 0 transparent}
 }
 
+/* ===== v17 Phase 5 — premium genre sections ===== */
+/* numeric ticker tape (fintech) */
+.ticker{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:var(--bg);overflow:hidden}
+.tk-scroll{overflow:hidden;white-space:nowrap}
+.tk-track{display:inline-flex;align-items:center;white-space:nowrap;animation:tkscroll linear infinite;will-change:transform}
+.tk-track.rev{animation-direction:reverse}
+@keyframes tkscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.tk-item{display:inline-flex;align-items:baseline;gap:.6em;padding:1.05em 1.7em;border-right:1px solid var(--line)}
+.tk-label{font-family:var(--fb);font-weight:600;letter-spacing:.07em;text-transform:uppercase;font-size:.8em;color:var(--muted)}
+.tk-val{font-family:var(--fh);font-weight:${hw};font-size:1.05em;color:var(--ink);font-variant-numeric:tabular-nums}
+.tk-delta{font-family:var(--fb);font-size:.8em;font-weight:600;font-variant-numeric:tabular-nums}
+.tk-delta.up{color:#28c076}.tk-delta.dn{color:#f0555a}
+.ticker:hover .tk-track{animation-play-state:paused}
+/* testimonials (grid + marquee) */
+.testimonials{padding:clamp(4rem,9vw,8rem) 0}
+.ts-head{font-family:var(--fh);font-weight:${hw};letter-spacing:${f.ls};font-size:clamp(1.9rem,4.6vw,3.4rem);line-height:1.05;margin:0 0 clamp(1.6rem,4vw,3rem)}
+.ts-grid{display:grid;gap:clamp(1rem,2.4vw,1.8rem)}
+.ts-grid.ts-c2{grid-template-columns:repeat(2,1fr)}
+.ts-grid.ts-c3{grid-template-columns:repeat(3,1fr)}
+.ts-card{margin:0;padding:clamp(1.5rem,2.6vw,2.3rem);border:1px solid var(--line);border-radius:var(--r-card,12px);background:color-mix(in srgb,var(--ink) 3%,var(--bg));display:flex;flex-direction:column;gap:1.4em;transition:transform .35s ease,box-shadow .35s ease}
+.ts-card:hover{transform:translateY(-4px);box-shadow:0 22px 60px -30px rgba(0,0,0,.5)}
+.ts-quote{margin:0;font-family:var(--fh);font-weight:${hw};font-size:clamp(1.05rem,1.5vw,1.35rem);line-height:1.42;letter-spacing:${f.ls}}
+.ts-who{display:flex;align-items:center;gap:.8em;margin-top:auto}
+.ts-av{width:44px;height:44px;border-radius:50%;overflow:hidden;flex:0 0 44px;background:var(--line)}
+.ts-av img{width:100%;height:100%;object-fit:cover;display:block}
+.ts-meta{display:flex;flex-direction:column;line-height:1.32}
+.ts-name{font-family:var(--fb);font-weight:600;font-size:.95em;color:var(--ink)}
+.ts-role{font-family:var(--fb);color:var(--muted);font-size:.82em}
+.ts-marquee .ts-scroll{overflow:hidden}
+.ts-marquee .ts-track{display:flex;gap:clamp(1rem,2vw,1.8rem);width:max-content;padding:0 1rem;animation:tsscroll 48s linear infinite;will-change:transform}
+.ts-marquee .ts-card{width:min(80vw,370px);flex:0 0 auto}
+.ts-marquee:hover .ts-track{animation-play-state:paused}
+@keyframes tsscroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+@media(max-width:760px){.ts-grid.ts-c2,.ts-grid.ts-c3{grid-template-columns:1fr}}
+/* gradient-clipped display text (SaaS/fintech headings) */
+.grad-text{background:linear-gradient(96deg,var(--accent),color-mix(in srgb,var(--accent) 42%,var(--ink)));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:var(--accent)}
+
 @media (prefers-reduced-motion:reduce){
   .pxhero .pxh-bg,.pximg .pximg-media{inset:0}
   .pxhero .pxh-title .w,.pinreveal .pxr-title .w{opacity:1!important;transform:none!important}
   .obj-spinbadge .sb-ring{animation:none}
   .pxhero .pxh-title.pxh-glitch{animation:none}
+  .tk-track,.ts-marquee .ts-track{animation:none}
 }
 `;
 }
@@ -4155,7 +4237,7 @@ function renderSectionBase(s,i,st){
         +bg
         +'<div class="wrap pxh-in">'
         +(s.kicker?'<p class="pxh-kick" data-t="kicker" data-tf="b">'+esc(s.kicker)+'</p>':'')
-        +'<h1 class="pxh-title'+(s.glitch?' pxh-glitch':'')+'" data-t="title" data-tf="h">'+pxSplit(s.title,s.reveal||"words")+'</h1>'
+        +'<h1 class="pxh-title'+(s.glitch?' pxh-glitch':'')+(s.grad?' grad-text':'')+'" data-t="title" data-tf="h">'+pxSplit(s.title,s.reveal||"words")+'</h1>'
         +(s.sub?'<p class="pxh-sub" data-t="sub" data-tf="b">'+acc(s.sub)+'</p>':'')
         +'</div></header>';
     }
@@ -4211,19 +4293,21 @@ function renderSectionBase(s,i,st){
         +(s.img?'<div class="hero-bg"><div class="px-wrap" data-px="0.18" style="position:absolute;inset:0;overflow:hidden"><img src="'+esc(s.img)+'" alt=""'+(s.imgPos?' style="'+FP(s)+'"':'')+'></div></div><div class="hero-veil"></div>':'')
         +'<div class="wrap">'
         +(s.kicker?'<p class="kicker" data-anim="fade" data-t="kicker" data-tf="b">'+esc(s.kicker)+'</p>':'')
-        +title
+        +(s.grad?title.replace('<h1','<h1 class="grad-text"'):title)
         +(s.sub?'<p class="hero-sub" data-anim="rise" data-t="sub" data-tf="b" style="transition-delay:.35s">'+acc(s.sub)+'</p>':'')
         +'</div></header>';
     }
 
-    case "statement":
+    case "statement":{
+      const _stc = 'st-text'+(s.grad?' grad-text':'');
       return '<section class="statement'+(s.align==="center"?" center":"")+'" data-i="'+i+'"><div class="wrap">'
         +(_lqm
-          ? '<p class="st-text"'+A(s.anim==="letters"?"rise":s.anim)+LQ+' data-t="text" data-tf="h">'+acc(s.text)+'</p>'
+          ? '<p class="'+_stc+'"'+A(s.anim==="letters"?"rise":s.anim)+LQ+' data-t="text" data-tf="h">'+acc(s.text)+'</p>'
           : s.anim==="letters"
-          ? '<p class="st-text" data-anim="letters" data-t="text" data-tf="h">'+letters(s.text)+'</p>'
-          : '<p class="st-text"'+A(s.anim)+' data-t="text" data-tf="h">'+acc(s.text)+'</p>')
+          ? '<p class="'+_stc+'" data-anim="letters" data-t="text" data-tf="h">'+letters(s.text)+'</p>'
+          : '<p class="'+_stc+'"'+A(s.anim)+' data-t="text" data-tf="h">'+acc(s.text)+'</p>')
         +'</div></section>';
+    }
 
     case "canvas":
       return '<section class="canvas-sec cv-'+(s.height||"m")+'" data-i="'+i+'"><div class="wrap"></div></section>';
@@ -4427,6 +4511,43 @@ function renderSectionBase(s,i,st){
         +'<div class="conv-cols"><div class="conv-col left">'+L+'</div><div class="conv-col right">'+R+'</div></div></section>';
     }
 
+    case "ticker":{
+      /* v17 P5: numeric ticker tape — pure-CSS auto-scroll loop (cells duplicated 2× for seamless
+         -50% keyframe); delta sign drives green/red arrow. Pauses on hover; reduced-motion halts it. */
+      const cells = String(s.items||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{
+        const p=l.split("|").map(x=>x?x.trim():"");
+        const label=p[0]||"", val=p[1]||"", delta=p[2]||"";
+        const dir=/^-/.test(delta)?"dn":(delta?"up":"");
+        const arrow=dir==="dn"?"▾":(dir==="up"?"▴":"");
+        return '<span class="tk-item"><span class="tk-label">'+esc(label)+'</span>'
+          +(val?'<span class="tk-val">'+esc(val)+'</span>':'')
+          +(delta?'<span class="tk-delta '+dir+'">'+arrow+' '+esc(delta.replace(/^\+/,""))+'</span>':'')
+          +'</span>';
+      }).join("");
+      return '<section class="ticker" data-i="'+i+'"><div class="tk-scroll"><div class="tk-track'+(s.dir==="rev"?" rev":"")+'" style="animation-duration:'+esc(s.speed||"40")+'s">'+cells+cells+'</div></div></section>';
+    }
+
+    case "testimonials":{
+      /* v17 P5: testimonials — grid (staggered rise reveal) or auto-scrolling marquee row. */
+      const cards = String(s.items||"").split("\n").map(l=>l.trim()).filter(Boolean).map((l,n)=>{
+        const p=l.split("|").map(x=>x?x.trim():"");
+        const quote=p[0]||"", name=p[1]||"", role=p[2]||"", av=p[3]||"";
+        return '<figure class="ts-card" data-anim="rise" style="transition-delay:'+(n*0.08).toFixed(2)+'s">'
+          +'<blockquote class="ts-quote">'+acc(quote)+'</blockquote>'
+          +'<figcaption class="ts-who">'
+          +(av?'<span class="ts-av"><img src="'+esc(av)+'" alt="'+esc(name)+'" loading="lazy"></span>':'')
+          +'<span class="ts-meta"><span class="ts-name">'+esc(name)+'</span>'+(role?'<span class="ts-role">'+esc(role)+'</span>':'')+'</span>'
+          +'</figcaption></figure>';
+      }).join("");
+      const marquee = s.layout==="marquee";
+      const inner = marquee
+        ? '<div class="ts-scroll"><div class="ts-track">'+cards+cards+'</div></div>'
+        : '<div class="wrap"><div class="ts-grid ts-c'+(s.cols||"3")+'">'+cards+'</div></div>';
+      return '<section class="testimonials'+(marquee?" ts-marquee":"")+'" data-i="'+i+'">'
+        +(s.heading?'<div class="wrap"><h2 class="ts-head" data-anim="rise"'+LQ+' data-t="heading" data-tf="h">'+acc(s.heading)+'</h2></div>':'')
+        +inner+'</section>';
+    }
+
     case "filmstrip":{
       const items = String(s.imgs||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{
         const [u,c] = l.split("|").map(x=>x.trim());
@@ -4572,7 +4693,7 @@ function renderSectionBase(s,i,st){
       const [bl,bu]=String(s.btn||"").split("→").map(x=>x.trim());
       return '<section class="ctasec" data-i="'+i+'"><div class="wrap"><div'+A(s.anim)+'>'
         +(s.kicker?'<p class="kicker" data-t="kicker" data-tf="b">'+esc(s.kicker)+'</p>':'')
-        +'<h2'+LQ+' data-t="heading" data-tf="h">'+acc(s.heading)+'</h2>'
+        +'<h2'+(s.grad?' class="grad-text"':'')+LQ+' data-t="heading" data-tf="h">'+acc(s.heading)+'</h2>'
         +(s.sub?'<p class="cta-sub" data-t="sub" data-tf="b">'+acc(s.sub)+'</p>':'')
         +(bl?'<a class="cta-btn" href="'+esc(bu||"#")+'">'+esc(bl)+'</a>':'')
         +'</div></div></section>';
@@ -11055,9 +11176,9 @@ if(_draftRestored) showToast("Welcome back — your last session was restored au
     ["Openers",             ["hero","statement","canvas","split"]],
     ["Galleries & media",   ["gallery","hscroll","filmstrip","zoom","pinned","logos"]],
     ["Motion showcase",     ["wordwall","orbit","converge","cascade","layers"]],   /* v14 P11; converge v16 P4 */
-    ["Content",             ["cards","list","alternate","timeline","stats","quote","faq","prose","marquee"]],
+    ["Content",             ["cards","list","alternate","timeline","stats","quote","testimonials","faq","prose","marquee"]],
     ["People & commerce",   ["team","catalog","pricing"]],
-    ["App & data",          ["appscreen","dashboard"]],
+    ["App & data",          ["appscreen","dashboard","ticker"]],
     ["Structure & convert", ["spacer","cta","newsletter","footer"]],
   ];
   let addPanel = null;
