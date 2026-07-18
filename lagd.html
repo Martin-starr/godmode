@@ -1790,7 +1790,48 @@ const IMAGE_LIB = {
 
 const IMG = s => "https://picsum.photos/seed/"+s+"/1400/1000";
 
+/* v15 Phase 2 — the five premium GSAP block types. Kept as a set so the SECTION_DEFS-driven
+   listings (⌘K palette, ＋Add catch-all) can skip them (they get their own "Premium — GSAP"
+   group) and so generateSiteHTML can detect when to pull in the GSAP/Lenis runtime. */
+const PX_TYPES = {pxhero:1, pximg:1, pxhscroll:1, pinreveal:1, velmarquee:1};
+
 const SECTION_DEFS = {
+  /* ===== v15 Phase 2 — premium GSAP blocks (real, exportable section types) ===== */
+  pxhero:{ label:"Premium Hero (GSAP)", ico:"✦",
+    make:()=>({type:"pxhero",kicker:"Studio",title:"We build the *unforgettable*",sub:"Scroll-driven, cinematic, deliberately slow.",img:IMG("pxhero"),align:"left"}),
+    fields:[
+      ["kicker","Kicker (small line above)","text"],
+      ["title","Headline","textarea","Each word reveals upward on scroll. Wrap a word in *stars* for accent."],
+      ["sub","Subline","textarea"],
+      ["align","Alignment","select",[["left","Left"],["center","Centered"]]],
+      ["img","Background image","img","Drifts with a Lenis-driven parallax as you scroll."],
+    ]},
+  pximg:{ label:"Parallax Image (GSAP)", ico:"▦",
+    make:()=>({type:"pximg",img:IMG("pximg"),caption:"Shot on location",height:"tall"}),
+    fields:[
+      ["img","Image","img","Drifts with multi-layer depth as the section scrolls past."],
+      ["caption","Caption (optional)","text"],
+      ["height","Height","select",[["tall","Tall"],["full","Full screen"],["compact","Compact"]]],
+    ]},
+  pxhscroll:{ label:"Horizontal Scroll (GSAP)", ico:"⇄",
+    make:()=>({type:"pxhscroll",heading:"Selected work",imgs:IMG("hx1")+" | Northern light\n"+IMG("hx2")+" | Coastal house\n"+IMG("hx3")+" | Concrete & oak\n"+IMG("hx4")+" | Long shadow\n"+IMG("hx5")+" | Quiet interior"}),
+    fields:[
+      ["heading","Heading (optional)","text"],
+      ["imgs","Panels — one per line","imglist","Format:  image-url | caption"],
+    ]},
+  pinreveal:{ label:"Pinned Text Reveal (GSAP)", ico:"❋",
+    make:()=>({type:"pinreveal",kicker:"Manifesto",text:"Every detail earns its place, or it is *cut*."}),
+    fields:[
+      ["kicker","Kicker (small line above)","text"],
+      ["text","Reveal text","textarea","The section pins and the words light up one by one as you scroll. Use *stars* for accent."],
+    ]},
+  velmarquee:{ label:"Velocity Marquee (GSAP)", ico:"↻",
+    make:()=>({type:"velmarquee",text:"CREATIVE STUDIO",sep:"✦",dir:"fwd"}),
+    fields:[
+      ["text","Marquee text","text"],
+      ["sep","Separator","text"],
+      ["dir","Direction","select",[["fwd","Left"],["rev","Right"]]],
+    ]},
   hero:{ label:"Hero", ico:"◆",
     make:()=>({type:"hero",kicker:"Established on the coast",title:"Design that *breathes*",sub:"A small studio for people who believe restraint is a form of ambition.",align:"left",height:"full",img:"",anim:"words",fadeout:true,variant:"editorial"}),
     fields:[
@@ -3744,6 +3785,12 @@ const letters = s => {
   ).join("<br>");
 };
 
+/* v15 Phase 2: word splitter for the premium GSAP blocks. Each word becomes a masked .w span
+   that GSAP drives directly (yPercent slide / autoAlpha fade) — independent of the legacy
+   [data-anim="words"] CSS reveal, so the two systems never fight over the same nodes. */
+const pxWords = s => esc(String(s||"").replace(/\*/g,"")).split(/\s+/).filter(Boolean)
+  .map(w=>'<span class="wmask"><span class="w">'+w+'</span></span>').join(' ');
+
 /* ---------- site generator (used for BOTH live preview and export) ---------- */
 
 /* v9 phase 3 → v14 P12: ONE effects registry. Every image/hover effect declares its label and
@@ -4807,6 +4854,51 @@ ${forceMotion?'':`@media (prefers-reduced-motion:reduce){
 #ed-guides .egg i{background:rgba(24,160,251,.06);border-left:1px solid rgba(24,160,251,.13);border-right:1px solid rgba(24,160,251,.13)}
 html.g-col #ed-guides .egc,html.g-col #ed-guides .egm,html.g-col #ed-guides b{display:block}
 html.g-grid #ed-guides .egg{display:grid}
+
+/* ===== v15 Phase 2 — premium GSAP blocks. Content is fully readable without JS; GSAP only
+   enhances. Transforms live on these block-scoped nodes, never on .wrap (the skew loop owns that). ===== */
+.pxhero{position:relative;min-height:100vh;display:flex;align-items:flex-end;overflow:hidden;padding:0 0 12vh}
+.pxhero.center{align-items:center;text-align:center;padding-bottom:0}
+.pxhero .pxh-bg{position:absolute;inset:-12% 0;background-size:cover;background-position:center;z-index:0;will-change:transform}
+.pxhero .pxh-veil{position:absolute;inset:0;z-index:1;background:linear-gradient(to top,color-mix(in srgb,var(--bg) 90%,transparent),color-mix(in srgb,var(--bg) 25%,transparent) 55%,color-mix(in srgb,var(--bg) 60%,transparent))}
+.pxhero .pxh-in{position:relative;z-index:2}
+.pxhero .pxh-kick{font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);margin-bottom:1.4em}
+.pxhero .pxh-title{font-family:var(--fh);font-weight:inherit;font-size:clamp(2.6rem,8vw,7.5rem);line-height:1.02;margin:0}
+.pxhero .pxh-sub{font-family:var(--fb);color:var(--muted);font-size:clamp(1rem,1.6vw,1.35rem);margin-top:1.1em;max-width:38ch}
+.pxhero.center .pxh-sub{margin-left:auto;margin-right:auto}
+.wmask{display:inline-block;overflow:hidden;vertical-align:top;padding-bottom:.08em}
+.pxh-title .w,.pxr-title .w{display:inline-block;will-change:transform,opacity}
+
+.pximg{padding:9vh 0}
+.pximg .pximg-frame{position:relative;overflow:hidden;border-radius:var(--r-img,4px)}
+.pximg-tall .pximg-frame{height:78vh}
+.pximg-full .pximg-frame{height:100vh}
+.pximg-compact .pximg-frame{height:52vh}
+.pximg .pximg-media{position:absolute;inset:-16% 0;background-size:cover;background-position:center;will-change:transform}
+.pximg .pximg-cap{margin-top:.9em;font-size:12px;letter-spacing:.06em;color:var(--muted);text-align:center}
+
+.pxhscroll{position:relative;overflow-x:auto;overflow-y:hidden;padding:9vh 0}
+.pxhscroll .pxhs-head{margin-bottom:4vh}
+.pxhscroll .pxhs-head h2{font-size:clamp(1.6rem,3.4vw,3rem)}
+.pxhscroll .pxhs-track{display:flex;gap:2.4vw;padding:0 5vw;width:max-content;will-change:transform}
+.pxhscroll .pxhs-panel{position:relative;flex:0 0 auto;width:min(46vw,560px);margin:0}
+.pxhscroll .pxhs-media{height:64vh;background-size:cover;background-position:center;border-radius:var(--r-img,4px)}
+.pxhscroll .pxhs-panel figcaption{margin-top:.7em;font-size:12px;letter-spacing:.05em;color:var(--muted)}
+
+.pinreveal{min-height:100vh;display:flex;align-items:center;padding:14vh 0}
+.pinreveal .pxr-kick{font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--accent);margin-bottom:1.6em}
+.pinreveal .pxr-title{font-family:var(--fh);font-weight:inherit;font-size:clamp(2rem,5.5vw,4.6rem);line-height:1.16;margin:0}
+
+.velmarquee{overflow:hidden;padding:7vh 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.velmarquee .pxm-track{display:flex;width:max-content;white-space:nowrap;will-change:transform}
+.velmarquee .pxm-seg{display:inline-flex;align-items:center}
+.velmarquee .pxm-item{font-family:var(--fh);font-weight:inherit;font-size:clamp(2.4rem,7vw,6rem);line-height:1;text-transform:uppercase;letter-spacing:.02em;padding:0 .35em}
+.velmarquee .pxm-sep{color:var(--accent);font-size:clamp(1.6rem,4vw,3.2rem);opacity:.8}
+
+@media (prefers-reduced-motion:reduce){
+  .pxhero .pxh-bg,.pximg .pximg-media{inset:0}
+  .pxhero .pxh-title .w,.pinreveal .pxr-title .w{opacity:1!important;transform:none!important}
+}
 `;
 }
 
@@ -5004,6 +5096,53 @@ function renderSectionBase(s,i,st){
   const _lqm = liquidModeOf(st||{}, s);
   const LQ = _lqm ? ' data-liquid'+((_lqm==="calm")?' data-lqm="calm"':'') : '';
   switch(s.type){
+
+    /* ===== v15 Phase 2 — premium GSAP blocks. Each renders full, readable content with NO JS
+       (progressive enhancement); the data-pxblock hook lets the exported GSAP runtime enhance it
+       in Preview + Export only. Transforms target the block's own inner nodes, never .wrap. ===== */
+    case "pxhero":{
+      const bg = s.img ? '<div class="pxh-bg" data-pxlayer style="background-image:url('+esc(s.img)+')"></div><div class="pxh-veil"></div>' : '';
+      return '<header class="pxhero'+(s.align==="center"?" center":"")+'" data-i="'+i+'" data-pxblock="hero">'
+        +bg
+        +'<div class="wrap pxh-in">'
+        +(s.kicker?'<p class="pxh-kick" data-t="kicker" data-tf="b">'+esc(s.kicker)+'</p>':'')
+        +'<h1 class="pxh-title" data-t="title" data-tf="h">'+pxWords(s.title)+'</h1>'
+        +(s.sub?'<p class="pxh-sub" data-t="sub" data-tf="b">'+acc(s.sub)+'</p>':'')
+        +'</div></header>';
+    }
+
+    case "pximg":{
+      const h = s.height||"tall";
+      return '<section class="pximg pximg-'+h+'" data-i="'+i+'" data-pxblock="pximg"><div class="wrap">'
+        +'<div class="pximg-frame"><div class="pximg-media" data-pxlayer'+(s.img?' style="background-image:url('+esc(s.img)+')"':'')+'></div></div>'
+        +(s.caption?'<figcaption class="pximg-cap" data-t="caption" data-tf="b">'+esc(s.caption)+'</figcaption>':'')
+        +'</div></section>';
+    }
+
+    case "pxhscroll":{
+      const panels = String(s.imgs||"").split("\n").map(l=>l.trim()).filter(Boolean).map(l=>{
+        const bar=l.split("|"); const u=(bar[0]||"").trim(), cap=(bar[1]||"").trim();
+        return '<figure class="pxhs-panel"><div class="pxhs-media"'+(u?' style="background-image:url('+esc(u)+')"':'')+'></div>'
+          +(cap?'<figcaption>'+esc(cap)+'</figcaption>':'')+'</figure>';
+      }).join("");
+      return '<section class="pxhscroll" data-i="'+i+'" data-pxblock="hscrollx">'
+        +(s.heading?'<div class="pxhs-head"><div class="wrap"><h2 data-t="heading" data-tf="h">'+esc(s.heading)+'</h2></div></div>':'')
+        +'<div class="pxhs-track">'+panels+'</div></section>';
+    }
+
+    case "pinreveal":
+      return '<section class="pinreveal" data-i="'+i+'" data-pxblock="pinreveal"><div class="wrap pxr-in">'
+        +(s.kicker?'<p class="pxr-kick" data-t="kicker" data-tf="b">'+esc(s.kicker)+'</p>':'')
+        +'<h2 class="pxr-title" data-t="text" data-tf="h">'+pxWords(s.text)+'</h2>'
+        +'</div></section>';
+
+    case "velmarquee":{
+      const txt=esc(s.text||"CREATIVE STUDIO"), sep=esc(s.sep||"✦");
+      const unit='<span class="pxm-item">'+txt+'</span><span class="pxm-sep">'+sep+'</span>';
+      const seg='<span class="pxm-seg">'+unit.repeat(6)+'</span>';
+      return '<section class="velmarquee" data-i="'+i+'" data-pxblock="velmarquee" data-dir="'+(s.dir==="rev"?"rev":"fwd")+'">'
+        +'<div class="pxm-track">'+seg+seg+'</div></section>';
+    }
 
     case "hero":{
       const title = _lqm
@@ -5542,6 +5681,18 @@ function renderSection(s,i,editMode,st){
     if(s.padT!==""&&s.padT!=null)pad+="padding-top:"+(+s.padT)+"vh;";
     if(s.padB!==""&&s.padB!=null)pad+="padding-bottom:"+(+s.padB)+"vh;";
     html=html.replace(/^<(header|section|footer|div)([^>]*)>/,'<$1$2 style="'+pad+'">');
+  }
+  /* v15 Phase 2: per-section GSAP scroll animation → encode s.scroll into a data-ux hook the
+     exported runtime reads. Skipped for premium blocks (they carry their own motion) and only
+     emitted when something is actually set, so pre-Phase-2 output stays byte-identical. */
+  if(s.scroll && !PX_TYPES[s.type]){
+    const _sc=s.scroll, _on=(_sc.anim&&_sc.anim!=="none")||(+_sc.parallax>0)||_sc.pin;
+    if(_on){
+      const _cfg={anim:_sc.anim||"none",parallax:+_sc.parallax||0,dur:+_sc.dur||1,delay:+_sc.delay||0,ease:_sc.ease||"power2.out",pin:!!_sc.pin};
+      const _ux=esc(JSON.stringify(_cfg)).replace(/'/g,"&#39;");
+      html=html.replace(/^<(header|section|footer|div)([^>]*)>/, m => m.slice(0,-1)+" data-ux='"+_ux+"'>");
+      if(_cfg.anim!=="none") html=html.replace(/\sdata-anim="[^"]*"/g,"");   // don't double-animate with the legacy IO reveal
+    }
   }
   /* v14 P4: sec-bg + secoverlay as the FIRST children of the section. A FUNCTION replacer, so a bgimg
      URL carrying a $ is never read as $1/$& (the same trap the objects injection below hit). Injected in
@@ -7700,6 +7851,70 @@ secChrome();
    offline. This fires as soon as the script runs. */
 post({t:'ready'});
 `:''}
+${editMode?'':`
+/* ===== v15 Phase 2 — GSAP + Lenis premium motion (Preview + Export only; never the edit canvas) ===== */
+try{ if(!reduced && window.gsap){
+  var _G=window.gsap, _ST=window.ScrollTrigger||null;
+  if(_ST) _G.registerPlugin(_ST);
+  var _LENIS_ON=${(st.lenis&&!st.snap)?'true':'false'};
+  if(_LENIS_ON && window.Lenis){
+    var _ln=new window.Lenis({duration:1.1,smoothWheel:true,wheelMultiplier:1,touchMultiplier:1.5});
+    document.documentElement.style.scrollBehavior='auto';
+    if(_ST){ _ln.on('scroll',_ST.update); _G.ticker.add(function(tm){ _ln.raf(tm*1000); }); _G.ticker.lagSmoothing(0); }
+    else { (function _lr(tm){ _ln.raf(tm); requestAnimationFrame(_lr); })(0); }
+  }
+  function _uxParse(el){ try{ return JSON.parse(el.getAttribute('data-ux')); }catch(e){ return null; } }
+  if(_ST) [].forEach.call(document.querySelectorAll('[data-ux]'), function(el){
+    var c=_uxParse(el); if(!c) return;
+    if(c.anim && c.anim!=='none'){
+      var fr={autoAlpha:0}, d=48;
+      if(c.anim==='fade-up') fr.y=d;
+      else if(c.anim==='scale-in') fr.scale=0.92;
+      else if(c.anim==='slide-left') fr.x=-64;
+      else if(c.anim==='slide-right') fr.x=64;
+      else if(c.anim==='reveal'){ fr.y=d; fr.clipPath='inset(0 0 100% 0)'; }
+      var opt={duration:c.dur||1,delay:c.delay||0,ease:c.ease||'power2.out',scrollTrigger:{trigger:el,start:'top 84%',once:true}};
+      for(var kk in fr) opt[kk]=fr[kk];
+      _G.from(el,opt);
+    }
+    if(+c.parallax>0){ var a=(+c.parallax/100)*70;
+      _G.fromTo(el,{y:-a},{y:a,ease:'none',scrollTrigger:{trigger:el,start:'top bottom',end:'bottom top',scrub:true}}); }
+    if(c.pin){ _ST.create({trigger:el,start:'top top',end:'+=90%',pin:true,pinSpacing:true}); }
+  });
+  if(_ST) [].forEach.call(document.querySelectorAll('[data-pxblock]'), function(el){
+    var kind=el.getAttribute('data-pxblock');
+    if(kind==='hero'){
+      var ws=el.querySelectorAll('.pxh-title .w');
+      if(ws.length) _G.from(ws,{yPercent:120,autoAlpha:0,duration:0.9,ease:'power3.out',stagger:0.05,delay:0.1});
+      var bgl=el.querySelector('[data-pxlayer]');
+      if(bgl) _G.fromTo(bgl,{yPercent:-10},{yPercent:14,ease:'none',scrollTrigger:{trigger:el,start:'top top',end:'bottom top',scrub:true}});
+    } else if(kind==='pximg'){
+      var m=el.querySelector('[data-pxlayer]');
+      if(m) _G.fromTo(m,{yPercent:-16},{yPercent:16,ease:'none',scrollTrigger:{trigger:el,start:'top bottom',end:'bottom top',scrub:true}});
+    } else if(kind==='hscrollx'){
+      var tr=el.querySelector('.pxhs-track');
+      if(tr){ el.style.overflow='hidden';
+        var dist=function(){ return Math.max(0,tr.scrollWidth-window.innerWidth); };
+        _G.to(tr,{x:function(){ return -dist(); },ease:'none',scrollTrigger:{trigger:el,start:'top top',end:function(){ return '+='+dist(); },pin:true,scrub:0.6,invalidateOnRefresh:true,anticipatePin:1}});
+      }
+    } else if(kind==='pinreveal'){
+      var wr=el.querySelectorAll('.pxr-title .w');
+      if(wr.length){ _G.set(wr,{autoAlpha:0.14});
+        _G.to(wr,{autoAlpha:1,ease:'none',stagger:0.4,scrollTrigger:{trigger:el,start:'top top',end:'+=120%',pin:true,scrub:0.5}});
+      }
+    } else if(kind==='velmarquee'){
+      var mt=el.querySelector('.pxm-track'); if(!mt) return;
+      var tl;
+      if(el.getAttribute('data-dir')==='rev'){ _G.set(mt,{xPercent:-50}); tl=_G.to(mt,{xPercent:0,duration:24,ease:'none',repeat:-1}); }
+      else { tl=_G.to(mt,{xPercent:-50,duration:24,ease:'none',repeat:-1}); }
+      _ST.create({trigger:el,start:'top bottom',end:'bottom top',
+        onUpdate:function(self){ var v=Math.abs(self.getVelocity()); var ts=1+Math.min(v/260,7); _G.to(tl,{timeScale:ts,duration:0.4,overwrite:true}); },
+        onLeave:function(){ _G.to(tl,{timeScale:1,duration:0.6}); }, onLeaveBack:function(){ _G.to(tl,{timeScale:1,duration:0.6}); }});
+    }
+  });
+  if(_ST) setTimeout(function(){ _ST.refresh(); },80);
+}}catch(_e){ if(window.console)console.warn('premium motion',_e); }
+`}
 })();`;
 }
 
@@ -7785,6 +8000,19 @@ function dotnavHTML(st){
   return '<nav id="dotnav" aria-label="Page sections">'+dots+'</nav>\n';
 }
 
+/* v15 Phase 2 — premium motion runs on GSAP + ScrollTrigger + Lenis, loaded from a pinned CDN.
+   Emitted only when the site actually uses premium motion (a premium block, a per-section scroll
+   animation, or site-wide Lenis), so ordinary exports carry zero extra bytes. The script tags are
+   split so this builder file's own HTML parser never sees a literal closing-script tag. */
+const GSAP_CDN_TAGS =
+  '<scr'+'ipt src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"></scr'+'ipt>\n'+
+  '<scr'+'ipt src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"></scr'+'ipt>\n'+
+  '<scr'+'ipt src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"></scr'+'ipt>\n';
+function siteUsesGsap(st){
+  if(st.lenis) return true;
+  return (st.sections||[]).some(s => PX_TYPES[s.type] || (s.scroll && (
+    (s.scroll.anim && s.scroll.anim!=="none") || (+s.scroll.parallax>0) || s.scroll.pin )));
+}
 function generateSiteHTML(st,editMode,forceMotion){
   const t = getTheme(st), f = getFonts(st), sc = SCALES[st.scale];
   const usedLib={};
@@ -7857,6 +8085,7 @@ function generateSiteHTML(st,editMode,forceMotion){
     +(st.header&&st.header.on?renderHeader(st.header):'')
     +wrapOpen+body+wrapClose
     +(editMode?'\n'+edGuidesHTML(st):'')
+    +(!editMode && siteUsesGsap(st) ? GSAP_CDN_TAGS : '')   // v15 Phase 2: GSAP/Lenis, only when used, Preview + Export
     +'\n<scr'+'ipt>'+siteJS(st,editMode,forceMotion)+'</scr'+'ipt>\n</body>\n</html>';
 }
 
@@ -8309,6 +8538,7 @@ const MODE_SEC_FIRST = {
 function renderAddMenu(){
   const first = MODE_SEC_FIRST[(state&&state.mode)||"web"]||[];
   const entries = Object.entries(SECTION_DEFS)
+    .filter(([k])=>!PX_TYPES[k])   // v15: premium GSAP blocks are added via the ⌘K / ＋Add "Premium" group
     .sort((a,b)=>{ const ia=first.indexOf(a[0]), ib=first.indexOf(b[0]);
       return (ia<0?first.length:ia)-(ib<0?first.length:ib); });
   $("#add-menu").innerHTML = entries.map(([k,d])=>
@@ -8771,31 +9001,31 @@ function renderSectionInspector(box,s,d,html){
      the model is visible now without pretending to animate anything yet. Phase 2 reads the
      saved values off s.scroll and drops the `disabled` attribute + real change handlers. */
   const _sa = s.scroll || {};
-  let tScroll = '<div class="pgroup p2lock">';
-  tScroll += '<div class="p2note"><b>Phase 2 · GSAP + Lenis.</b> Choose how this section moves as it scrolls into view. These controls are a preview — the scroll-animation engine is wired up next.</div>';
-  tScroll += '<div class="field"><label>Entrance</label><select data-scroll-anim disabled>'
+  let tScroll = '<div class="pgroup">';
+  tScroll += '<div class="p2note"><b>GSAP · ScrollTrigger.</b> How this section moves as it scrolls into view. Hit <b>Preview</b> (or export) to feel it — the editing canvas stays still on purpose.</div>';
+  tScroll += '<div class="field"><label>Entrance</label><select data-scroll-anim>'
     + [["none","None"],["fade-up","Fade up"],["fade-in","Fade in"],["reveal","Clip reveal"],["scale-in","Scale in"],["slide-left","Slide from left"],["slide-right","Slide from right"]]
         .map(o=>'<option value="'+o[0]+'"'+((_sa.anim||"none")===o[0]?' selected':'')+'>'+o[1]+'</option>').join("")
     + '</select></div>';
   tScroll += '<div class="field"><label>Parallax depth <span style="color:var(--faint);letter-spacing:0;text-transform:none;font-size:10px">— 0 = none</span></label>'
-    + '<input type="range" min="0" max="100" step="5" value="'+(+_sa.parallax||0)+'" data-scroll-parallax disabled></div>';
+    + '<input type="range" min="0" max="100" step="5" value="'+(+_sa.parallax||0)+'" data-scroll-parallax></div>';
   tScroll += '<div class="frow">'
-    + '<div class="field"><label>Duration (s)</label><input type="number" min="0.1" max="4" step="0.1" value="'+esc(_sa.dur||1)+'" data-scroll-dur disabled></div>'
-    + '<div class="field"><label>Delay (s)</label><input type="number" min="0" max="3" step="0.05" value="'+esc(_sa.delay||0)+'" data-scroll-delay disabled></div>'
+    + '<div class="field"><label>Duration (s)</label><input type="number" min="0.1" max="4" step="0.1" value="'+esc(_sa.dur||1)+'" data-scroll-dur></div>'
+    + '<div class="field"><label>Delay (s)</label><input type="number" min="0" max="3" step="0.05" value="'+esc(_sa.delay||0)+'" data-scroll-delay></div>'
     + '</div>';
-  tScroll += '<div class="field"><label>Easing</label><select data-scroll-ease disabled>'
+  tScroll += '<div class="field"><label>Easing</label><select data-scroll-ease>'
     + [["power2.out","Smooth (power2.out)"],["power3.out","Strong (power3.out)"],["power4.out","Dramatic (power4.out)"],["expo.out","Expo out"],["back.out","Overshoot (back.out)"],["none","Linear"]]
         .map(o=>'<option value="'+o[0]+'"'+((_sa.ease||"power2.out")===o[0]?' selected':'')+'>'+o[1]+'</option>').join("")
     + '</select></div>';
-  tScroll += '<div class="tgl inert'+(_sa.pin?' on':'')+'"><span>Pin while scrolling<i class="tgl-sub">hold this section in place and animate its contents (GSAP pin)</i></span><div class="knob"></div></div>';
-  tScroll += '<div class="tgl inert"><span>Smooth scroll — Lenis<i class="tgl-sub">momentum scrolling across the whole exported site</i></span><div class="knob"></div></div>';
+  tScroll += '<div class="tgl'+(_sa.pin?' on':'')+'" data-scroll-pin><span>Pin while scrolling<i class="tgl-sub">hold this section in place as its contents animate (GSAP pin)</i></span><div class="knob"></div></div>';
+  tScroll += '<div class="tgl'+(state.lenis?' on':'')+'" data-scroll-lenis><span>Smooth scroll — Lenis <span style="color:var(--faint);font-size:9px;letter-spacing:0;text-transform:none">site-wide</span><i class="tgl-sub">momentum smooth-scrolling across the whole exported site'+(state.snap?' — turn Snap off to use it':'')+'</i></span><div class="knob"></div></div>';
   tScroll += '</div>';
 
   /* assemble — Tier 1 (label pgroup: harmony + the words) → freeform → the disclosure tiers */
   html += harmony + t1f + '</div>';
   html += freeform;
   if(t2) html += '<details class="tier" data-tier="sm"'+(_secTierOpen.sm?' open':'')+'><summary>Style &amp; motion</summary>'+t2+'</details>';
-  html += '<details class="tier" data-tier="scroll"'+(_secTierOpen.scroll?' open':'')+'><summary>Motion / Scroll animations <span class="tier-soon">PHASE 2</span></summary>'+tScroll+'</details>';
+  if(!PX_TYPES[s.type]) html += '<details class="tier" data-tier="scroll"'+(_secTierOpen.scroll?' open':'')+'><summary>Motion / Scroll animations <span class="tier-soon">GSAP</span></summary>'+tScroll+'</details>';
   html += '<details class="tier" data-tier="ca"'+(_secTierOpen.ca?' open':'')+'><summary>Colours &amp; advanced</summary>'+t3+'</details>';
 
   box.innerHTML = html;
@@ -8804,6 +9034,25 @@ function renderSectionInspector(box,s,d,html){
   box.querySelectorAll("details.tier").forEach(dt=>{
     dt.addEventListener("toggle", ()=>{ _secTierOpen[dt.dataset.tier] = dt.open; });
   });
+
+  /* v15 Phase 2 — Motion/Scroll tier: write s.scroll.* (per section) and state.lenis (site-wide),
+     then rebuild. update(true,true) keeps the inspector stable so a drag/select isn't interrupted. */
+  (function(){
+    const secObj = state.sections[sel]; if(!secObj) return;
+    const ens = ()=>{ secObj.scroll = secObj.scroll || {}; return secObj.scroll; };
+    const bind = (q,ev,fn)=>{ const el=box.querySelector(q); if(el) el[ev]=fn; };
+    bind("[data-scroll-anim]","onchange",e=>{ pushUndo("scroll:anim"); ens().anim=e.target.value; update(true,true); });
+    bind("[data-scroll-parallax]","oninput",e=>{ ens().parallax=+e.target.value; update(true,true); });
+    bind("[data-scroll-dur]","onchange",e=>{ ens().dur=+e.target.value||1; update(true,true); });
+    bind("[data-scroll-delay]","onchange",e=>{ ens().delay=+e.target.value||0; update(true,true); });
+    bind("[data-scroll-ease]","onchange",e=>{ ens().ease=e.target.value; update(true,true); });
+    const pin=box.querySelector("[data-scroll-pin]");
+    if(pin) pin.onclick=()=>{ pushUndo("scroll:pin"); const o=ens(); o.pin=!o.pin; pin.classList.toggle("on",o.pin); update(true,true); };
+    const lz=box.querySelector("[data-scroll-lenis]");
+    if(lz) lz.onclick=()=>{ pushUndo("scroll:lenis"); state.lenis=!state.lenis; lz.classList.toggle("on",state.lenis);
+      if(state.lenis && state.snap){ state.snap=false; if(typeof renderToggles==="function") renderToggles(); showToast("Snap turned off — Lenis smooth scroll is on"); }
+      update(true); };
+  })();
 
   box.querySelectorAll("[data-pad]").forEach(el=>{
     el.onchange=()=>{ pushUndo("pad:"+sel+":"+el.dataset.pad); state.sections[sel][el.dataset.pad] = el.value===""? "" : Number(el.value); update(true,true); };
@@ -11511,15 +11760,23 @@ $("#ik-create").onclick = ()=>{
    ready to inject — no markup is added yet. They surface in two places: the ⌘K palette
    (top group) and the ＋Add overlay. Keep this the single source of truth for both. */
 const PREMIUM_BLOCKS = [
-  {key:"gsap-hero",    ico:"✦", label:"Premium Hero Section (GSAP)", sub:"Split-text headline reveal + Lenis-driven background parallax"},
-  {key:"parallax-img", ico:"▦", label:"Parallax Image Container",    sub:"A pinned image with multi-layer depth as you scroll"},
-  {key:"hscroll",      ico:"⇄", label:"Horizontal Scroll Gallery",   sub:"Pinned section that scrolls its panels sideways"},
-  {key:"pin-reveal",   ico:"❋", label:"Pinned Text Reveal",          sub:"Pin the section and fade the copy in word by word"},
-  {key:"marquee-x",    ico:"↻", label:"Scroll-Velocity Marquee",     sub:"A ticker whose speed reacts to scroll velocity"},
+  {key:"gsap-hero",    sec:"pxhero",     ico:"✦", label:"Premium Hero Section (GSAP)", sub:"Split-word headline reveal + Lenis-driven background parallax"},
+  {key:"parallax-img", sec:"pximg",      ico:"▦", label:"Parallax Image Container",    sub:"A pinned image with multi-layer depth as you scroll"},
+  {key:"hscroll",      sec:"pxhscroll",  ico:"⇄", label:"Horizontal Scroll Gallery",   sub:"Pinned section that scrolls its panels sideways"},
+  {key:"pin-reveal",   sec:"pinreveal",  ico:"❋", label:"Pinned Text Reveal",          sub:"Pin the section and light the copy up word by word"},
+  {key:"marquee-x",    sec:"velmarquee", ico:"↻", label:"Scroll-Velocity Marquee",     sub:"A ticker whose speed reacts to scroll velocity"},
 ];
-function premiumBlockAlert(b){
-  /* Phase 1 stub — Phase 2 replaces this with the real GSAP/Lenis injection. */
-  alert("“"+b.label+"” is ready to inject.\n\n"+b.sub+".\n\nThe GSAP + Lenis code for this block is wired up in Phase 2.");
+/* v15 Phase 2 — insert a premium GSAP block as a real section (was a Phase-1 alert stub). Mirrors
+   addSectionType, but lives at top level so both the ⌘K palette and the ＋Add overlay can call it. */
+function insertPremiumBlock(b){
+  const k = b && b.sec;
+  if(!k || !SECTION_DEFS[k]){ showToast("Block type not found: "+(b&&b.label||"?")); return; }
+  pushUndo("premium:"+k);
+  const at = Math.min((sel|0)+1, state.sections.length);
+  state.sections.splice(at, 0, SECTION_DEFS[k].make());
+  sel = at; update(true);
+  setTimeout(()=>{ try{ scrollFrameToSel(); }catch(e){} }, 400);
+  showToast("Added: "+(SECTION_DEFS[k].label||b.label)+" — press Preview to feel it");
 }
 
 /* ---------- v10.3 slice 22: command palette (Ctrl/⌘+K) ---------- */
@@ -11529,7 +11786,7 @@ function buildCommands(){
   PREMIUM_BLOCKS.forEach(b=>{
     out.push({group:"✦ Premium — GSAP", ico:b.ico, label:b.label,
       key:b.label+" "+b.key+" premium gsap scroll parallax animation hero",
-      run:()=>premiumBlockAlert(b)});
+      run:()=>insertPremiumBlock(b)});
   });
   // Templates
   BUILTIN_TPL_OPTS.forEach(([k,label])=>{
@@ -11558,6 +11815,7 @@ function buildCommands(){
   });
   // Add section
   Object.entries(SECTION_DEFS).forEach(([k,d])=>{
+    if(PX_TYPES[k]) return;   // v15: premium GSAP blocks have their own "Premium — GSAP" group above
     out.push({group:"Add section", ico:d.ico||"+", label:"Add "+d.label, key:d.label+" section "+k,
       run:()=>{ pushUndo("cmdp:addsec:"+k); state.sections.splice(sel+1,0,SECTION_DEFS[k].make()); sel=Math.min(sel+1,state.sections.length-1); update(true); setTimeout(()=>scrollFrameToSel(),400); showToast("Added "+d.label);}});
   });
@@ -11868,7 +12126,7 @@ if(_draftRestored) showToast("Welcome back — your last session was restored au
       if(ks.length) h += '<div class="ap-group">'+esc(title)+'</div><div class="ap-grid">'+ks.map(secTile).join("")+'</div>';
     });
     // Catch-all: any SECTION_DEFS key not placed in a group above stays reachable (future types never vanish).
-    const rest = Object.keys(SECTION_DEFS).filter(k=>!placed[k] && hit(k, SECTION_DEFS[k].label));
+    const rest = Object.keys(SECTION_DEFS).filter(k=>!placed[k] && !PX_TYPES[k] && hit(k, SECTION_DEFS[k].label));   // v15: PX blocks live in the Premium group
     if(rest.length) h += '<div class="ap-group">More</div><div class="ap-grid">'+rest.map(secTile).join("")+'</div>';
     // v14 P10: designed presets — the BLUEPRINTS library, previously only reachable via the command palette.
     const bps = BLUEPRINTS.filter(bp=>hit(bp.key, bp.label));
@@ -11876,7 +12134,7 @@ if(_draftRestored) showToast("Welcome back — your last session was restored au
       bps.map(bp=>apItem(bp.ico||"◆", bp.label, 'data-add-bp="'+bp.key+'"')).join("")+'</div>';
     if(!h) h = '<div class="ap-empty">Nothing matches “'+esc(q)+'”.</div>';
     body.innerHTML = h;
-    body.querySelectorAll("[data-add-premium]").forEach(b=>b.addEventListener("click",()=>{ const pb=PREMIUM_BLOCKS.find(x=>x.key===b.dataset.addPremium); if(pb) premiumBlockAlert(pb); }));
+    body.querySelectorAll("[data-add-premium]").forEach(b=>b.addEventListener("click",()=>{ const pb=PREMIUM_BLOCKS.find(x=>x.key===b.dataset.addPremium); if(pb){ insertPremiumBlock(pb); closeAddPanel(); } }));
     body.querySelectorAll("[data-add-sec]").forEach(b=>b.addEventListener("click",()=>{ addSectionType(b.dataset.addSec); closeAddPanel(); }));
     body.querySelectorAll("[data-add-el]").forEach(b=>b.addEventListener("click",()=>{ addElementType(b.dataset.addEl); closeAddPanel(); }));
     body.querySelectorAll("[data-add-bp]").forEach(b=>b.addEventListener("click",()=>{ const bp=BLUEPRINTS.find(x=>x.key===b.dataset.addBp); insertBlueprint(b.dataset.addBp); closeAddPanel(); showToast("Added: "+(bp?bp.label:b.dataset.addBp)); }));
