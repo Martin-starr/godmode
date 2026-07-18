@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Parallax Ridge — SVG Scroll Depth</title>
+
+  <!-- Fonts: bold display + clean body -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Syne:wght@700;800&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- ===================================================================
+       SECTION 1 — THE PINNED PARALLAX STAGE
+       This section gets pinned by ScrollTrigger. Every direct child
+       .layer is stacked absolutely on top of one another, and each one
+       is driven at a different speed to fake 3D depth.
+       data-depth is read by JS to scale the movement (lower = slower).
+  ==================================================================== -->
+  <section class="stage" id="stage">
+
+    <!-- Layer 0 — SKY GRADIENT (deepest background, moves slowest / scales up) -->
+    <div class="layer layer--sky" data-depth="0.1">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"  stop-color="#1b1035" />
+            <stop offset="45%" stop-color="#5b2a86" />
+            <stop offset="78%" stop-color="#e0567b" />
+            <stop offset="100%" stop-color="#ff9d5c" />
+          </linearGradient>
+        </defs>
+        <rect width="1440" height="900" fill="url(#skyGrad)" />
+      </svg>
+    </div>
+
+    <!-- Layer 1 — SUN / GLOW disc -->
+    <div class="layer layer--sun" data-depth="0.25">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <radialGradient id="sunGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"  stop-color="#ffe8b0" />
+            <stop offset="55%" stop-color="#ffd166" />
+            <stop offset="100%" stop-color="#ff9d5c" stop-opacity="0" />
+          </radialGradient>
+        </defs>
+        <circle cx="720" cy="470" r="230" fill="url(#sunGrad)" />
+      </svg>
+    </div>
+
+    <!-- Layer 2 — FAR MOUNTAINS (slow) -->
+    <div class="layer layer--far" data-depth="0.35">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <path d="M0 640 L220 470 L430 610 L640 420 L900 640 L1120 480 L1440 660 L1440 900 L0 900 Z"
+              fill="#3a1e5c" />
+      </svg>
+    </div>
+
+    <!-- Layer 3 — MID HILLS (medium) -->
+    <div class="layer layer--mid" data-depth="0.55">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <path d="M0 720 C260 600 420 780 700 700 C980 620 1180 780 1440 690 L1440 900 L0 900 Z"
+              fill="#6a2a6b" />
+      </svg>
+    </div>
+
+    <!-- Layer 4 — THE MASSIVE HEADING
+         Starts hidden BEHIND the foreground layer below and is revealed
+         as that foreground slides away on scroll. -->
+    <div class="layer layer--headline" data-depth="0.7">
+      <h1 class="headline">
+        <span class="headline__line">INTO THE</span>
+        <span class="headline__line headline__line--accent">DEEP</span>
+      </h1>
+    </div>
+
+    <!-- Layer 5 — BACK TREES (fast-ish) -->
+    <div class="layer layer--trees" data-depth="0.8">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <path d="M0 790 C240 700 380 840 620 780 C900 710 1080 850 1440 770 L1440 900 L0 900 Z"
+              fill="#8f2d68" />
+      </svg>
+    </div>
+
+    <!-- Layer 6 — FOREGROUND GROUND (closest, slides DOWN & exits fastest,
+         uncovering the headline behind it) -->
+    <div class="layer layer--fore" data-depth="1.25">
+      <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <path d="M0 720 C300 640 520 860 760 800 C1040 730 1200 900 1440 820 L1440 900 L0 900 Z"
+              fill="#c1385c" />
+        <path d="M0 800 C260 760 520 900 820 850 C1080 810 1240 920 1440 880 L1440 900 L0 900 Z"
+              fill="#e04b5a" />
+      </svg>
+    </div>
+
+    <!-- Small intro overlay that leaves the screen quickly on scroll -->
+    <div class="layer layer--intro" data-depth="1.5">
+      <p class="intro-kicker">SCROLL</p>
+      <p class="intro-sub">A GSAP · ScrollTrigger parallax study</p>
+    </div>
+
+  </section>
+
+  <!-- ===================================================================
+       SECTION 2 — CONTENT AFTER THE STAGE UNPINS
+       Just proves scrolling continues normally once the parallax ends.
+  ==================================================================== -->
+  <section class="outro">
+    <h2>Layers move at their own pace.</h2>
+    <p>
+      Seven stacked SVG planes, each scrubbed at a different speed. The
+      foreground slides down and off-screen while the background gently
+      scales up — the eye reads that speed difference as depth.
+    </p>
+  </section>
+
+  <!-- ===== SCRIPTS (CDN) =====
+       GSAP core, the ScrollTrigger plugin, and Lenis for smooth scroll. -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@studio-freight/lenis@1.0.42/dist/lenis.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

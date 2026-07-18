@@ -1,0 +1,154 @@
+/* ============================================================
+   RESET & BASE
+   ============================================================ */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #1b1035;               /* matches the deepest sky stop */
+  color: #fff;
+  font-family: "Space Grotesk", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Lenis toggles this class on <html>; keeps native scroll sane */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+
+/* ============================================================
+   STAGE — the pinned parallax container
+   position: relative so the absolute .layer children anchor here.
+   Each layer is a full-bleed plane stacked with z-index.
+   ============================================================ */
+.stage {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+  background: #1b1035;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;                 /* top/right/bottom/left: 0 -> full-bleed */
+  width: 100%;
+  height: 100%;
+  will-change: transform;   /* hint the compositor: we animate transforms */
+}
+
+.layer svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---- Z-ORDER: back (0) to front (high) ---- */
+.layer--sky      { z-index: 1; }
+.layer--sun      { z-index: 2; }
+.layer--far      { z-index: 3; }
+.layer--mid      { z-index: 4; }
+.layer--headline { z-index: 5; }   /* text sits BETWEEN mid + foreground */
+.layer--trees    { z-index: 6; }
+.layer--fore     { z-index: 7; }
+.layer--intro    { z-index: 9; }
+
+/* ============================================================
+   THE MASSIVE HEADING
+   Centered, tightly leaded, revealed as the foreground exits.
+   ============================================================ */
+.layer--headline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.headline {
+  margin: 0;
+  text-align: center;
+  font-family: "Syne", sans-serif;
+  font-weight: 800;
+  line-height: 0.82;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+}
+
+.headline__line {
+  display: block;
+  font-size: clamp(4.5rem, 20vw, 18rem);
+  color: #fff;
+}
+
+.headline__line--accent {
+  color: transparent;
+  -webkit-text-stroke: 2px #ffd166;   /* outlined accent word */
+  text-stroke: 2px #ffd166;
+}
+
+/* ============================================================
+   INTRO OVERLAY (kicker + subtitle) — flies off early
+   ============================================================ */
+.layer--intro {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 8vh;
+  pointer-events: none;
+}
+
+.intro-kicker {
+  margin: 0;
+  font-family: "Syne", sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.5em;
+  font-size: 0.85rem;
+  padding-left: 0.5em;                /* optically balance the tracking */
+  color: #ffd166;
+}
+
+.intro-sub {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+/* ============================================================
+   OUTRO — plain content after the pin releases
+   ============================================================ */
+.outro {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10vw;
+  background: linear-gradient(180deg, #e04b5a 0%, #1b1035 60%);
+}
+
+.outro h2 {
+  font-family: "Syne", sans-serif;
+  font-weight: 800;
+  font-size: clamp(2rem, 6vw, 4.5rem);
+  margin: 0 0 1rem;
+  letter-spacing: -0.02em;
+}
+
+.outro p {
+  max-width: 46ch;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+/* ============================================================
+   ACCESSIBILITY — respect reduced-motion
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .layer { will-change: auto; }
+}
