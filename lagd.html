@@ -1576,6 +1576,7 @@ function normalize(st){
     if(s.padT==null)s.padT="";
     if(s.padB==null)s.padB="";
     if(s.fx==null)s.fx="none";
+    if(s.fluid==null)s.fluid="none";   // v18 Phase 6: per-section liquid FX ("none" = off)
     if(s.font==null)s.font="";   // v14 P12: per-section typeface override ("" = inherit the site pairing)
     if(s.type==="cards"&&s.interaction==null)s.interaction="none";
     if((s.type==="cards"||s.type==="quote")&&s.variant==null)s.variant="plain";   // v14 6a: layout variant
@@ -2213,6 +2214,8 @@ dashboard:{ label:"Dashboard", ico:"▦",
 
 Object.entries(SECTION_DEFS).forEach(([k,d])=>{
   if(FX_OK(k)) d.fields.push(["fx","Scroll transition","select",FXS]);
+  /* v18 Phase 6: liquid FX on hover — usable on ANY section (Tier 2). */
+  d.fields.push(["fluid","Liquid FX (on hover)","select",[["none","None"],["water","Water — calm ripple"],["intense","Intense — fluid distortion + cursor trails"]],2]);
 });
 
 /* ---------- starter templates ---------- */
@@ -4792,7 +4795,8 @@ function objHTML(o,si,oi){
     : (o.type==="shape"||o.type==="badge") ? ' data-ofill="'+esc(o.fill||"acc")+'" data-ocust="'+esc(o.cust||"")+'"'
     : "";
   const dat=' data-rot="'+(o.rot||0)+'"'+(drift?' data-drift="'+drift+'"':'')+' data-obj="'+si+':'+oi+'"'+' data-oid="'+esc(o.id||"")+'"'
-    +(o.mx!=null?' data-mx="'+(+o.mx).toFixed(2)+'" data-my="'+(+o.my||0).toFixed(2)+'"':'')+edat;   /* v11: mobile position override */
+    +(o.mx!=null?' data-mx="'+(+o.mx).toFixed(2)+'" data-my="'+(+o.my||0).toFixed(2)+'"':'')
+    +((o.fluid==="water"||o.fluid==="intense")?' data-fluid-fx="'+o.fluid+'"':'')+edat;   /* v11: mobile position override; v18 fluid-fx */
   const cls=o.hideM?" hm":"";
   if(o.type==="text"){
     st+="font-family:"+objFontCSS(o.font)+";font-weight:"+(o.weight||"600")
@@ -4901,6 +4905,10 @@ function renderSection(s,i,editMode,st){
       html=html.replace(/^<(header|section|footer|div)([^>]*)>/, m => m.slice(0,-1)+" data-ux='"+_ux+"'>");
       if(_cfg.anim!=="none") html=html.replace(/\sdata-anim="[^"]*"/g,"");   // don't double-animate with the legacy IO reveal
     }
+  }
+  /* v18 Phase 6: per-section fluid-fx → data-fluid-fx on the section root (the fluid engine reads it). */
+  if(s.fluid==="water"||s.fluid==="intense"){
+    html=html.replace(/^<(header|section|footer|div)([^>]*)>/, m => m.slice(0,-1)+' data-fluid-fx="'+s.fluid+'">');
   }
   /* v14 P4: sec-bg + secoverlay as the FIRST children of the section. A FUNCTION replacer, so a bgimg
      URL carrying a $ is never read as $1/$& (the same trap the objects injection below hit). Injected in
@@ -7277,6 +7285,1645 @@ function siteUsesGsap(st){
   return (st.sections||[]).some(s => PX_TYPES[s.type] || (s.scroll && (
     (s.scroll.anim && s.scroll.anim!=="none") || (+s.scroll.parallax>0) || s.scroll.pin )));
 }
+/* v18 Phase 6: FLUID FX engine — inline, no CDN. Global WebGL fluid-cursor canvas +
+   data-fluid-fx="water|intense" SVG-displacement on any element. Emitted into exported
+   sites (and premium full-page templates) only when used. */
+const FLUID_FX_JS = `/* =============================================================================
+   FLUID FX ENGINE  — self-contained, no CDN, no library. Ships inside exported
+   sites (siteJS) AND inside each raw premium-template document.
+   API:  add  data-fluid-fx="water"   -> calm SVG turbulence+displacement ripple
+         add  data-fluid-fx="intense"  -> stronger cursor-reactive displacement
+                                          + a global WebGL fluid-dye cursor canvas
+   Works on any element (text, section, image). Guards: reduced-motion off,
+   (pointer:fine). WebGL canvas degrades gracefully to the SVG effect alone.
+   Exposed as a string constant FLUID_FX_JS in the builder; here it's the raw body.
+   ============================================================================= */
+(function(){
+  if (window.__fluidFX) return; window.__fluidFX = 1;
+  var mm = window.matchMedia;
+  var reduced = mm && mm('(prefers-reduced-motion:reduce)').matches;
+  var fine    = !mm || mm('(pointer:fine)').matches;
+  function nodes(){ return [].slice.call(document.querySelectorAll('[data-fluid-fx]')); }
+  if (reduced || !fine) { return; }               // static: leave the DOM untouched
+
+  /* ---------- 1. SVG displacement filters (the portable distortion) ---------- */
+  var NS = 'http://www.w3.org/2000/svg';
+  function svg(tag, attrs){ var n=document.createElementNS(NS,tag); for(var k in attrs) n.setAttribute(k,attrs[k]); return n; }
+  function installFilters(){
+    if (document.getElementById('fluidfx-defs')) return;
+    var root = svg('svg',{id:'fluidfx-defs',width:0,height:0,'aria-hidden':'true'});
+    root.setAttribute('style','position:absolute;width:0;height:0;overflow:hidden;pointer-events:none');
+    var defs = svg('defs',{});
+    // one filter per mode; the turbulence baseFrequency + displacement scale are animated in JS
+    [['water',0.010,0.6],['intense',0.016,0.9]].forEach(function(cfg){
+      var f = svg('filter',{id:'fluidfx-'+cfg[0],x:'-20%',y:'-20%',width:'140%',height:'140%',
+        filterUnits:'objectBoundingBox','color-interpolation-filters':'sRGB'});
+      var turb = svg('feTurbulence',{type:'fractalNoise',baseFrequency:cfg[1]+' '+cfg[1],
+        numOctaves:2,seed:cfg[0]==='water'?3:7,stitchTiles:'stitch',result:'noise'});
+      var disp = svg('feDisplacementMap',{in:'SourceGraphic',in2:'noise',scale:0,
+        xChannelSelector:'R',yChannelSelector:'G'});
+      turb.setAttribute('data-bf', cfg[1]);
+      f.appendChild(turb); f.appendChild(disp); defs.appendChild(f);
+    });
+    root.appendChild(defs); document.body.appendChild(root);
+  }
+
+  // per-element state: current + target displacement scale, hover boost, phase
+  function fxState(el){
+    var mode = el.getAttribute('data-fluid-fx')==='intense' ? 'intense' : 'water';
+    return { el:el, mode:mode,
+      turb: document.querySelector('#fluidfx-'+mode+' feTurbulence'),
+      disp: document.querySelector('#fluidfx-'+mode+' feDisplacementMap'),
+      // each element gets its OWN filter clone so hover-scale is independent
+      cur:0, tgt:0, base: mode==='intense'?4:2, max: mode==='intense'?34:16, hover:0, ph: Math.random()*6.28 };
+  }
+
+  /* Each element needs an independent filter instance (shared scale would couple them).
+     Clone the mode filter per element with a unique id. */
+  var uid=0;
+  function attachFilter(el, mode){
+    var src = document.getElementById('fluidfx-'+mode);
+    if(!src) return null;
+    var clone = src.cloneNode(true);
+    var id = 'fluidfx-'+mode+'-'+(++uid);
+    clone.id = id;
+    document.getElementById('fluidfx-defs').querySelector('defs').appendChild(clone);
+    el.style.filter = 'url(#'+id+')';
+    el.style.webkitFilter = 'url(#'+id+')';
+    return clone;
+  }
+
+  var items = [];
+  function collect(){
+    installFilters();
+    items = [];
+    nodes().forEach(function(el){
+      var mode = el.getAttribute('data-fluid-fx')==='intense' ? 'intense':'water';
+      var clone = attachFilter(el, mode);
+      if(!clone) return;
+      var disp = clone.querySelector('feDisplacementMap');
+      var turb = clone.querySelector('feTurbulence');
+      var st = { el:el, mode:mode, disp:disp, turb:turb,
+        cur:0, tgt:mode==='intense'?0:1.4, base:mode==='intense'?0:1.4,
+        max:mode==='intense'?36:15, hover:0, over:false, ph:Math.random()*6.283, bf:parseFloat(turb.getAttribute('data-bf'))||0.01 };
+      el.addEventListener('pointerenter', function(){ st.over=true; });
+      el.addEventListener('pointerleave', function(){ st.over=false; });
+      el.addEventListener('pointermove', function(e){
+        var r = el.getBoundingClientRect();
+        // pointer speed drives the boost
+        st.hover = Math.min(1, st.hover + 0.16);
+        if(window.__fluidCanvas) window.__fluidCanvas.splat(e.clientX, e.clientY, st.mode==='intense'?1:0.35);
+      });
+      items.push(st);
+    });
+  }
+
+  var t0 = performance.now();
+  function tick(now){
+    var t = (now - t0)/1000;
+    for(var i=0;i<items.length;i++){
+      var s = items[i];
+      // calm baseline breathing + hover/pointer boost
+      var breathe = s.mode==='water' ? (0.5+0.5*Math.sin(t*0.8+s.ph)) : 0;
+      s.tgt = s.base + breathe*(s.mode==='water'?1.4:0) + s.hover*(s.max-s.base);
+      s.cur += (s.tgt - s.cur)*0.12;
+      if(s.disp) s.disp.scale.baseVal = s.cur;
+      s.hover *= 0.92;
+      // drift the noise so the ripple lives even at rest (water only)
+      if(s.mode==='water' && s.turb){
+        var bf = s.bf + Math.sin(t*0.5+s.ph)*s.bf*0.25;
+        try{ s.turb.setAttribute('baseFrequency', bf.toFixed(4)+' '+(bf*0.9).toFixed(4)); }catch(e){}
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  /* ---------- 2. global WebGL fluid-dye cursor canvas (the "intense" spectacle) ---------- */
+  function initFluidCanvas(){
+    if (window.__fluidCanvas) return;
+    // only spin up if an intense element exists OR the page opts in with data-fluid-global
+    var wantGlobal = document.querySelector('[data-fluid-fx="intense"]') || document.querySelector('[data-fluid-global]');
+    if(!wantGlobal) return;
+    var cv = document.createElement('canvas');
+    cv.id = 'fluidfx-canvas';
+    cv.setAttribute('aria-hidden','true');
+    cv.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:2147483000;pointer-events:none;mix-blend-mode:screen;opacity:.9';
+    var _opts={alpha:true,premultipliedAlpha:false,antialias:false,depth:false,stencil:false};
+    var gl = cv.getContext('webgl',_opts) || cv.getContext('experimental-webgl',_opts);
+    if(!gl){ return; }                       // no WebGL -> SVG effect still works
+    document.body.appendChild(cv);
+
+    var SIM = 160;                            // sim resolution (square, cheap)
+    // Byte textures ONLY: half-float FBOs are unreliable to render/read across GPUs+headless.
+    // Velocity (signed) is stored 0.5-biased: enc = v*0.2 + 0.5 ; v = (enc-0.5)*5.
+    var TT = gl.UNSIGNED_BYTE, FILT = gl.LINEAR;
+
+    function shader(type, src){ var s=gl.createShader(type); gl.shaderSource(s,src); gl.compileShader(s);
+      if(!gl.getShaderParameter(s,gl.COMPILE_STATUS)){ throw new Error(gl.getShaderInfoLog(s)); } return s; }
+    function prog(vs, fs){ var p=gl.createProgram(); gl.attachShader(p,shader(gl.VERTEX_SHADER,vs)); gl.attachShader(p,shader(gl.FRAGMENT_SHADER,fs));
+      gl.linkProgram(p); if(!gl.getProgramParameter(p,gl.LINK_STATUS)){ throw new Error(gl.getProgramInfoLog(p)); } return p; }
+
+    var VS = 'attribute vec2 p;varying vec2 uv;void main(){uv=p*0.5+0.5;gl_Position=vec4(p,0.0,1.0);}';
+    // advect the velocity field (self), dissipate toward rest (0.5)
+    var VADV = 'precision highp float;varying vec2 uv;uniform sampler2D uVel;uniform float uDt,uDis;'+
+      'void main(){vec2 v=(texture2D(uVel,uv).xy-0.5)*5.0;vec2 c=uv-uDt*v;vec2 nv=(texture2D(uVel,c).xy-0.5)*uDis;gl_FragColor=vec4(nv+0.5,0.0,1.0);}';
+    // advect the dye by the velocity field, fade
+    var DADV = 'precision highp float;varying vec2 uv;uniform sampler2D uVel,uDye;uniform float uDt,uDis;'+
+      'void main(){vec2 v=(texture2D(uVel,uv).xy-0.5)*5.0;vec2 c=uv-uDt*v;gl_FragColor=uDis*texture2D(uDye,c);}';
+    // add a gaussian velocity impulse (centered/biased)
+    var SPLV = 'precision highp float;varying vec2 uv;uniform sampler2D uT;uniform vec2 uP,uV;uniform float uR;'+
+      'void main(){vec2 d=uv-uP;float g=exp(-dot(d,d)/uR);vec2 v=(texture2D(uT,uv).xy-0.5)+uV*g;gl_FragColor=vec4(clamp(v,-0.5,0.5)+0.5,0.0,1.0);}';
+    // add a gaussian dye splat
+    var SPL = 'precision highp float;varying vec2 uv;uniform sampler2D uT;uniform vec2 uP;uniform vec3 uCol;uniform float uR;'+
+      'void main(){vec2 d=uv-uP;float g=exp(-dot(d,d)/uR);gl_FragColor=texture2D(uT,uv)+vec4(uCol*g,g);}';
+    // display dye with a soft alpha so the fixed canvas screen-blends over the page
+    var DISP = 'precision highp float;varying vec2 uv;uniform sampler2D uDye;'+
+      'void main(){vec3 c=texture2D(uDye,uv).rgb;float a=clamp(max(max(c.r,c.g),c.b)*1.2,0.0,1.0);gl_FragColor=vec4(c,a);}';
+
+    var pVadv=prog(VS,VADV), pDadv=prog(VS,DADV), pSplV=prog(VS,SPLV), pSpl=prog(VS,SPL), pDisp=prog(VS,DISP);
+    var quad=gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER,quad);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+    function bindQuad(p){ var l=gl.getAttribLocation(p,'p'); gl.bindBuffer(gl.ARRAY_BUFFER,quad); gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l,2,gl.FLOAT,false,0,0); }
+
+    function makeFBO(isVel){ var t=gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D,t);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,FILT); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,FILT);
+      gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+      // velocity textures seed at 0.5 (rest); dye textures seed fully transparent black
+      var seed=new Uint8Array(SIM*SIM*4);
+      if(isVel){ for(var i=0;i<seed.length;i+=4){ seed[i]=128; seed[i+1]=128; seed[i+2]=0; seed[i+3]=255; } }
+      gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,SIM,SIM,0,gl.RGBA,TT,seed);
+      var f=gl.createFramebuffer(); gl.bindFramebuffer(gl.FRAMEBUFFER,f); gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,t,0);
+      return {t:t,f:f}; }
+    function dbl(isVel){ return {a:makeFBO(isVel),b:makeFBO(isVel),swap:function(){var x=this.a;this.a=this.b;this.b=x;}}; }
+    var vel, dye;
+    try{ vel=dbl(true); dye=dbl(false); }catch(e){ cv.remove(); return; }
+    gl.bindFramebuffer(gl.FRAMEBUFFER, vel.a.f);
+    if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE){ cv.remove(); window.__fluidCanvas=null; return; }
+
+    var queue=[], last=null;
+    var PAL=[[0.20,0.42,0.95],[0.95,0.26,0.48],[0.16,0.80,0.66],[0.98,0.68,0.22],[0.60,0.34,0.95]];
+    function splat(x,y,force){
+      var px=x/window.innerWidth, py=1-y/window.innerHeight;
+      var dx=0, dy=0;
+      if(last){ dx=(x-last.x)/window.innerWidth; dy=-(y-last.y)/window.innerHeight; }
+      last={x:x,y:y};
+      var col=PAL[(Math.floor((x*0.7+y)/70))%PAL.length];
+      queue.push({px:px,py:py,vx:dx,vy:dy,col:col,force:force||1});
+    }
+    window.__fluidCanvas={ splat:splat };
+    window.addEventListener('pointermove',function(e){ splat(e.clientX,e.clientY,0.7); },{passive:true});
+
+    function draw(p){ gl.useProgram(p); bindQuad(p); gl.drawArrays(gl.TRIANGLES,0,6); }
+    function to(fbo){ gl.bindFramebuffer(gl.FRAMEBUFFER,fbo.f); gl.viewport(0,0,SIM,SIM); }
+    function toScreen(){ gl.bindFramebuffer(gl.FRAMEBUFFER,null); gl.viewport(0,0,cv.width,cv.height); }
+    function resize(){ cv.width=Math.round(window.innerWidth*Math.min(devicePixelRatio||1,1.5)); cv.height=Math.round(window.innerHeight*Math.min(devicePixelRatio||1,1.5)); }
+    resize(); window.addEventListener('resize',resize);
+    gl.disable(gl.BLEND);
+
+    var pt=performance.now();
+    function step(now){
+      var dt=Math.min((now-pt)/1000,0.033); pt=now;
+      // 1. advect velocity (self)
+      to(vel.b); gl.useProgram(pVadv);
+      gl.uniform1i(gl.getUniformLocation(pVadv,'uVel'),0); gl.uniform1f(gl.getUniformLocation(pVadv,'uDt'),dt); gl.uniform1f(gl.getUniformLocation(pVadv,'uDis'),0.992);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,vel.a.t); draw(pVadv); vel.swap();
+      // 2. advect dye by velocity
+      to(dye.b); gl.useProgram(pDadv);
+      gl.uniform1i(gl.getUniformLocation(pDadv,'uVel'),0); gl.uniform1i(gl.getUniformLocation(pDadv,'uDye'),1);
+      gl.uniform1f(gl.getUniformLocation(pDadv,'uDt'),dt); gl.uniform1f(gl.getUniformLocation(pDadv,'uDis'),0.982);
+      gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,vel.a.t);
+      gl.activeTexture(gl.TEXTURE1); gl.bindTexture(gl.TEXTURE_2D,dye.a.t); draw(pDadv); dye.swap();
+      // 3. splats
+      while(queue.length){
+        var s=queue.shift();
+        to(vel.b); gl.useProgram(pSplV);
+        gl.uniform1i(gl.getUniformLocation(pSplV,'uT'),0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,vel.a.t);
+        gl.uniform2f(gl.getUniformLocation(pSplV,'uP'),s.px,s.py);
+        gl.uniform2f(gl.getUniformLocation(pSplV,'uV'),s.vx*7.0*s.force,s.vy*7.0*s.force);
+        gl.uniform1f(gl.getUniformLocation(pSplV,'uR'),0.0016);
+        draw(pSplV); vel.swap();
+        to(dye.b); gl.useProgram(pSpl);
+        gl.uniform1i(gl.getUniformLocation(pSpl,'uT'),0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,dye.a.t);
+        gl.uniform2f(gl.getUniformLocation(pSpl,'uP'),s.px,s.py);
+        gl.uniform3f(gl.getUniformLocation(pSpl,'uCol'),s.col[0]*s.force,s.col[1]*s.force,s.col[2]*s.force);
+        gl.uniform1f(gl.getUniformLocation(pSpl,'uR'),0.0022);
+        draw(pSpl); dye.swap();
+      }
+      // 4. display dye
+      toScreen(); gl.useProgram(pDisp);
+      gl.uniform1i(gl.getUniformLocation(pDisp,'uDye'),0); gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D,dye.a.t);
+      bindQuad(pDisp); gl.clearColor(0,0,0,0); gl.clear(gl.COLOR_BUFFER_BIT); gl.drawArrays(gl.TRIANGLES,0,6);
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ---------- boot ---------- */
+  function boot(){ collect(); try{ initFluidCanvas(); }catch(e){} requestAnimationFrame(tick); }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+  // re-scan when the app injects new DOM (exported sites are static, but the builder canvas re-renders)
+  window.__fluidFXRescan = function(){ collect(); try{ initFluidCanvas(); }catch(e){} };
+})();`;
+function siteUsesFluid(st){
+  if(st && st.fluidGlobal) return true;
+  return (st.sections||[]).some(s => (s.fluid && s.fluid!=="none") ||
+    (Array.isArray(s.objects) && s.objects.some(o => o.fluid && o.fluid!=="none")));
+}
+/* v18 Phase 6: premium FULL-PAGE templates — bespoke Awwwards-level raw HTML docs,
+   injected into the canvas via Cmd+K (loadPremiumTemplate). Kept OUT of TEMPLATES so the
+   state/normalize/inspector paths never see them. <!--FLUIDENGINE--> is replaced with the
+   inline FLUID_FX_JS at load/export time. */
+const premiumTemplates = {
+  "kinetic-agency": {name:"Kinetic — dark agency ✦", ico:"◑", html:`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VANTA — Kinetic Studio</title>
+
+<!-- Fonts: brutalist display + mono accent -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;600;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<!-- GSAP + ScrollTrigger + Lenis -->
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"><\/script>
+
+<style>
+:root{
+  --bg:#050505;
+  --ink:#f4f2ec;
+  --dim:#7a766c;
+  --accent:#c8ff00;
+  --accent2:#ff3d2e;
+  --panel:#0c0c0c;
+  --line:#1c1c1a;
+  --mono:'Space Mono',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:var(--bg);color:var(--ink);}
+body{
+  font-family:'Archivo',sans-serif;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+  cursor:default;
+}
+::selection{background:var(--accent);color:#000}
+a{color:inherit;text-decoration:none}
+img{display:block;max-width:100%}
+
+/* ------------ shared type ------------ */
+.display{
+  font-family:'Anton',sans-serif;
+  text-transform:uppercase;
+  line-height:0.82;
+  letter-spacing:-0.01em;
+  font-weight:400;
+}
+.mono{font-family:var(--mono);text-transform:uppercase;letter-spacing:0.18em;font-size:.7rem;color:var(--dim)}
+.mono.acc{color:var(--accent)}
+
+/* ------------ fixed chrome ------------ */
+.nav{
+  position:fixed;top:0;left:0;width:100%;z-index:80;
+  display:flex;justify-content:space-between;align-items:center;
+  padding:22px clamp(18px,4vw,52px);
+  mix-blend-mode:difference;
+  pointer-events:none;
+}
+.nav a,.nav span{pointer-events:auto}
+.nav .brand{font-family:'Anton';font-size:1.15rem;letter-spacing:.04em;text-transform:uppercase}
+.nav .brand b{color:var(--accent)}
+.nav .links{display:flex;gap:26px}
+.nav .links a{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.18em;opacity:.85}
+.nav .links a:hover{opacity:1;color:var(--accent)}
+@media(max-width:760px){.nav .links{display:none}}
+
+/* ============ HERO (100vh, kinetic, absolute layers) ============ */
+.hero{
+  position:relative;
+  height:100vh;min-height:640px;
+  overflow:hidden;
+  background:radial-gradient(120% 90% at 70% 10%,#151510 0%,#050505 55%);
+}
+/* big background watermark word */
+.hero__ghost{
+  position:absolute;left:50%;top:46%;
+  transform:translate(-50%,-50%);
+  font-family:'Anton';
+  font-size:34vw;line-height:.7;
+  color:#0e0e0c;
+  white-space:nowrap;
+  z-index:0;
+  letter-spacing:-.02em;
+  user-select:none;
+}
+/* stacked kinetic headline */
+.hero__stack{
+  position:absolute;
+  left:clamp(18px,4vw,52px);
+  bottom:clamp(90px,14vh,150px);
+  z-index:5;
+  max-width:92vw;
+}
+.hero__line{
+  display:block;
+  font-family:'Anton';text-transform:uppercase;
+  font-size:clamp(3.2rem,14vw,14rem);
+  line-height:.8;letter-spacing:-.015em;
+  overflow:hidden;
+}
+.hero__line .word{display:inline-block;transform:translateY(110%);will-change:transform}
+.hero__line--outline .word{
+  -webkit-text-stroke:1.5px var(--ink);
+  color:transparent;
+}
+.hero__line .accentw{color:var(--accent)}
+.hero__sub{
+  position:absolute;right:clamp(18px,4vw,52px);top:clamp(120px,20vh,220px);
+  z-index:6;text-align:right;max-width:340px;
+}
+.hero__sub p{font-size:.92rem;line-height:1.5;color:#bdb9ae;margin-top:14px}
+.hero__meta{
+  position:absolute;left:clamp(18px,4vw,52px);top:clamp(120px,20vh,180px);
+  z-index:6;display:flex;flex-direction:column;gap:6px;
+}
+.hero__scroll{
+  position:absolute;left:50%;bottom:26px;transform:translateX(-50%);
+  z-index:7;display:flex;flex-direction:column;align-items:center;gap:8px;
+}
+.hero__scroll .bar{width:1px;height:38px;background:linear-gradient(var(--accent),transparent);animation:drop 1.8s infinite}
+@keyframes drop{0%{transform:scaleY(0);transform-origin:top}45%{transform:scaleY(1);transform-origin:top}55%{transform:scaleY(1);transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
+
+/* ============ MARQUEE ============ */
+.marquee{
+  position:relative;z-index:10;
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  background:var(--accent);color:#000;
+  padding:14px 0;overflow:hidden;white-space:nowrap;
+}
+.marquee__track{display:inline-flex;gap:0;will-change:transform}
+.marquee__track span{
+  font-family:'Anton';text-transform:uppercase;
+  font-size:clamp(1.6rem,3.4vw,2.6rem);
+  padding:0 26px;letter-spacing:.01em;
+}
+.marquee__track span i{color:var(--bg);opacity:.35;font-style:normal;padding:0 6px}
+.marquee--rev{background:var(--bg);color:var(--ink);border-top:none}
+.marquee--rev span i{color:var(--accent)}
+
+/* ============ INTRO STATEMENT ============ */
+.statement{
+  padding:clamp(90px,16vh,200px) clamp(18px,4vw,52px);
+  position:relative;
+}
+.statement .idx{position:absolute;top:34px;right:clamp(18px,4vw,52px)}
+.statement h2{
+  font-family:'Anton';text-transform:uppercase;
+  font-size:clamp(1.8rem,5vw,4.4rem);line-height:1.02;
+  letter-spacing:-.01em;max-width:16ch;
+}
+.statement h2 em{color:var(--accent);font-style:normal}
+.statement h2 .dim{color:var(--dim)}
+.statement .foot{display:flex;gap:60px;flex-wrap:wrap;margin-top:60px;border-top:1px solid var(--line);padding-top:26px}
+.statement .foot div{max-width:280px}
+.statement .foot p{font-size:.9rem;line-height:1.55;color:#b6b2a8;margin-top:10px}
+
+/* ============ HORIZONTAL PINNED WORK ============ */
+.workwrap{position:relative;background:var(--bg)}
+.work{
+  display:flex;
+  height:100vh;
+  align-items:stretch;
+  will-change:transform;
+}
+.panel{
+  position:relative;
+  flex:0 0 auto;
+  width:78vw;max-width:1100px;
+  height:100vh;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:clamp(30px,5vw,70px);
+  border-right:1px solid var(--line);
+  overflow:hidden;
+}
+.panel--intro{width:52vw;justify-content:center}
+.panel--intro h3{font-family:'Anton';text-transform:uppercase;font-size:clamp(2.4rem,6vw,6rem);line-height:.86}
+.panel--intro h3 span{color:var(--accent)}
+.panel--intro p{margin-top:22px;max-width:34ch;color:#b6b2a8;line-height:1.55}
+.panel__media{
+  position:absolute;inset:0;z-index:0;
+  background-size:cover;background-position:center;
+  filter:grayscale(1) contrast(1.05) brightness(.62);
+  transition:filter .6s;
+}
+.panel:hover .panel__media{filter:grayscale(0) contrast(1.05) brightness(.78)}
+.panel__media::after{content:"";position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,.85),rgba(0,0,0,.05) 55%)}
+.panel__num{position:absolute;top:clamp(24px,4vw,46px);left:clamp(30px,5vw,70px);z-index:2}
+.panel__tag{position:absolute;top:clamp(24px,4vw,46px);right:clamp(30px,5vw,70px);z-index:2}
+.panel__body{position:relative;z-index:2}
+.panel__body h4{
+  font-family:'Anton';text-transform:uppercase;
+  font-size:clamp(2rem,5.4vw,5rem);line-height:.86;letter-spacing:-.01em;
+}
+.panel__body .cat{display:flex;gap:22px;margin-top:20px;flex-wrap:wrap}
+.panel__body .cat span{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;color:var(--accent);text-transform:uppercase}
+.panel__body .desc{margin-top:16px;max-width:40ch;color:#cfcbc1;line-height:1.5;font-size:.95rem}
+.panel--out{width:46vw;justify-content:center;align-items:flex-start}
+.panel--out h3{font-family:'Anton';text-transform:uppercase;font-size:clamp(2rem,5vw,4.6rem);line-height:.9}
+.panel--out a{margin-top:26px;display:inline-flex;align-items:center;gap:12px;font-family:var(--mono);font-size:.72rem;letter-spacing:.18em;color:var(--accent);border:1px solid var(--accent);padding:14px 22px;text-transform:uppercase}
+.progress{position:absolute;left:0;bottom:0;height:3px;background:var(--accent);width:0;z-index:30}
+
+/* stacked mobile fallback for work */
+.work--stack{display:block;height:auto}
+.work--stack .panel{width:100%!important;max-width:none;height:78vh;border-right:none;border-bottom:1px solid var(--line)}
+.work--stack .panel--intro,.work--stack .panel--out{height:auto;padding:70px clamp(18px,5vw,40px)}
+
+/* ============ SERVICES ============ */
+.services{padding:clamp(90px,15vh,180px) 0;border-top:1px solid var(--line)}
+.services .head{display:flex;justify-content:space-between;align-items:flex-end;padding:0 clamp(18px,4vw,52px);flex-wrap:wrap;gap:20px}
+.services .head h2{font-family:'Anton';text-transform:uppercase;font-size:clamp(2.2rem,6vw,5rem);line-height:.9}
+.srow{
+  display:grid;grid-template-columns:80px 1fr auto;gap:30px;align-items:center;
+  padding:30px clamp(18px,4vw,52px);
+  border-top:1px solid var(--line);
+  transition:background .4s,color .4s,padding-left .4s;
+  position:relative;overflow:hidden;
+}
+.srow:last-child{border-bottom:1px solid var(--line)}
+.srow .n{font-family:var(--mono);color:var(--dim);font-size:.8rem}
+.srow .t{font-family:'Anton';text-transform:uppercase;font-size:clamp(1.5rem,3.6vw,2.9rem);line-height:.95;transition:transform .4s}
+.srow .k{font-family:var(--mono);font-size:.66rem;letter-spacing:.14em;color:var(--dim);text-align:right;text-transform:uppercase;max-width:220px}
+.srow:hover{background:var(--accent);color:#000;padding-left:calc(clamp(18px,4vw,52px) + 18px)}
+.srow:hover .n,.srow:hover .k{color:#000}
+
+/* ============ CLIENT INDEX ============ */
+.clients{padding:clamp(80px,12vh,140px) clamp(18px,4vw,52px);border-top:1px solid var(--line)}
+.clients h2{font-family:var(--mono);font-size:.72rem;letter-spacing:.2em;color:var(--dim);margin-bottom:40px;text-transform:uppercase}
+.clients .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0;border-top:1px solid var(--line)}
+.clients .grid div{
+  padding:26px 4px;border-bottom:1px solid var(--line);
+  font-family:'Anton';text-transform:uppercase;font-size:clamp(1.3rem,2.6vw,2.1rem);
+  color:var(--dim);transition:color .3s,padding-left .3s;
+}
+.clients .grid div:hover{color:var(--ink);padding-left:12px}
+.clients .grid div sup{font-family:var(--mono);font-size:.5rem;color:var(--accent);vertical-align:super;margin-left:6px}
+
+/* ============ CONTACT / FOOTER ============ */
+.contact{
+  position:relative;
+  padding:clamp(80px,14vh,160px) clamp(18px,4vw,52px) 40px;
+  border-top:1px solid var(--line);
+  overflow:hidden;
+}
+.contact .big{
+  font-family:'Anton';text-transform:uppercase;
+  font-size:clamp(3rem,15vw,15rem);line-height:.8;letter-spacing:-.02em;
+}
+.contact .big a{transition:color .3s}
+.contact .big a:hover{color:var(--accent)}
+.contact .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:40px;margin-top:70px;border-top:1px solid var(--line);padding-top:34px}
+.contact .col{display:flex;flex-direction:column;gap:10px}
+.contact .col a,.contact .col span{font-size:.92rem;color:#b6b2a8}
+.contact .col a:hover{color:var(--accent)}
+.contact .base{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;margin-top:60px;color:var(--dim);font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase}
+
+/* reveal helper */
+.rv{opacity:0;transform:translateY(40px)}
+
+@media(max-width:760px){
+  .hero__sub{position:static;text-align:left;max-width:none;padding:0 20px;margin-top:20px}
+  .hero__ghost{font-size:52vw}
+  .srow{grid-template-columns:40px 1fr;gap:14px}
+  .srow .k{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  .marquee__track,.hero__scroll .bar{animation:none!important}
+}
+</style>
+</head>
+<body>
+
+<!-- ================= NAV ================= -->
+<nav class="nav">
+  <a class="brand" href="#top">VANTA<b>°</b></a>
+  <div class="links">
+    <a href="#work">Work</a>
+    <a href="#services">Studio</a>
+    <a href="#clients">Clients</a>
+    <a href="#contact">Contact</a>
+  </div>
+  <span class="mono acc">EST. MMXIV</span>
+</nav>
+
+<!-- ================= HERO ================= -->
+<!-- data-fluid-fx="intense" -> global WebGL fluid cursor trails + liquid distortion -->
+<header class="hero" id="top" data-fluid-fx="intense" data-fluid-global>
+  <div class="hero__ghost">VANTA</div>
+
+  <div class="hero__meta">
+    <span class="mono acc">[ KINETIC STUDIO ]</span>
+    <span class="mono">51.507° N / 0.127° W — LONDON</span>
+  </div>
+
+  <div class="hero__sub">
+    <span class="mono">© 2014—2026 / VOL.09</span>
+    <p>An independent design & motion studio building loud brands and kinetic digital experiences for people who refuse to be ignored.</p>
+  </div>
+
+  <!-- kinetic stacked headline: words animate in, then live via GSAP -->
+  <div class="hero__stack" data-fluid-fx="water">
+    <span class="hero__line"><span class="word">WE&nbsp;</span><span class="word accentw">MAKE</span></span>
+    <span class="hero__line hero__line--outline"><span class="word">BRANDS</span></span>
+    <span class="hero__line"><span class="word">THAT&nbsp;</span><span class="word">MOVE.</span></span>
+  </div>
+
+  <div class="hero__scroll">
+    <span class="mono">SCROLL</span>
+    <span class="bar"></span>
+  </div>
+</header>
+
+<!-- ================= MARQUEE ================= -->
+<section class="marquee" aria-hidden="true">
+  <div class="marquee__track" id="mq1">
+    <span>KINETIC IDENTITY<i>✦</i>MOTION DESIGN<i>✦</i>ART DIRECTION<i>✦</i>WEB EXPERIENCE<i>✦</i>STRATEGY<i>✦</i></span>
+    <span>KINETIC IDENTITY<i>✦</i>MOTION DESIGN<i>✦</i>ART DIRECTION<i>✦</i>WEB EXPERIENCE<i>✦</i>STRATEGY<i>✦</i></span>
+  </div>
+</section>
+
+<!-- ================= STATEMENT ================= -->
+<section class="statement">
+  <span class="mono idx">(01) — MANIFESTO</span>
+  <h2 data-fluid-fx="water">We design the <em>loud</em> parts. <span class="dim">Identity systems, motion languages and websites</span> engineered to be felt before they're read.</h2>
+  <div class="foot">
+    <div><span class="mono acc">WHAT WE BELIEVE</span><p>Attention is the only currency. Everything we build is tuned to earn a reaction in the first 300 milliseconds.</p></div>
+    <div><span class="mono acc">HOW WE WORK</span><p>Small senior team, no middle layer. Direct access to the people making the work, start to launch.</p></div>
+    <div><span class="mono acc">WHO WE ARE</span><p>Twelve designers, motion artists and engineers operating between London and Berlin.</p></div>
+  </div>
+</section>
+
+<!-- ============ HORIZONTAL PINNED WORK ============ -->
+<section class="workwrap" id="work">
+  <div class="work" id="work-track">
+
+    <!-- intro panel -->
+    <div class="panel panel--intro">
+      <span class="mono acc">(02) — SELECTED WORK</span>
+      <h3>SELECTED<br><span>WORKS</span> ↗</h3>
+      <p>A slice of recent projects. Scroll to travel sideways through the index — nine studios, nine industries, one obsession with motion.</p>
+    </div>
+
+    <!-- work panels -->
+    <div class="panel">
+      <div class="panel__media" style="background-image:url('https://images.unsplash.com/photo-1550439062-609e1531270e?q=80&w=1600')"></div>
+      <span class="mono panel__num">01 / NORTHWIND</span>
+      <span class="mono panel__tag">2026 — BRANDING</span>
+      <div class="panel__body">
+        <h4>NORTHWIND<br>ENERGY</h4>
+        <div class="cat"><span>Identity</span><span>Motion</span><span>Digital</span></div>
+        <p class="desc">A full rebrand for a renewable energy challenger — kinetic mark, generative system and a site that reacts to live wind data.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__media" style="background-image:url('https://images.unsplash.com/photo-1526779259212-939e64788e3c?q=80&w=1600')"></div>
+      <span class="mono panel__num">02 / SÉRAC</span>
+      <span class="mono panel__tag">2025 — E-COMMERCE</span>
+      <div class="panel__body">
+        <h4>SÉRAC<br>ATELIER</h4>
+        <div class="cat"><span>Art Direction</span><span>Web</span><span>3D</span></div>
+        <p class="desc">Luxury eyewear storefront with a fully interactive product room and a checkout that feels like a gallery, not a form.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__media" style="background-image:url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1600')"></div>
+      <span class="mono panel__num">03 / HELIX</span>
+      <span class="mono panel__tag">2025 — PRODUCT</span>
+      <div class="panel__body">
+        <h4>HELIX<br>LABS</h4>
+        <div class="cat"><span>Brand</span><span>UI System</span><span>Motion</span></div>
+        <p class="desc">Design language and marketing site for an AI research lab — a restrained system that lets the science do the shouting.</p>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel__media" style="background-image:url('https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?q=80&w=1600')"></div>
+      <span class="mono panel__num">04 / RIOT</span>
+      <span class="mono panel__tag">2024 — CULTURE</span>
+      <div class="panel__body">
+        <h4>RIOT<br>FESTIVAL</h4>
+        <div class="cat"><span>Identity</span><span>Campaign</span><span>Signage</span></div>
+        <p class="desc">A shape-shifting festival identity that mutates across 400 assets, generated live from the lineup each year.</p>
+      </div>
+    </div>
+
+    <!-- outro panel -->
+    <div class="panel panel--out">
+      <span class="mono acc">— END OF INDEX</span>
+      <h3>WANT THE<br>FULL REEL?</h3>
+      <a href="#contact">START A PROJECT ↗</a>
+    </div>
+
+    <div class="progress" id="work-progress"></div>
+  </div>
+</section>
+
+<!-- ================= SERVICES ================= -->
+<section class="services" id="services">
+  <div class="head">
+    <h2>WHAT WE<br>ACTUALLY DO</h2>
+    <span class="mono">(03) — CAPABILITIES</span>
+  </div>
+  <div style="margin-top:60px">
+    <div class="srow"><span class="n">01</span><span class="t">Kinetic Branding</span><span class="k">Logotypes · Motion Systems · Guidelines</span></div>
+    <div class="srow"><span class="n">02</span><span class="t">Digital Experience</span><span class="k">Websites · WebGL · Interaction</span></div>
+    <div class="srow"><span class="n">03</span><span class="t">Art Direction</span><span class="k">Campaigns · Photography · Type</span></div>
+    <div class="srow"><span class="n">04</span><span class="t">Motion & Film</span><span class="k">Titles · Loops · Broadcast</span></div>
+    <div class="srow"><span class="n">05</span><span class="t">Strategy</span><span class="k">Positioning · Naming · Voice</span></div>
+  </div>
+</section>
+
+<!-- ================= CLIENTS ================= -->
+<section class="clients" id="clients">
+  <h2>(04) — SELECTED CLIENTS & PARTNERS</h2>
+  <div class="grid">
+    <div>Northwind<sup>01</sup></div>
+    <div>Sérac<sup>02</sup></div>
+    <div>Helix Labs<sup>03</sup></div>
+    <div>Riot Fest<sup>04</sup></div>
+    <div>Monolith<sup>05</sup></div>
+    <div>Vaporwave<sup>06</sup></div>
+    <div>Kessler<sup>07</sup></div>
+    <div>Aurora TV<sup>08</sup></div>
+    <div>Fold Studio<sup>09</sup></div>
+    <div>Grün Bank<sup>10</sup></div>
+    <div>Tectonic<sup>11</sup></div>
+    <div>Nova Sport<sup>12</sup></div>
+  </div>
+</section>
+
+<!-- ================= CONTACT / FOOTER ================= -->
+<section class="contact" id="contact">
+  <span class="mono acc">(05) — LET'S TALK</span>
+  <div class="big" style="margin-top:24px">
+    <a href="mailto:hello@vanta.studio">HELLO@<br>VANTA.STUDIO</a>
+  </div>
+  <div class="row">
+    <div class="col">
+      <span class="mono acc">STUDIO</span>
+      <span>18 Redchurch Street</span>
+      <span>London E2 7DP</span>
+    </div>
+    <div class="col">
+      <span class="mono acc">SOCIAL</span>
+      <a href="#">Instagram ↗</a>
+      <a href="#">LinkedIn ↗</a>
+      <a href="#">Are.na ↗</a>
+    </div>
+    <div class="col">
+      <span class="mono acc">NEW BUSINESS</span>
+      <a href="mailto:new@vanta.studio">new@vanta.studio</a>
+      <span>+44 20 7946 0912</span>
+    </div>
+  </div>
+  <div class="base">
+    <span>VANTA° KINETIC STUDIO — ALL RIGHTS RESERVED 2026</span>
+    <span>DESIGNED IN MOTION / BUILT TO BE FELT</span>
+  </div>
+</section>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  /* ---------- Lenis smooth scroll wired to ScrollTrigger ---------- */
+  var lenis;
+  if(!reduce && window.Lenis){
+    lenis = new Lenis({ duration:1.1, smoothWheel:true });
+    lenis.on('scroll', ScrollTrigger.update);          // keep ST in sync
+    gsap.ticker.add(function(t){ lenis.raf(t*1000); }); // drive Lenis off GSAP ticker
+    gsap.ticker.lagSmoothing(0);
+  }
+
+  /* ---------- HERO kinetic headline reveal ---------- */
+  if(!reduce){
+    gsap.to('.hero__line .word', {
+      yPercent:0, duration:1.1, ease:'expo.out', stagger:0.08, delay:0.2
+    });
+    // continuous life: subtle floating drift on the outline word
+    gsap.to('.hero__line--outline .word', {
+      xPercent:3, duration:3.2, ease:'sine.inOut', yoyo:true, repeat:-1
+    });
+    // ghost watermark slow parallax
+    gsap.to('.hero__ghost', {
+      yPercent:-14, ease:'none',
+      scrollTrigger:{ trigger:'.hero', start:'top top', end:'bottom top', scrub:true }
+    });
+  } else {
+    gsap.set('.hero__line .word', { yPercent:0 });
+  }
+
+  /* ---------- MARQUEE (infinite loop via GSAP) ---------- */
+  if(!reduce){
+    var mq = document.getElementById('mq1');
+    // track holds two identical spans; move by 50% then reset = seamless loop
+    gsap.to(mq, { xPercent:-50, duration:18, ease:'none', repeat:-1 });
+    // nudge speed on scroll velocity for a kinetic feel
+    if(lenis){
+      lenis.on('scroll', function(e){
+        gsap.to(mq, { timeScale: 1 + Math.min(Math.abs(e.velocity||0)/8, 3), duration:0.3, overwrite:true });
+      });
+    }
+  }
+
+  /* =========================================================
+     HORIZONTAL PINNED WORK GALLERY
+     Pin the viewport, translate the flex track on X while the
+     user scrolls vertically. Distance scrolled == extra width
+     of the track beyond one viewport.
+     ========================================================= */
+  var mm = gsap.matchMedia();
+
+  // DESKTOP / TABLET (>=760px, motion allowed): real horizontal pin
+  mm.add("(min-width:760px) and (prefers-reduced-motion: no-preference)", function(){
+    var track = document.getElementById('work-track');
+    var panels = gsap.utils.toArray('.work .panel');
+    var progress = document.getElementById('work-progress');
+
+    // total horizontal distance = full track width minus one viewport width
+    function getScrollAmount(){ return track.scrollWidth - window.innerWidth; }
+
+    var tween = gsap.to(track, {
+      x: function(){ return -getScrollAmount(); },
+      ease:'none'
+    });
+
+    var st = ScrollTrigger.create({
+      trigger:'.workwrap',
+      start:'top top',
+      end: function(){ return '+=' + getScrollAmount(); }, // scroll length == track overflow
+      pin:true,               // freeze the section in the viewport
+      scrub:1,                // tie X translate to scroll position
+      animation:tween,
+      invalidateOnRefresh:true, // recompute widths on resize
+      anticipatePin:1,
+      onUpdate:function(self){ if(progress) progress.style.width=(self.progress*100)+'%'; }
+    });
+
+    // per-panel: parallax the media + fade body as it enters
+    panels.forEach(function(p){
+      var media = p.querySelector('.panel__media');
+      if(media){
+        gsap.fromTo(media, {xPercent:-8}, {
+          xPercent:8, ease:'none',
+          scrollTrigger:{ trigger:p, containerAnimation:tween, start:'left right', end:'right left', scrub:true }
+        });
+      }
+      var body = p.querySelector('.panel__body');
+      if(body){
+        gsap.fromTo(body, {autoAlpha:0.25, y:40}, {
+          autoAlpha:1, y:0, ease:'power2.out',
+          scrollTrigger:{ trigger:p, containerAnimation:tween, start:'left 78%', end:'left 45%', scrub:true }
+        });
+      }
+    });
+
+    return function(){ /* cleanup handled by matchMedia */ };
+  });
+
+  /* ---------- reveals for standard sections ---------- */
+  if(!reduce){
+    gsap.utils.toArray('.statement h2, .services .head h2, .contact .big').forEach(function(el){
+      gsap.fromTo(el, {autoAlpha:0, y:50}, {
+        autoAlpha:1, y:0, duration:1, ease:'power3.out',
+        scrollTrigger:{ trigger:el, start:'top 85%' }
+      });
+    });
+    gsap.utils.toArray('.srow').forEach(function(el,i){
+      gsap.fromTo(el, {autoAlpha:0, x:-30}, {
+        autoAlpha:1, x:0, duration:.7, ease:'power2.out',
+        scrollTrigger:{ trigger:el, start:'top 90%' }
+      });
+    });
+  }
+
+  // recalc after fonts load so pin distances are correct
+  if(document.fonts && document.fonts.ready){
+    document.fonts.ready.then(function(){ ScrollTrigger.refresh(); });
+  }
+  window.addEventListener('load', function(){ ScrollTrigger.refresh(); });
+})();
+<\/script>
+<!--FLUIDENGINE-->
+</body>
+</html>
+`},
+  "editorial-luxury": {name:"Editorial — luxury ✦", ico:"❑", html:`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MAISON RÉVERIE — Atelier No. 07</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Inter:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* ============ TOKENS ============ */
+  :root{
+    --paper:#f6f5f2;
+    --paper-2:#efece6;
+    --ink:#161412;
+    --ink-70:rgba(22,20,18,.62);
+    --ink-40:rgba(22,20,18,.40);
+    --line:rgba(22,20,18,.16);   /* hairline colour */
+    --accent:#8a3b28;             /* single restrained terracotta accent */
+    --hair:1px;
+    --pad:clamp(20px,4vw,64px);
+    --micro:.72rem;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:"Inter",sans-serif;
+    font-weight:300;
+    line-height:1.6;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--accent);color:var(--paper)}
+  img{display:block;width:100%;height:100%;object-fit:cover}
+  a{color:inherit;text-decoration:none}
+
+  /* micro-label: letter-spaced uppercase sans */
+  .micro{
+    font-size:var(--micro);
+    text-transform:uppercase;
+    letter-spacing:.28em;
+    font-weight:400;
+    color:var(--ink-70);
+  }
+  .num{font-variant-numeric:tabular-nums;font-feature-settings:"tnum"}
+  .serif{font-family:"Cormorant Garamond",serif;font-weight:300;letter-spacing:.005em}
+  .ital{font-style:italic}
+
+  /* ============ HAIRLINE FRAME ============
+     A fixed 1px frame + inner column ruled lines that read as a
+     magazine's registration grid. */
+  .frame{position:fixed;inset:14px;pointer-events:none;z-index:60;
+    border:var(--hair) solid var(--line)}
+  .frame:before,.frame:after{content:"";position:absolute;top:0;bottom:0;width:var(--hair);
+    background:var(--line)}
+  .frame:before{left:16.6667%}
+  .frame:after{right:25%}
+  @media(max-width:860px){.frame:before,.frame:after{display:none}}
+
+  /* ============ MASTHEAD ============ */
+  .mast{
+    position:relative;z-index:10;
+    display:grid;grid-template-columns:2fr 1fr 1fr;
+    align-items:baseline;
+    padding:26px var(--pad) 22px;
+    border-bottom:var(--hair) solid var(--line);
+  }
+  .mast .wordmark{font-family:"Cormorant Garamond",serif;font-weight:400;
+    font-size:1.15rem;letter-spacing:.42em;text-transform:uppercase}
+  .mast nav{display:flex;gap:2.4em;justify-content:flex-end}
+  .mast .est{text-align:right}
+  @media(max-width:860px){
+    .mast{grid-template-columns:1fr;gap:14px}
+    .mast nav{justify-content:flex-start;gap:1.6em;flex-wrap:wrap}
+    .mast .est{text-align:left}
+  }
+
+  /* ============ HERO ============ */
+  .hero{
+    display:grid;
+    grid-template-columns:1fr 5fr 3fr 3fr;
+    grid-template-rows:auto auto;
+    border-bottom:var(--hair) solid var(--line);
+  }
+  /* every cell gets a right hairline; last handled by container border */
+  .hero>div{border-right:var(--hair) solid var(--line);padding:var(--pad)}
+  .hero .h-coord{
+    grid-column:1;grid-row:1/3;
+    display:flex;flex-direction:column;justify-content:space-between;
+    writing-mode:vertical-rl;align-items:flex-start;
+  }
+  .hero .h-coord .micro{transform:rotate(180deg)}
+  .hero .h-title{grid-column:2/4;grid-row:1;
+    display:flex;flex-direction:column;justify-content:flex-end;min-height:46vh}
+  .hero .h-title h1{
+    font-family:"Cormorant Garamond",serif;font-weight:300;
+    font-size:clamp(3.4rem,9.5vw,10rem);line-height:.92;letter-spacing:-.01em;
+    margin-top:.28em}
+  .hero .h-title h1 em{font-style:italic;color:var(--accent)}
+  .hero .h-side{grid-column:4;grid-row:1;
+    display:flex;flex-direction:column;justify-content:space-between;gap:2rem}
+  .hero .h-side p{font-size:.92rem;color:var(--ink-70);max-width:26ch}
+  .hero .h-img{grid-column:2;grid-row:2;padding:0;overflow:hidden;min-height:52vh}
+  .hero .h-meta{grid-column:3/5;grid-row:2;
+    display:grid;grid-template-columns:1fr 1fr;align-content:space-between;gap:2.4rem}
+  .hero .h-meta .cap .serif{font-size:1.5rem;line-height:1.2;display:block;margin-top:.3em}
+  .reveal{clip-path:inset(0 0 100% 0)} /* start: fully clipped from bottom */
+
+  @media(max-width:860px){
+    .hero{grid-template-columns:1fr}
+    .hero>div{border-right:none;border-bottom:var(--hair) solid var(--line)}
+    .hero .h-coord{writing-mode:horizontal-tb;grid-row:auto;grid-column:1;flex-direction:row;justify-content:space-between}
+    .hero .h-coord .micro{transform:none}
+    .hero .h-title,.hero .h-side,.hero .h-img,.hero .h-meta{grid-column:1;grid-row:auto}
+    .hero .h-title{min-height:auto}
+    .hero .h-img{min-height:70vh}
+    .hero .h-meta{grid-template-columns:1fr}
+  }
+
+  /* ============ LOOKBOOK GRID (asymmetric) ============ */
+  .look{display:grid;
+    grid-template-columns:3fr 4fr 2fr 3fr;
+    border-bottom:var(--hair) solid var(--line)}
+  .look>*{border-right:var(--hair) solid var(--line)}
+  .look>*:last-child{border-right:none}
+  .cell{padding:var(--pad);display:flex;flex-direction:column;justify-content:space-between;gap:2.2rem;min-height:38vh}
+  .cell.tall{min-height:76vh}
+  .cell .k{display:flex;justify-content:space-between;align-items:baseline}
+  .cell h3{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:2rem;line-height:1.08}
+  .cell .desc{font-size:.9rem;color:var(--ink-70);max-width:30ch}
+  .cell.img{padding:0;overflow:hidden}
+  .cell.empty{background:
+    repeating-linear-gradient(-45deg,transparent 0 22px,rgba(22,20,18,.03) 22px 23px)}
+  .price{font-variant-numeric:tabular-nums;letter-spacing:.04em}
+  @media(max-width:860px){
+    .look{grid-template-columns:1fr}
+    .look>*{border-right:none;border-bottom:var(--hair) solid var(--line)}
+    .cell,.cell.tall{min-height:auto}
+    .cell.img{min-height:64vh}
+    .cell.empty{display:none}
+  }
+
+  /* ============ EDITORIAL SPREAD / PULL-QUOTE ============ */
+  .spread{display:grid;grid-template-columns:4fr 5fr 3fr;border-bottom:var(--hair) solid var(--line)}
+  .spread>*{border-right:var(--hair) solid var(--line)}
+  .spread>*:last-child{border-right:none}
+  .spread .s-img{padding:0;overflow:hidden;min-height:88vh}
+  .spread .s-quote{padding:var(--pad);display:flex;flex-direction:column;justify-content:center;gap:2.4rem}
+  .spread .s-quote blockquote{
+    font-family:"Cormorant Garamond",serif;font-weight:300;font-style:italic;
+    font-size:clamp(1.9rem,3.6vw,3.4rem);line-height:1.16;letter-spacing:-.005em}
+  .spread .s-quote blockquote span{color:var(--accent)}
+  .spread .s-notes{padding:var(--pad);display:flex;flex-direction:column;justify-content:space-between;gap:2.6rem}
+  .spread .s-notes p{font-size:.9rem;color:var(--ink-70)}
+  .rule{height:var(--hair);background:var(--line);width:100%}
+  @media(max-width:860px){
+    .spread{grid-template-columns:1fr}
+    .spread>*{border-right:none;border-bottom:var(--hair) solid var(--line)}
+    .spread .s-img{min-height:72vh}
+  }
+
+  /* ============ INDEX ============ */
+  .index{padding:var(--pad);border-bottom:var(--hair) solid var(--line)}
+  .index .head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2.4rem}
+  .index .head h2{font-family:"Cormorant Garamond",serif;font-weight:300;font-size:clamp(2rem,4vw,3.4rem)}
+  .idx-row{display:grid;grid-template-columns:.5fr 3fr 2fr 1.4fr 1fr;
+    gap:1.5rem;align-items:baseline;padding:1.2rem 0;border-top:var(--hair) solid var(--line);
+    transition:padding-left .5s cubic-bezier(.16,1,.3,1)}
+  .idx-row:last-child{border-bottom:var(--hair) solid var(--line)}
+  .idx-row:hover{padding-left:.9rem}
+  .idx-row .t{font-family:"Cormorant Garamond",serif;font-size:1.5rem;font-weight:400}
+  .idx-row .arr{text-align:right;color:var(--accent);opacity:0;transition:opacity .4s}
+  .idx-row:hover .arr{opacity:1}
+  @media(max-width:860px){
+    .idx-row{grid-template-columns:.4fr 2fr 1fr;gap:.8rem}
+    .idx-row .hidem{display:none}
+  }
+
+  /* ============ FOOTER ============ */
+  footer{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;padding:var(--pad);gap:2rem}
+  footer .big{font-family:"Cormorant Garamond",serif;font-weight:300;
+    font-size:clamp(2.6rem,7vw,6rem);line-height:.95;letter-spacing:-.01em}
+  footer .col h4{margin-bottom:1.2rem}
+  footer .col a{display:block;color:var(--ink-70);padding:.28em 0;font-size:.92rem;transition:color .3s}
+  footer .col a:hover{color:var(--ink)}
+  .colophon{grid-column:1/-1;display:flex;justify-content:space-between;
+    padding-top:2.4rem;margin-top:2rem;border-top:var(--hair) solid var(--line);flex-wrap:wrap;gap:1rem}
+  @media(max-width:860px){footer{grid-template-columns:1fr 1fr}footer .big{grid-column:1/-1}}
+
+  .flow{display:block}
+  @media(prefers-reduced-motion:reduce){
+    .reveal{clip-path:none!important}
+    *{scroll-behavior:auto!important}
+  }
+</style>
+</head>
+<body>
+
+  <!-- registration frame / ruled columns -->
+  <div class="frame" aria-hidden="true"></div>
+
+  <!-- ============ MASTHEAD ============ -->
+  <header class="mast">
+    <div class="wordmark">Maison&nbsp;Rêverie</div>
+    <nav class="micro">
+      <a href="#look">Collection</a>
+      <a href="#index">Index</a>
+    </nav>
+    <div class="est micro">Atelier N°07<br>Été 2026</div>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="h-coord">
+      <span class="micro num">A / 01</span>
+      <span class="micro">Objets &amp; Vêtements — Édition Limitée</span>
+    </div>
+
+    <div class="h-title">
+      <span class="micro">The Quiet Season — Lookbook</span>
+      <h1 class="serif" data-fluid-fx="water">Slow<br><em>Matière</em>,<br>Still Light.</h1>
+    </div>
+
+    <div class="h-side">
+      <p>A study in restraint — garments and objects made to be lived with, unhurried, in natural light. Photographed in Arles.</p>
+      <div>
+        <span class="micro num">N° 07 — VII</span>
+      </div>
+    </div>
+
+    <div class="h-img flow reveal" data-dir="up">
+      <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d?auto=format&fit=crop&w=1600&q=80" alt="Editorial figure in linen">
+    </div>
+
+    <div class="h-meta">
+      <div class="cap">
+        <span class="micro">Featured</span>
+        <span class="serif">The Linen Coat, folded over the arm</span>
+      </div>
+      <div class="cap" style="text-align:right">
+        <span class="micro">Palette</span>
+        <span class="serif ital">Bone, Clay, Ash</span>
+      </div>
+      <div class="cap" style="grid-column:1/-1">
+        <span class="micro">Scroll to reveal the collection</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOOKBOOK GRID ============ -->
+  <section class="look" id="look">
+    <div class="cell tall">
+      <div class="k"><span class="micro num">B / 01</span><span class="micro">Knitwear</span></div>
+      <div>
+        <h3 class="serif">The Undyed<br>Alpaca Sweater</h3>
+        <p class="desc" style="margin-top:1.2rem">Hand-loomed in Peru from a single natural fleece. No dye, no waste.</p>
+      </div>
+      <div class="k"><span class="micro">Made to order</span><span class="micro price num">€ 420</span></div>
+    </div>
+
+    <div class="cell img tall flow reveal" data-dir="up">
+      <img src="https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1600&q=80" alt="Draped fabric editorial">
+    </div>
+
+    <div class="cell empty" aria-hidden="true"></div>
+
+    <div class="cell img flow reveal" data-dir="right">
+      <img src="https://images.unsplash.com/photo-1441984904996-e0b6ba687e04?auto=format&fit=crop&w=1600&q=80" alt="Still life object">
+    </div>
+
+    <!-- second row of the asymmetric grid -->
+    <div class="cell img flow reveal" data-dir="left" style="grid-column:1;border-top:var(--hair) solid var(--line)">
+      <img src="https://images.unsplash.com/photo-1509631179647-0177331693ae?auto=format&fit=crop&w=1600&q=80" alt="Textile detail">
+    </div>
+
+    <div class="cell" style="grid-column:2;border-top:var(--hair) solid var(--line)">
+      <div class="k"><span class="micro num">B / 05</span><span class="micro">Objet</span></div>
+      <div>
+        <h3 class="serif">Ceramic Vessel,<br><span class="ital">Unglazed</span></h3>
+        <p class="desc" style="margin-top:1.2rem">Thrown by hand in Provence. Each piece keeps the mark of the maker's thumb.</p>
+      </div>
+      <div class="k"><span class="micro">One of twelve</span><span class="micro price num">€ 180</span></div>
+    </div>
+
+    <div class="cell" style="grid-column:3/5;border-top:var(--hair) solid var(--line)">
+      <div class="k"><span class="micro num">B / 07</span><span class="micro">Note</span></div>
+      <p class="serif ital" style="font-size:1.6rem;line-height:1.3;max-width:24ch">
+        Everything here is made to age well — to soften, to patina, to become yours.
+      </p>
+      <div class="k"><span class="micro">— The Atelier</span><span class="micro num">↓</span></div>
+    </div>
+  </section>
+
+  <!-- ============ EDITORIAL SPREAD ============ -->
+  <section class="spread">
+    <div class="s-img flow reveal" data-dir="up">
+      <img src="https://images.unsplash.com/photo-1487222477894-8943e31ef7b2?auto=format&fit=crop&w=1600&q=80" alt="Editorial portrait in soft light">
+    </div>
+
+    <div class="s-quote">
+      <span class="micro num">C / 01 — Manifesto</span>
+      <blockquote class="serif">
+        “We do not chase the season. We keep the <span>things</span> that outlast it.”
+      </blockquote>
+      <span class="micro">Isolde Marchand, Fondatrice</span>
+    </div>
+
+    <div class="s-notes">
+      <div>
+        <span class="micro">The Philosophy</span>
+        <p style="margin-top:1rem">Fewer objects, chosen with care and kept for decades. We publish one atelier a year and retire it when the last piece finds a home.</p>
+      </div>
+      <div class="rule"></div>
+      <div>
+        <span class="micro">Provenance</span>
+        <p style="margin-top:1rem">Naturally-dyed linen from Normandy. Alpaca from the Andes. Clay from the banks of the Rhône.</p>
+      </div>
+      <div class="rule"></div>
+      <div class="cap">
+        <span class="micro num">Est. MMXIV — Arles, France</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ INDEX ============ -->
+  <section class="index" id="index">
+    <div class="head">
+      <h2 class="serif">The Index</h2>
+      <span class="micro num">07 Pieces — Été 2026</span>
+    </div>
+
+    <a class="idx-row"><span class="micro num">01</span><span class="t serif">The Linen Coat</span><span class="micro hidem">Outerwear</span><span class="micro num price">€ 640</span><span class="arr micro">View →</span></a>
+    <a class="idx-row"><span class="micro num">02</span><span class="t serif">Undyed Alpaca Sweater</span><span class="micro hidem">Knitwear</span><span class="micro num price">€ 420</span><span class="arr micro">View →</span></a>
+    <a class="idx-row"><span class="micro num">03</span><span class="t serif">Wide Trouser, Raw Cotton</span><span class="micro hidem">Tailoring</span><span class="micro num price">€ 310</span><span class="arr micro">View →</span></a>
+    <a class="idx-row"><span class="micro num">04</span><span class="t serif">Ceramic Vessel, Unglazed</span><span class="micro hidem">Objet</span><span class="micro num price">€ 180</span><span class="arr micro">View →</span></a>
+    <a class="idx-row"><span class="micro num">05</span><span class="t serif">Hand-Blown Carafe</span><span class="micro hidem">Objet</span><span class="micro num price">€ 220</span><span class="arr micro">View →</span></a>
+    <a class="idx-row"><span class="micro num">06</span><span class="t serif">Leather Slipper, Vegetable-Tanned</span><span class="micro hidem">Footwear</span><span class="micro num price">€ 260</span><span class="arr micro">View →</span></a>
+    <a class="idx-row"><span class="micro num">07</span><span class="t serif">The Everyday Scarf</span><span class="micro hidem">Accessory</span><span class="micro num price">€ 140</span><span class="arr micro">View →</span></a>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer>
+    <div class="big serif">Maison<br><em class="ital">Rêverie</em></div>
+    <div class="col">
+      <h4 class="micro">Atelier</h4>
+      <a href="#">Collection Été 2026</a>
+      <a href="#">Archive</a>
+      <a href="#">Provenance</a>
+      <a href="#">Made to Order</a>
+    </div>
+    <div class="col">
+      <h4 class="micro">Maison</h4>
+      <a href="#">Our Story</a>
+      <a href="#">Ateliers &amp; Makers</a>
+      <a href="#">Care Guide</a>
+      <a href="#">Contact</a>
+    </div>
+    <div class="col">
+      <h4 class="micro">Correspond</h4>
+      <a href="#">Journal</a>
+      <a href="#">Instagram</a>
+      <a href="#">Newsletter</a>
+      <a href="#">Arles, FR</a>
+    </div>
+    <div class="colophon">
+      <span class="micro num">© MMXXVI Maison Rêverie — Atelier N°07</span>
+      <span class="micro">Photographed in natural light — Arles</span>
+      <span class="micro num">All prices in Euro</span>
+    </div>
+  </footer>
+
+  <!-- ============ SCRIPTS ============ -->
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"><\/script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"><\/script>
+  <script>
+  (function(){
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if(reduce) return; // honour reduced-motion: skip all motion, images already visible
+
+    /* ---- Lenis smooth scroll, wired into GSAP's ticker ---- */
+    var lenis = new Lenis({ lerp:.09, wheelMultiplier:.9 });
+    lenis.on('scroll', ScrollTrigger.update);
+    gsap.ticker.add(function(t){ lenis.raf(t*1000); });
+    gsap.ticker.lagSmoothing(0);
+
+    /* ============ CLIP-PATH IMAGE REVEALS ============
+       Each .reveal begins fully clipped (clip-path: inset(0 0 100% 0)).
+       As it scrolls into view we animate the inset edges to 0 0 0 0 so the
+       image is "wiped" open like a printed frame being unmasked. The wipe
+       direction is chosen per element via data-dir, so the grid reveals with
+       varied, editorial rhythm rather than a single uniform move.            */
+    var startClip = {
+      up:    'inset(0 0 100% 0)',  // reveal upward  (clipped from bottom)
+      down:  'inset(100% 0 0 0)',  // reveal downward(clipped from top)
+      left:  'inset(0 100% 0 0)',  // reveal leftward(clipped from right)
+      right: 'inset(0 0 0 100%)'   // reveal rightward(clipped from left)
+    };
+
+    gsap.utils.toArray('.reveal').forEach(function(el){
+      var dir = el.getAttribute('data-dir') || 'up';
+      var img = el.querySelector('img');
+
+      // set the masked starting state explicitly
+      gsap.set(el,  { clipPath: startClip[dir] });
+      // subtle counter-scale on the inner image for a slow "settle"
+      if(img) gsap.set(img, { scale:1.14 });
+
+      var tl = gsap.timeline({
+        scrollTrigger:{
+          trigger: el,
+          start:'top 82%',   // begin the wipe as the frame nears the fold
+          end:'top 40%',
+          scrub: false
+        }
+      });
+      // animate the inset back to zero — the frame opens
+      tl.to(el, { clipPath:'inset(0% 0% 0% 0%)', duration:1.25, ease:'power3.out' })
+        .to(img, { scale:1, duration:1.6, ease:'power3.out' }, 0);
+    });
+
+    /* ---- gentle fade/rise for text-bearing cells ---- */
+    gsap.utils.toArray('.cell:not(.img), .h-title, .s-quote, .idx-row').forEach(function(el){
+      gsap.from(el, {
+        y:26, autoAlpha:0, duration:1.1, ease:'power2.out',
+        scrollTrigger:{ trigger:el, start:'top 88%' }
+      });
+    });
+
+    ScrollTrigger.refresh();
+  })();
+  <\/script>
+<!--FLUIDENGINE-->
+</body>
+</html>
+`},
+  "fluid-portfolio": {name:"Fluid — WebGL portfolio ✦", ico:"≋", html:`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NØVA HALLE — Liquid Systems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Space+Grotesk:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050506;
+    --ink:#f4f1ea;
+    --dim:#6f6c66;
+    --accent:#c9ff3d;
+    --edge:rgba(244,241,234,.12);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Space Grotesk",system-ui,sans-serif;
+    overflow-x:hidden;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    cursor:crosshair;
+  }
+  ::selection{background:var(--accent);color:#000}
+  a{color:inherit;text-decoration:none}
+
+  /* global liquid canvas host — sits under everything */
+  .fluid-stage{
+    position:fixed;inset:0;
+    z-index:0;
+    pointer-events:none;
+  }
+
+  .grain{
+    position:fixed;inset:0;z-index:2;pointer-events:none;opacity:.05;mix-blend-mode:screen;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  main{position:relative;z-index:1}
+  .wrap{max-width:1400px;margin:0 auto;padding:0 6vw}
+
+  /* NAV */
+  nav{
+    position:fixed;top:0;left:0;right:0;z-index:5;
+    display:flex;justify-content:space-between;align-items:center;
+    padding:26px 6vw;
+    mix-blend-mode:difference;
+    font-size:12px;letter-spacing:.28em;text-transform:uppercase;
+  }
+  nav .brand{font-weight:500}
+  nav .status{color:var(--ink);display:flex;align-items:center;gap:9px}
+  nav .dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 12px var(--accent);animation:pulse 2.4s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+
+  /* HERO */
+  .hero{
+    min-height:100svh;
+    display:flex;flex-direction:column;justify-content:center;align-items:center;
+    text-align:center;position:relative;
+    padding:14vh 4vw 8vh;
+  }
+  .kicker{
+    font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--dim);
+    margin-bottom:5vh;
+  }
+  .kicker b{color:var(--ink);font-weight:400}
+  .bigname{
+    font-family:"Fraunces",serif;
+    font-weight:500;
+    font-size:clamp(4rem,16vw,17rem);
+    line-height:.86;
+    letter-spacing:-.03em;
+    text-transform:uppercase;
+    font-style:italic;
+    will-change:transform;
+  }
+  .bigname .l2{font-style:normal;font-weight:300;display:block}
+  .manifesto{
+    max-width:620px;margin:6vh auto 0;
+    font-size:clamp(1rem,1.5vw,1.35rem);
+    color:#d8d4cc;line-height:1.55;font-weight:400;
+  }
+  .manifesto span{color:var(--dim)}
+  .scrollcue{
+    position:absolute;bottom:34px;left:50%;transform:translateX(-50%);
+    font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+  }
+  .scrollcue i{width:1px;height:40px;background:linear-gradient(var(--dim),transparent);display:block}
+
+  /* section header */
+  .shead{
+    display:flex;justify-content:space-between;align-items:baseline;
+    padding-bottom:26px;margin-bottom:60px;border-bottom:1px solid var(--edge);
+    flex-wrap:wrap;gap:10px;
+  }
+  .shead h2{
+    font-family:"Fraunces",serif;font-weight:400;font-style:italic;
+    font-size:clamp(1.6rem,3vw,2.6rem);letter-spacing:-.01em;
+  }
+  .shead .idx{font-size:12px;letter-spacing:.3em;color:var(--dim);text-transform:uppercase}
+
+  /* WORK */
+  .work{padding:16vh 0 10vh}
+  .grid{
+    display:grid;grid-template-columns:repeat(12,1fr);gap:4vw 3vw;
+  }
+  figure{position:relative;overflow:hidden;background:#0c0c0e}
+  figure img{
+    width:100%;height:100%;object-fit:cover;display:block;
+    filter:grayscale(.35) contrast(1.05) brightness(.92);
+    transition:filter .6s ease, transform 1.2s cubic-bezier(.16,1,.3,1);
+  }
+  figure:hover img{filter:grayscale(0) contrast(1.05) brightness(1);transform:scale(1.03)}
+  figure figcaption{
+    position:absolute;left:0;bottom:0;right:0;
+    display:flex;justify-content:space-between;align-items:flex-end;
+    padding:20px;
+    background:linear-gradient(transparent,rgba(0,0,0,.72));
+    font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+    pointer-events:none;
+  }
+  figcaption .t{font-family:"Fraunces",serif;font-style:italic;font-size:17px;letter-spacing:0;text-transform:none}
+  figcaption .y{color:var(--dim)}
+
+  .item{position:relative}
+  .a{grid-column:1 / span 7}
+  .a figure{aspect-ratio:16/10}
+  .b{grid-column:8 / span 5;align-self:end}
+  .b figure{aspect-ratio:4/5}
+  .c{grid-column:1 / span 4;align-self:start}
+  .c figure{aspect-ratio:4/5}
+  .d{grid-column:5 / span 8}
+  .d figure{aspect-ratio:16/9}
+
+  .worknote{color:var(--dim);font-size:13px;max-width:340px;margin-top:16px;line-height:1.6}
+
+  /* ABOUT */
+  .about{padding:16vh 0}
+  .about .body{
+    max-width:760px;
+    font-family:"Fraunces",serif;font-weight:300;
+    font-size:clamp(1.5rem,3.2vw,2.8rem);line-height:1.28;letter-spacing:-.01em;
+  }
+  .about .body em{font-style:italic;color:var(--accent)}
+  .meta{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:30px;margin-top:11vh;
+    border-top:1px solid var(--edge);padding-top:40px;
+  }
+  .meta h4{font-size:11px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim);margin-bottom:16px;font-weight:400}
+  .meta ul{list-style:none;font-size:15px;line-height:2;color:#cbc7bf}
+
+  /* CONTACT */
+  .contact{
+    min-height:92svh;display:flex;flex-direction:column;justify-content:center;
+    padding:12vh 0;text-align:center;
+  }
+  .contact .lead{font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--dim);margin-bottom:6vh}
+  .bigmail{
+    font-family:"Fraunces",serif;font-style:italic;font-weight:500;
+    font-size:clamp(2.6rem,10vw,9rem);line-height:.9;letter-spacing:-.03em;
+    display:inline-block;transition:color .4s;
+  }
+  .bigmail:hover{color:var(--accent)}
+  .socials{
+    display:flex;gap:34px;justify-content:center;margin-top:8vh;flex-wrap:wrap;
+    font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);
+  }
+  .socials a{position:relative;transition:color .3s}
+  .socials a:hover{color:var(--ink)}
+
+  footer{
+    display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:14px;
+    padding:40px 6vw;border-top:1px solid var(--edge);
+    font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--dim);
+    position:relative;z-index:1;
+  }
+
+  .reveal{opacity:0;transform:translateY(28px)}
+
+  @media (max-width:820px){
+    .grid{gap:8vw 4vw}
+    .a,.b,.c,.d{grid-column:1 / span 12}
+    .bigname{font-size:clamp(3.4rem,20vw,7rem)}
+    .meta{grid-template-columns:1fr;gap:24px}
+    nav{padding:20px 6vw}
+    nav .status .txt{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    .reveal{opacity:1;transform:none}
+    figure img{filter:grayscale(0) brightness(1)}
+  }
+</style>
+</head>
+<body>
+
+<!-- global liquid cursor canvas host -->
+<div class="fluid-stage" data-fluid-global aria-hidden="true"></div>
+<div class="grain" aria-hidden="true"></div>
+
+<nav>
+  <span class="brand">N.H · Liquid Systems</span>
+  <span class="status"><span class="dot"></span><span class="txt">Open for 2026 collaborations</span></span>
+</nav>
+
+<main>
+
+  <!-- HERO -->
+  <section class="hero">
+    <p class="kicker reveal">Creative Technologist &nbsp;/&nbsp; <b>Oslo · Remote</b></p>
+    <h1 class="bigname" data-fluid-fx="water">
+      Nøva
+      <span class="l2">Halle</span>
+    </h1>
+    <p class="manifesto reveal">
+      I build interfaces that behave like matter — <span>things that ripple, resist and remember touch.</span> Shaders, motion, and the physics of feeling.
+    </p>
+    <div class="scrollcue reveal"><span>Scroll</span><i></i></div>
+  </section>
+
+  <!-- WORK -->
+  <section class="work wrap">
+    <div class="shead">
+      <h2 class="reveal">Selected fluid work</h2>
+      <span class="idx reveal">01 — Portfolio</span>
+    </div>
+
+    <div class="grid">
+      <div class="item a reveal">
+        <figure>
+          <img data-fluid-fx="intense" loading="lazy"
+            src="https://images.unsplash.com/photo-1541701494587-cb58502866ab?auto=format&fit=crop&w=1600&q=80"
+            alt="Chromatic liquid render">
+          <figcaption><span class="t">Halocline</span><span class="y">WebGL · 2025</span></figcaption>
+        </figure>
+        <p class="worknote">A real-time fluid-simulation identity for a synth label — every hover displaces the surface.</p>
+      </div>
+
+      <div class="item b reveal">
+        <figure>
+          <img data-fluid-fx="intense" loading="lazy"
+            src="https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=1600&q=80"
+            alt="Deep blue abstraction">
+          <figcaption><span class="t">Nord / Drift</span><span class="y">Installation · 2024</span></figcaption>
+        </figure>
+      </div>
+
+      <div class="item c reveal">
+        <figure>
+          <img data-fluid-fx="intense" loading="lazy"
+            src="https://images.unsplash.com/photo-1550745165-9bc0b252726f?auto=format&fit=crop&w=1600&q=80"
+            alt="Iridescent surface">
+          <figcaption><span class="t">Mercury OS</span><span class="y">Concept · 2025</span></figcaption>
+        </figure>
+      </div>
+
+      <div class="item d reveal">
+        <figure>
+          <img data-fluid-fx="intense" loading="lazy"
+            src="https://images.unsplash.com/photo-1502691876148-a84978e59af8?auto=format&fit=crop&w=1600&q=80"
+            alt="Liquid gradient waves">
+          <figcaption><span class="t">Solvent</span><span class="y">Brand system · 2026</span></figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ABOUT -->
+  <section class="about wrap">
+    <div class="shead">
+      <h2 class="reveal">On practice</h2>
+      <span class="idx reveal">02 — About</span>
+    </div>
+    <p class="body reveal">
+      For a decade I've treated the screen as a <em>liquid</em> — a medium that yields to attention and closes behind it. My work sits between GLSL, generative motion and product craft, making digital things feel <em>alive</em> to the hand that moves them.
+    </p>
+    <div class="meta">
+      <div class="reveal"><h4>Disciplines</h4><ul><li>WebGL / GLSL shaders</li><li>Interaction & motion</li><li>Creative direction</li><li>Real-time systems</li></ul></div>
+      <div class="reveal"><h4>Selected clients</h4><ul><li>Aesop Digital</li><li>Bang & Olufsen</li><li>Nike ISPA</li><li>Google Arts</li></ul></div>
+      <div class="reveal"><h4>Recognition</h4><ul><li>Awwwards SOTD ×6</li><li>FWA of the Day ×4</li><li>CSS Design Awards</li><li>Webby Honoree</li></ul></div>
+    </div>
+  </section>
+
+  <!-- CONTACT -->
+  <section class="contact wrap">
+    <p class="lead reveal">Let's make something that moves</p>
+    <a class="bigmail reveal" href="mailto:studio@novahalle.io">studio@novahalle.io</a>
+    <div class="socials reveal">
+      <a href="#">Instagram</a><a href="#">Are.na</a><a href="#">GitHub</a><a href="#">Read.cv</a>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <span>© 2026 Nøva Halle</span>
+  <span>Built liquid · Oslo 59.9°N</span>
+  <span>Local time <b id="clock">—</b></span>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/gsap.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/gsap@3.13.0/dist/ScrollTrigger.min.js"><\/script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.20/dist/lenis.min.js"><\/script>
+<script>
+(function(){
+  var reduce = window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+
+  // clock
+  function tick(){
+    try{
+      var t=new Date().toLocaleTimeString("en-GB",{timeZone:"Europe/Oslo",hour:"2-digit",minute:"2-digit"});
+      var el=document.getElementById("clock"); if(el) el.textContent=t;
+    }catch(e){}
+  }
+  tick(); setInterval(tick,15000);
+
+  if(reduce || !window.gsap) return;
+
+  // Lenis smooth scroll
+  if(window.Lenis){
+    var lenis=new Lenis({lerp:.09,wheelMultiplier:1});
+    function raf(t){lenis.raf(t);requestAnimationFrame(raf);}
+    requestAnimationFrame(raf);
+    if(window.ScrollTrigger){ lenis.on("scroll", ScrollTrigger.update); }
+  }
+
+  gsap.registerPlugin(ScrollTrigger);
+
+  // hero entrance
+  gsap.set(".bigname",{opacity:0,y:40,filter:"blur(14px)"});
+  var tl=gsap.timeline({delay:.15});
+  tl.to(".bigname",{opacity:1,y:0,filter:"blur(0px)",duration:1.4,ease:"power3.out"})
+    .to(".hero .reveal",{opacity:1,y:0,duration:.9,stagger:.12,ease:"power2.out"},"-=.9");
+  gsap.set(".hero .reveal",{y:20});
+
+  // scroll reveals
+  gsap.utils.toArray(".reveal").forEach(function(el){
+    if(el.closest(".hero")) return;
+    gsap.to(el,{
+      opacity:1,y:0,duration:1,ease:"power3.out",
+      scrollTrigger:{trigger:el,start:"top 88%"}
+    });
+  });
+
+  // subtle parallax drift on hero name as you scroll
+  gsap.to(".bigname",{yPercent:18,ease:"none",
+    scrollTrigger:{trigger:".hero",start:"top top",end:"bottom top",scrub:.6}});
+})();
+<\/script>
+<!--FLUIDENGINE-->
+</body>
+</html>
+`},
+};
+function premiumHTML(key){ var r=premiumTemplates[key]; if(!r) return ""; return r.html.replace("<!--FLUIDENGINE-->", "<scr"+"ipt>"+FLUID_FX_JS+"</scr"+"ipt>"); }
 function generateSiteHTML(st,editMode,forceMotion){
   const t = getTheme(st), f = getFonts(st), sc = SCALES[st.scale];
   const usedLib={};
@@ -7350,7 +8997,9 @@ function generateSiteHTML(st,editMode,forceMotion){
     +wrapOpen+body+wrapClose
     +(editMode?'\n'+edGuidesHTML(st):'')
     +(!editMode && siteUsesGsap(st) ? GSAP_CDN_TAGS : '')   // v15 Phase 2: GSAP/Lenis, only when used, Preview + Export
-    +'\n<scr'+'ipt>'+siteJS(st,editMode,forceMotion)+'</scr'+'ipt>\n</body>\n</html>';
+    +'\n<scr'+'ipt>'+siteJS(st,editMode,forceMotion)+'</scr'+'ipt>\n'
+    +(!editMode && siteUsesFluid(st) ? '<scr'+'ipt>'+FLUID_FX_JS+'</scr'+'ipt>\n' : '')   // v18 Phase 6: fluid-fx engine, only when used
+    +'</body>\n</html>';
 }
 
 /* ---------- builder UI rendering ---------- */
@@ -7713,6 +9362,7 @@ const FX_SHORT = {none:"·", cover:"▼ Cover", reveal:"▲ Reveal", stack:"⏹ 
   zoomo:"⤢ Zoom", tiltin:"⟂ Tilt", blurin:"◌ Blur", shrink:"⤡ Shrink"};
 
 function renderSectionList(){
+  if(state.raw){ $("#sections").innerHTML = '<div id="empty-inspector" style="padding:14px;line-height:1.6">✦ <b>Premium full-page template</b><br>A bespoke code showcase — not section-editable. Use <b>Preview</b> to view it and <b>Export</b> to download the HTML. Load any other template (or Blank) to return to the editor.</div>'; return; }
   $("#sections").innerHTML = state.sections.map((s,i)=>{
     const d = SECTION_DEFS[s.type];
     const name = (s.title||s.heading||s.text||s.caption||d.label).replace(/\*/g,"").split("\n")[0].slice(0,26);
@@ -7929,6 +9579,7 @@ function renderLayersPanel(){
 }
 function renderInspector(){
   const box = $("#inspector");
+  if(state.raw){ box.innerHTML = '<div id="empty-inspector">This premium template is a full-page code showcase — edit it after Export, or load a normal template to keep building here.</div>'; renderLayersPanel && renderLayersPanel(); return; }
   const s = state.sections[sel];
   renderLayersPanel();   // v14 4c: keep the left Layers list in sync with the current section/selection
   if(!s){ box.innerHTML = '<div id="empty-inspector">No section selected.<br>Click one in the list — or click directly in the page.</div>'; return; }
@@ -8805,7 +10456,9 @@ function rebuildFrame(){
   _scrollTopNext = false;
   _pendingScrollY = y;
   frame.onload = restoreCanvasState;
-  frame.srcdoc = generateSiteHTML(state, mode==="edit", forceMotion);
+  /* v18 Phase 6: a raw premium full-page template renders its own HTML (with the fluid engine
+     injected) instead of the state-driven generator. */
+  frame.srcdoc = state.raw ? premiumHTML(state.tplId.replace(/^premium:/,"")) : generateSiteHTML(state, mode==="edit", forceMotion);
 }
 
 /* ---------- v14 P2: the patch path ----------
@@ -9915,7 +11568,7 @@ function exportChecks(){
       : "No hero section — the page has no main H1 heading, which search engines expect."});
   return out;
 }
-function doExport(){ download(slug(state.meta.title)+".html", generateSiteHTML(state,false), "text/html"); }
+function doExport(){ download(slug(state.meta.title)+".html", state.raw ? premiumHTML(state.tplId.replace(/^premium:/,"")) : generateSiteHTML(state,false), "text/html"); }
 $("#btn-export").onclick = ()=>{
   if(LAGD_DEMO){ openDemoGate(); return; }
   const checks = exportChecks();
@@ -10897,6 +12550,13 @@ function insertPremiumBlock(b){
 /* ---------- v10.3 slice 22: command palette (Ctrl/⌘+K) ---------- */
 function buildCommands(){
   const out = [];
+  // v18 Phase 6: bespoke full-page premium templates (raw HTML, injected into the canvas).
+  Object.keys(premiumTemplates).forEach(key=>{
+    const rec=premiumTemplates[key];
+    out.push({group:"✦ Premium — Full Page", ico:rec.ico||"✦", label:rec.name.replace(/\s*✦\s*$/,""),
+      key:rec.name+" "+key+" premium full page awwwards webgl fluid template site",
+      run:()=>{ if(confirm("Load the “"+rec.name.replace(/\s*✦\s*$/,"")+"” premium page? This replaces your current design.\n(It's a code showcase — Export gives you the HTML.)")){ loadPremiumTemplate(key); } }});
+  });
   // v15: premium GSAP blocks lead the palette — the Phase-2 headline feature.
   PREMIUM_BLOCKS.forEach(b=>{
     out.push({group:"✦ Premium — GSAP", ico:b.ico, label:b.label,
@@ -10987,6 +12647,22 @@ function loadTemplateByKey(k){
   syncAll(); update(true); renderThemes(); renderFonts(); renderCustomFonts(); renderToggles();
   const label = (userTemplates[k]&&userTemplates[k].name) || k;
   showToast("Loaded template: "+label);
+}
+/* v18 Phase 6: load a bespoke full-page premium template (raw HTML) into the canvas. Uses a
+   normalized shim (so every left-panel renderer has its fields) plus state.raw + tplId; the
+   raw-aware rebuildFrame/doExport render premiumHTML(key). Not section-editable by design. */
+function loadPremiumTemplate(key){
+  const rec = premiumTemplates[key]; if(!rec) return;
+  pushUndo("premium:"+key);
+  snapshotVersion("before premium page");
+  const keepT = state.customThemes, keepF = state.customFonts;
+  state = normalize({meta:{title:rec.name}, theme:"noir", fonts:"editorial", scale:"balansert", sections:[]});
+  state.raw = true; state.tplId = "premium:"+key;
+  state.customThemes = keepT||{}; state.customFonts = keepF||[];
+  sel = 0; selObj = null; selObjs = null; closeQuickFill();
+  _scrollTopNext = true;
+  syncAll(); update(true); renderThemes(); renderFonts(); renderCustomFonts(); renderToggles();
+  showToast("Loaded premium page: "+rec.name+" — a code showcase (Preview to view · Export for the HTML)");
 }
 /* The real setMode() lives further up in the file. Do NOT shadow it — hoisting will
    swap the definitions and the toolbar's Edit/Preview buttons will trigger infinite
