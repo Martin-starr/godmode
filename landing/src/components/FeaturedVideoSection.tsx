@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 
 const FEATURED_VIDEO =
-  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260402_054547_9875cfc5-155a-4229-8ec8-b7ba7125cbf8.mp4";
+  "https://d8j0ntlcm91z4.cloudfront.net/user_3F7VRh1v22Oprb61Ysc9ZVbmxWM/hf_20260724_005337_b6b05942-7c84-439a-baa7-6b3cf9f3f59e.mp4";
 
 const FeaturedVideoSection = () => {
   const ref = useRef(null);
@@ -24,19 +24,19 @@ const FeaturedVideoSection = () => {
             autoPlay
             loop
             playsInline
-            preload="auto"
+            preload="metadata"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
           <div className="absolute bottom-0 left-0 right-0 flex flex-col gap-6 p-6 md:flex-row md:items-end md:justify-between md:p-10">
             <div className="liquid-glass max-w-md rounded-2xl p-6 md:p-8">
               <p className="mb-3 text-xs uppercase tracking-widest text-white/50">
-                Our Approach
+                The Method
               </p>
               <p className="text-sm leading-relaxed text-white md:text-base">
-                We believe in the power of curiosity-driven exploration. Every
-                project starts with a question, and every answer opens a new door
-                to innovation.
+                We chase the feeling first. Every project begins as a mood — a
+                colour, a texture, a pulse — then we engineer it into something
+                real enough to ship.
               </p>
             </div>
 
@@ -45,7 +45,7 @@ const FeaturedVideoSection = () => {
               whileTap={{ scale: 0.95 }}
               className="liquid-glass flex-shrink-0 rounded-full px-8 py-3 text-sm font-medium text-white"
             >
-              Explore more
+              See the work
             </motion.button>
           </div>
         </motion.div>

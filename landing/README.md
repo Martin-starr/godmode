@@ -1,10 +1,12 @@
-# Asme — Liquid Glass Landing
+# Lucid — Liquid Glass Portfolio
 
-A single-page landing site built with **React + TypeScript + Vite + Tailwind CSS + framer-motion + lucide-react**.
+A single-page creative-studio landing site built with **React + TypeScript + Vite + Tailwind CSS + framer-motion + lucide-react**.
 
-The page is a black-background, video-driven marketing site featuring a reusable
-"liquid glass" surface treatment, a seamlessly cross-fading hero video, and
-scroll-reveal animations.
+A black-background, video-driven portfolio site with a "smooth acid trip"
+aesthetic: dark, iridescent, liquid. It pairs a reusable **liquid-glass**
+surface treatment with AI-generated 4K background videos, an animated
+iridescent "acid" gradient on emphasised words, a subtle film-grain overlay,
+and scroll-reveal animations.
 
 ## Stack
 
@@ -13,7 +15,16 @@ scroll-reveal animations.
 - [Tailwind CSS 3](https://tailwindcss.com/) — utility styling
 - [framer-motion](https://www.framer.com/motion/) — scroll-reveal + hover animation
 - [lucide-react](https://lucide.dev/) — icons
-- [Instrument Serif](https://fonts.google.com/specimen/Instrument+Serif) via Google Fonts
+- Type: [Bricolage Grotesque](https://fonts.google.com/specimen/Bricolage+Grotesque) (display) + [Space Grotesk](https://fonts.google.com/specimen/Space+Grotesk) (body), via Google Fonts
+
+## Media
+
+The background videos are 4K (3840×2160) clips generated with Higgsfield
+(Kling 3.0, `4k` mode) and streamed from a CloudFront CDN — the same hosting
+pattern the project started with. They are referenced by URL in the section
+components, so nothing large is committed to the repo. If those URLs ever
+rotate, swap the constants at the top of each section component (and the
+`HERO_VIDEO` constant in `src/pages/Index.tsx`) for self-hosted copies.
 
 ## Getting started
 
@@ -32,27 +43,24 @@ landing/
 ├─ index.html
 ├─ src/
 │  ├─ main.tsx                 # app entry
-│  ├─ index.css                # Tailwind layers + .liquid-glass component + font import
+│  ├─ index.css                # Tailwind layers, fonts, .liquid-glass, .acid-text, .grain
 │  ├─ pages/
-│  │  └─ Index.tsx             # Section 1 — hero (nav, headline, email, socials) + page assembly
+│  │  └─ Index.tsx             # Hero (nav, headline, email, socials) + page assembly
 │  └─ components/
-│     ├─ AboutSection.tsx      # Section 2 — About
-│     ├─ FeaturedVideoSection.tsx  # Section 3 — Featured video
-│     ├─ PhilosophySection.tsx     # Section 4 — Innovation × Vision
-│     └─ ServicesSection.tsx       # Section 5 — What we do
+│     ├─ AboutSection.tsx          # The Studio
+│     ├─ FeaturedVideoSection.tsx  # The Method — featured video
+│     ├─ PhilosophySection.tsx     # Chaos × Control
+│     └─ ServicesSection.tsx       # What we do
 ```
 
-## The liquid-glass treatment
+## Design details
 
-`.liquid-glass` (defined in `src/index.css`) layers a near-transparent white
-fill, a 4px backdrop blur, an inner highlight, and a masked gradient border
-(`::before`) to produce a frosted-glass edge on any element it's applied to.
-
-## Hero video crossfade
-
-The hero video loops with a smooth crossfade to black between plays. Opacity is
-tweened in vanilla JS via `requestAnimationFrame` (no CSS transitions):
-
-- **canplay** → play and fade `0 → 1` over 500ms
-- **timeupdate** → when ≤ 0.55s remain, fade current → `0` over 500ms
-- **ended** → snap to `0`, wait 100ms, reset to the start, replay, and fade back in
+- **`.liquid-glass`** — near-transparent white fill, 4px backdrop blur, inner
+  highlight, and a masked gradient border (`::before`) for a frosted edge.
+- **`.acid-text`** — a slow, smooth iridescent gradient clipped to the glyphs,
+  used on emphasised words (respects `prefers-reduced-motion`).
+- **`.grain`** — a fixed, low-opacity SVG film-grain overlay for analog texture.
+- **Hero crossfade** — the hero video loops with a smooth crossfade to black
+  between plays, tweened in vanilla JS via `requestAnimationFrame` (no CSS
+  transitions): fade in on `canplay`, fade out at ≤ 0.55s remaining, seamless
+  restart on `ended`.

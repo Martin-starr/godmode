@@ -4,7 +4,8 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        instrument: ["'Instrument Serif'", "serif"],
+        sans: ["'Space Grotesk'", "ui-sans-serif", "system-ui", "sans-serif"],
+        display: ["'Bricolage Grotesque'", "'Space Grotesk'", "sans-serif"],
       },
     },
   },

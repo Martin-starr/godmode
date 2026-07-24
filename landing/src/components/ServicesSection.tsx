@@ -4,20 +4,20 @@ import { ArrowUpRight } from "lucide-react";
 
 const services = [
   {
-    tag: "Strategy",
-    title: "Research & Insight",
+    tag: "Direction",
+    title: "Brand & Direction",
     description:
-      "We dig deep into data, culture, and human behavior to surface the insights that drive meaningful, lasting change.",
+      "We find the core feeling of a brand and build a world around it — voice, colour, motion and story, all moving as one.",
     video:
-      "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260314_131748_f2ca2a28-fed7-44c8-b9a9-bd9acdd5ec31.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3F7VRh1v22Oprb61Ysc9ZVbmxWM/hf_20260724_005324_ecb6d9d9-13ce-4144-9376-3698454f2d1c.mp4",
   },
   {
-    tag: "Craft",
-    title: "Design & Execution",
+    tag: "Motion",
+    title: "Motion & Immersion",
     description:
-      "From concept to launch, we obsess over every detail to deliver experiences that feel effortless and look extraordinary.",
+      "From first frame to final render, we craft immersive visuals and interfaces that feel alive — smooth, tactile, and just a little hypnotic.",
     video:
-      "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260324_151826_c7218672-6e92-402c-9e45-f1e0f454bdc4.mp4",
+      "https://d8j0ntlcm91z4.cloudfront.net/user_3F7VRh1v22Oprb61Ysc9ZVbmxWM/hf_20260724_005326_74d929cd-82a1-43c7-997a-80dbf1719c71.mp4",
   },
 ];
 
@@ -26,7 +26,10 @@ const ServicesSection = () => {
   const inView = useInView(ref, { once: true, margin: "-100px" });
 
   return (
-    <section className="relative overflow-hidden bg-black px-6 py-28 md:py-40">
+    <section
+      id="work"
+      className="relative overflow-hidden bg-black px-6 py-28 md:py-40"
+    >
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_rgba(255,255,255,0.02)_0%,_transparent_60%)]" />
 
       <div ref={ref} className="relative mx-auto max-w-6xl">
@@ -36,12 +39,10 @@ const ServicesSection = () => {
           transition={{ duration: 0.7 }}
           className="mb-12 flex items-center justify-between md:mb-16"
         >
-          <h2 className="text-3xl tracking-tight text-white md:text-5xl">
+          <h2 className="font-display text-3xl font-semibold tracking-tight text-white md:text-5xl">
             What we do
           </h2>
-          <span className="hidden text-sm text-white/40 md:block">
-            Our services
-          </span>
+          <span className="hidden text-sm text-white/40 md:block">Services</span>
         </motion.div>
 
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-8">
@@ -61,7 +62,7 @@ const ServicesSection = () => {
                   autoPlay
                   loop
                   playsInline
-                  preload="auto"
+                  preload="metadata"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
               </div>
@@ -75,7 +76,7 @@ const ServicesSection = () => {
                     <ArrowUpRight size={18} />
                   </span>
                 </div>
-                <h3 className="mb-3 text-xl tracking-tight text-white md:text-2xl">
+                <h3 className="mb-3 font-display text-xl font-semibold tracking-tight text-white md:text-2xl">
                   {service.title}
                 </h3>
                 <p className="text-sm leading-relaxed text-white/50">

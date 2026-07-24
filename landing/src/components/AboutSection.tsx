@@ -7,6 +7,7 @@ const AboutSection = () => {
 
   return (
     <section
+      id="studio"
       ref={ref}
       className="relative overflow-hidden bg-black px-6 pb-10 pt-32 md:pb-14 md:pt-44"
     >
@@ -19,30 +20,19 @@ const AboutSection = () => {
           transition={{ duration: 0.6 }}
           className="text-sm uppercase tracking-widest text-white/40"
         >
-          About Us
+          The Studio
         </motion.p>
 
         <motion.h2
           initial={{ opacity: 0, y: 40 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8, delay: 0.1 }}
-          className="mt-6 text-4xl leading-[1.1] tracking-tight text-white md:text-6xl lg:text-7xl"
+          className="mt-6 font-display text-4xl font-semibold leading-[1.05] tracking-tight text-white md:text-6xl lg:text-7xl"
         >
-          Pioneering{" "}
-          <span
-            className="italic text-white/60"
-            style={{ fontFamily: "'Instrument Serif', serif" }}
-          >
-            ideas
-          </span>{" "}
-          for
-          <br className="hidden md:block" /> minds that{" "}
-          <span
-            className="italic text-white/60"
-            style={{ fontFamily: "'Instrument Serif', serif" }}
-          >
-            create, build, and inspire.
-          </span>
+          We design <span className="acid-text">lucid</span> experiences —
+          <br className="hidden md:block" /> brands, films and interfaces built
+          to <span className="acid-text">feel</span> like a dream you can't
+          shake.
         </motion.h2>
       </div>
     </section>

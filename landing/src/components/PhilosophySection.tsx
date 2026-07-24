@@ -2,7 +2,7 @@ import { useRef } from "react";
 import { motion, useInView } from "framer-motion";
 
 const PHILOSOPHY_VIDEO =
-  "https://d8j0ntlcm91z4.cloudfront.net/user_38xzZboKViGWJOttwIXH07lWA1P/hf_20260307_083826_e938b29f-a43a-41ec-a153-3d4730578ab8.mp4";
+  "https://d8j0ntlcm91z4.cloudfront.net/user_3F7VRh1v22Oprb61Ysc9ZVbmxWM/hf_20260724_005322_0bc5242b-2deb-4ff3-aecc-219a0749b3d4.mp4";
 
 const PhilosophySection = () => {
   const ref = useRef(null);
@@ -15,16 +15,9 @@ const PhilosophySection = () => {
           initial={{ opacity: 0, y: 40 }}
           animate={inView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.8 }}
-          className="mb-16 text-5xl tracking-tight text-white md:mb-24 md:text-7xl lg:text-8xl"
+          className="mb-16 font-display text-5xl font-semibold tracking-tight text-white md:mb-24 md:text-7xl lg:text-8xl"
         >
-          Innovation{" "}
-          <span
-            className="italic text-white/40"
-            style={{ fontFamily: "'Instrument Serif', serif" }}
-          >
-            x
-          </span>{" "}
-          Vision
+          Chaos <span className="acid-text">×</span> Control
         </motion.h2>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-2 md:gap-12">
@@ -41,7 +34,7 @@ const PhilosophySection = () => {
               autoPlay
               loop
               playsInline
-              preload="auto"
+              preload="metadata"
             />
           </motion.div>
 
@@ -53,13 +46,13 @@ const PhilosophySection = () => {
           >
             <div>
               <p className="mb-4 text-xs uppercase tracking-widest text-white/40">
-                Choose your space
+                The tension
               </p>
               <p className="text-base leading-relaxed text-white/70 md:text-lg">
-                Every meaningful breakthrough begins at the intersection of
-                disciplined strategy and remarkable creative vision. We operate at
-                that crossroads, turning bold thinking into tangible outcomes that
-                move people and reshape industries.
+                Every breakthrough lives on the edge between a wild idea and
+                disciplined craft. We work right on that line — turning the
+                strange, the psychedelic and the beautiful into things that
+                actually function.
               </p>
             </div>
 
@@ -67,13 +60,12 @@ const PhilosophySection = () => {
 
             <div>
               <p className="mb-4 text-xs uppercase tracking-widest text-white/40">
-                Shape the future
+                The payoff
               </p>
               <p className="text-base leading-relaxed text-white/70 md:text-lg">
-                We believe that the best work emerges when curiosity meets
-                conviction. Our process is designed to uncover hidden
-                opportunities and translate them into experiences that resonate
-                long after the first impression.
+                The best work feels inevitable and impossible at once. Our
+                process hunts for those moments — the ones that make someone
+                stop, stare, and remember exactly how it felt.
               </p>
             </div>
           </motion.div>
