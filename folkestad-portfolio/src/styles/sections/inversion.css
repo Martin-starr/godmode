@@ -1,0 +1,17 @@
+/* ---------- 04 · inversion — "fire prosjekter" ---------- */
+.p-out{
+  background:var(--ink);color:var(--ivory);
+  display:grid;place-items:center;
+}
+.p-out .inner{text-align:center;will-change:filter,opacity}
+.p-out .g{
+  font-size:clamp(3rem,12vw,11rem);
+  font-weight:900;letter-spacing:-.05em;line-height:.82;
+}
+.p-out .g em{
+  font-family:var(--didone);font-weight:500;font-style:italic;letter-spacing:-.02em;
+}
+.p-out .sub{
+  margin-top:1.6rem;font-family:var(--mono);font-size:.625rem;
+  letter-spacing:.24em;text-transform:uppercase;color:var(--grey);
+}

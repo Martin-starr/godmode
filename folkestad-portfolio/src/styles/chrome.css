@@ -1,0 +1,68 @@
+/* ============================================================
+   chrome.css — fixed classification strip, progress foot,
+   preloader curtain. Chrome self-inverts over light/dark
+   panels via mix-blend-mode: difference.
+   ============================================================ */
+
+.chrome{
+  position:fixed;inset:0;pointer-events:none;z-index:40;
+  mix-blend-mode:difference;color:#fff;
+}
+
+/* top — classification strip */
+.klass{
+  position:absolute;top:0;left:0;right:0;
+  display:grid;grid-template-columns:auto repeat(4,1fr) auto;gap:0;
+  border-bottom:1px solid rgba(255,255,255,.28);
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.16em;text-transform:uppercase;
+}
+.klass span{
+  padding:.7rem .75rem;border-right:1px solid rgba(255,255,255,.28);
+  white-space:nowrap;overflow:hidden;
+}
+.klass span:last-child{border-right:0;text-align:right}
+.klass .on{color:var(--red);mix-blend-mode:normal}
+
+/* bottom — beat name + signature */
+.foot{
+  position:absolute;bottom:0;left:0;right:0;
+  display:flex;justify-content:space-between;
+  padding:.7rem var(--gutter);border-top:1px solid rgba(255,255,255,.28);
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.16em;text-transform:uppercase;
+}
+
+/* progress bar */
+.bar{position:absolute;bottom:0;left:0;height:2px;background:#fff;width:0}
+
+@media (max-width:767px){
+  .klass{grid-template-columns:auto 1fr auto}
+  .klass span:nth-child(2),
+  .klass span:nth-child(4),
+  .klass span:nth-child(5){display:none}
+}
+
+/* ---------- 00 · preloader curtain ---------- */
+.preloader{
+  position:fixed;inset:0;z-index:60;background:var(--ink);color:var(--ivory);
+  display:grid;place-items:center;will-change:transform;
+}
+.pl-inner{text-align:center}
+.pl-mask{overflow:clip}
+.pl-word{
+  display:inline-block;
+  font-weight:800;letter-spacing:-.045em;line-height:1.1;
+  font-size:clamp(1.4rem,3.4vw,2.6rem);
+  transform:translateY(115%);will-change:transform;
+}
+.pl-word .paren{font-family:var(--serif);font-weight:300;font-style:italic;color:var(--grey)}
+.pl-meta{
+  margin-top:.9rem;font-family:var(--mono);font-size:.5625rem;
+  letter-spacing:.24em;text-transform:uppercase;color:var(--grey);
+  opacity:0;
+}
+.preloader.is-done{display:none}
+
+/* reduced motion / no-js safety: content readable immediately */
+@media (prefers-reduced-motion:reduce){
+  .preloader{display:none}
+}

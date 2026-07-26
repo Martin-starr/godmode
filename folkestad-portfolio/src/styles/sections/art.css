@@ -1,0 +1,188 @@
+/* ============================================================
+   03 · the art piece — pinned horizontal scroll, ~340vw.
+   Desktop: ScrollTrigger pins .p-art and translates .art-track;
+   layers get per-velocity parallax (data-v .35/.55/.75/1/1.28).
+   .art--static (mobile <768px / reduced motion): vertically
+   stacked composition, no pin.
+   ============================================================ */
+
+.p-art{
+  background:var(--ivory);color:var(--ink);
+  height:100vh;overflow:hidden;position:relative;
+}
+.art-track{
+  position:relative;width:340vw;height:100vh;
+  will-change:transform;
+}
+.layer{position:absolute;inset:0;will-change:transform}
+
+/* ---------- layer 1 · putty circles (v .35) ---------- */
+.circ{position:absolute;border-radius:50%;background:var(--putty);display:block}
+.c1{width:46vh;height:46vh;top:12vh;left:38vw}
+.c2{width:28vh;height:28vh;top:52vh;left:74vw;background:var(--kraft);opacity:.5}
+.c3{width:62vh;height:62vh;top:8vh;left:132vw;background:var(--putty);opacity:.75}
+.c4{width:20vh;height:20vh;top:62vh;left:196vw;background:var(--red);opacity:.13}
+
+/* ---------- layer 2 · torn newsprint fragments (v .55) ----------
+   Fallback: ruled-line "newsprint" gradient (mockup style).
+   When /assets/newsprint-page.webp loads, main.js adds
+   .has-newsprint to <html> and the real scan takes over —
+   clip-path polygons do the tearing either way. */
+.frag{
+  position:absolute;
+  background-color:#E4E0D4;
+  background-image:repeating-linear-gradient(180deg,rgba(20,20,15,.62) 0 1px,transparent 1px 4px);
+  background-size:100% 4px;
+  opacity:.5;filter:contrast(1.15);
+}
+.f1{width:20vw;height:26vh;top:20vh;left:52vw;transform:rotate(-7deg);clip-path:polygon(3% 6%,97% 0,100% 74%,88% 100%,14% 96%,0 38%)}
+.f2{width:15vw;height:19vh;top:56vh;left:66vw;transform:rotate(5deg);clip-path:polygon(0 12%,90% 3%,100% 88%,44% 100%,6% 82%)}
+.f3{width:24vw;height:31vh;top:14vh;left:92vw;transform:rotate(3deg);clip-path:polygon(6% 0,100% 9%,94% 92%,30% 100%,0 60%)}
+.f4{width:17vw;height:22vh;top:60vh;left:118vw;transform:rotate(-11deg);clip-path:polygon(0 8%,88% 0,100% 66%,62% 100%,8% 90%)}
+.f5{width:13vw;height:17vh;top:26vh;left:174vw;transform:rotate(8deg);clip-path:polygon(4% 2%,96% 10%,100% 80%,38% 100%,0 52%)}
+
+.has-newsprint .frag{
+  background-image:url('/assets/newsprint-page.webp');
+  background-size:cover;
+  opacity:.85;filter:contrast(1.05) saturate(.9);
+}
+/* vary the crop per fragment so one scan reads as many pages */
+.has-newsprint .f1{background-position:12% 8%}
+.has-newsprint .f2{background-position:80% 30%}
+.has-newsprint .f3{background-position:30% 68%}
+.has-newsprint .f4{background-position:70% 85%}
+.has-newsprint .f5{background-position:50% 45%}
+
+/* wide scattered-fragments scan — only when the asset exists */
+.collage-strip{
+  display:none;position:absolute;
+  top:44vh;left:150vw;width:46vw;height:40vh;
+  transform:rotate(-2deg);
+  background:url('/assets/newsprint-collage.webp') center/cover no-repeat;
+  opacity:.7;
+  clip-path:polygon(2% 8%,98% 0,100% 90%,64% 100%,4% 94%);
+}
+.has-collage .collage-strip{display:block}
+
+/* ---------- layer 3 · engraved portrait plate (v .75) ----------
+   Centered between SELECTED and WORKS. Fallback: CSS-hatch
+   engraving (mockup). .has-portrait swaps in the real plate. */
+.plate{
+  position:absolute;top:16vh;left:104vw;width:26vw;min-width:230px;height:62vh;
+  background:var(--paper);
+  box-shadow:0 1px 0 rgba(20,20,15,.2);
+}
+.plate .hatch{
+  position:absolute;inset:0;
+  background:
+    repeating-linear-gradient(38deg,rgba(20,20,15,.82) 0 1.1px,transparent 1.1px 5px),
+    repeating-linear-gradient(-42deg,rgba(20,20,15,.5) 0 1px,transparent 1px 6px),
+    radial-gradient(58% 46% at 50% 34%,rgba(237,235,228,.96) 0%,rgba(237,235,228,.5) 44%,transparent 72%);
+  mix-blend-mode:multiply;
+}
+.plate .photo{
+  position:absolute;inset:0;opacity:0;
+  background:url('/assets/portrait.webp') center/cover no-repeat;
+  transition:opacity .6s var(--e);
+}
+.has-portrait .plate .photo{opacity:1}
+.has-portrait .plate .hatch{opacity:0}
+.plate .cap{
+  position:absolute;left:0;right:0;bottom:-2.1rem;display:flex;justify-content:space-between;
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.16em;text-transform:uppercase;color:var(--grey-dark);
+}
+.plate .tag{
+  position:absolute;top:.6rem;left:.6rem;z-index:2;
+  font-family:var(--mono);font-size:.5rem;letter-spacing:.14em;color:var(--red);text-transform:uppercase;
+}
+
+/* ---------- layer 4 · giant type (v 1) ----------
+   Bodoni Moda ITALIC — high-contrast Didone per hi-res render
+   (overrides the mockup's bold grotesk). */
+.giant{
+  position:absolute;top:50%;left:6vw;transform:translateY(-50%);
+  font-family:var(--didone);font-style:italic;font-weight:560;
+  font-size:clamp(6rem,24vw,30rem);
+  font-optical-sizing:auto;
+  line-height:.82;letter-spacing:-.02em;white-space:nowrap;
+  word-spacing:.42em;
+}
+
+/* ---------- layer 5 · text clusters (v 1.28) ---------- */
+.cluster{position:absolute;font-size:.8125rem;line-height:1.45;max-width:34ch}
+
+/* "Utvalgt.ARBEID 2024—2026" — top-left of the S */
+.cl-top{top:14vh;left:8vw;display:flex;align-items:baseline;gap:1.2rem}
+.cl-top .lab{font-weight:800;letter-spacing:-.01em}
+.cl-top .val{font-family:var(--serif);font-style:italic;font-size:1.6rem;color:var(--grey-dark)}
+
+/* "fire prosjekter / presentert i detaljer /via/dette scrolleventyret" */
+.cl-mid{top:72vh;left:10vw}
+.cl-mid .rule{display:block;width:5.5rem;height:1px;background:var(--ink);opacity:.5;margin-bottom:.7rem}
+.cl-mid b{font-weight:800}
+
+/* "(martin)folkestad /SCROLL /videre →" — top-right of portrait */
+.cl-right{top:34vh;left:214vw;display:flex;align-items:baseline;gap:.5rem;font-size:1rem}
+.cl-right .s{font-weight:800;font-size:.6875rem;text-transform:uppercase;letter-spacing:.02em}
+.cl-right .v{font-family:var(--serif);font-style:italic;color:var(--grey-dark)}
+
+/* "/Founder & builder/JÆREN (no)" — bottom-right of portrait */
+.cl-role{top:64vh;left:212vw;font-weight:800;font-size:1.15rem;letter-spacing:-.02em}
+.cl-role em{font-family:var(--serif);font-weight:300;font-style:italic;letter-spacing:0}
+
+.cl-tail{top:52vh;left:262vw;max-width:30ch;font-size:.75rem;line-height:1.6;color:var(--grey-dark)}
+.cl-tail b{color:var(--ink);font-weight:800}
+.cl-tail em{font-family:var(--serif);font-style:italic}
+
+.vert{
+  position:absolute;top:20vh;left:296vw;writing-mode:vertical-rl;
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.2em;text-transform:uppercase;color:var(--grey-dark);
+}
+
+/* ============================================================
+   Static fallback — mobile <768px and prefers-reduced-motion.
+   horizontal.js adds .art--static; the composition stacks
+   vertically, no pin, no parallax.
+   ============================================================ */
+.p-art.art--static{height:auto;overflow:visible}
+.art--static .art-track{
+  width:100%;height:auto;will-change:auto;
+  display:flex;flex-direction:column;
+  padding:16vh var(--gutter) 14vh;gap:3rem;
+}
+.art--static .layer{position:relative;inset:auto;will-change:auto}
+
+/* decorative circles stay absolute behind the stack */
+.art--static .l-circles{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.art--static .c1{width:38vw;height:38vw;top:6%;left:auto;right:-12vw}
+.art--static .c2{display:none}
+.art--static .c3{width:52vw;height:52vw;top:auto;bottom:8%;left:-18vw}
+.art--static .c4{display:none}
+
+/* a couple of fragments as accents, the rest hidden */
+.art--static .l-collage{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.art--static .f1{width:34vw;height:16vh;top:12%;left:4%}
+.art--static .f2{width:26vw;height:12vh;top:auto;bottom:16%;left:auto;right:6%}
+.art--static .f3,.art--static .f4,.art--static .f5,
+.art--static .collage-strip{display:none}
+
+.art--static .l-clusters{display:flex;flex-direction:column;gap:1.5rem}
+.art--static .cluster{position:relative;inset:auto;left:auto;top:auto}
+.art--static .cl-top{order:1}
+.art--static .l-giant{order:2}
+.art--static .l-plate{order:3;display:grid}
+.art--static .l-clusters{order:4}
+
+.art--static .giant{
+  position:relative;top:auto;left:auto;transform:none;
+  white-space:normal;word-spacing:normal;
+  font-size:clamp(3.6rem,19vw,9rem);line-height:.9;
+}
+.art--static .plate{
+  position:relative;top:auto;left:auto;
+  width:min(78vw,360px);height:auto;aspect-ratio:3/4;
+  margin:0 0 2.6rem;
+}
+.art--static .vert{
+  position:relative;top:auto;left:auto;writing-mode:horizontal-tb;
+}
