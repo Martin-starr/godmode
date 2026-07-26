@@ -42,7 +42,9 @@ export function initReveals({ reduced }) {
     if (!inners.length) return;
     gsap.fromTo(
       inners,
-      { yPercent: 115 },
+      // y:0 clears the px offset GSAP parses out of the CSS
+      // translateY(115%) pre-hide; yPercent then owns the reveal.
+      { yPercent: 115, y: 0 },
       {
         yPercent: 0,
         duration: 0.9,
