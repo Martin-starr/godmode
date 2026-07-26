@@ -129,7 +129,15 @@ function initChrome() {
     ScrollTrigger.create({
       trigger: sec,
       start: 'top 50%',
-      end: 'bottom 50%',
+      // ScrollTrigger only pin-offsets triggers that START after a pin, so a
+      // beat trigger on a pinned section (the art piece) would end 450px into
+      // the pin and the label would freeze on the previous beat. Extend the
+      // end by this section's own pin distance; 0 everywhere else and in the
+      // static / reduced-motion modes (no pin trigger exists there).
+      end: () => {
+        const pin = ScrollTrigger.getAll().find((t) => t.pin === sec);
+        return `bottom+=${pin ? pin.end - pin.start : 0} 50%`;
+      },
       onToggle: (self) => {
         if (self.isActive) beatEl.textContent = name;
       }
