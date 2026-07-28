@@ -313,6 +313,172 @@ function fmtReceived(ts) {
   return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 
+const hhmm = (m) => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
+const DAY_KEYS = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
+
+// Connector health, surfaced where it cannot be missed.
+//
+// The whole point of the health table is that a dead integration announces
+// itself. A badge buried in Innstillinger would repeat the original failure —
+// Gmail was broken for 15 days behind a panel nobody opened — so this renders
+// at the top of the Brief and only when something is actually wrong. Silence
+// is the healthy state; a banner means act.
+function HelseBanner({ integrations }) {
+  const bad = (integrations || []).filter((i) => i.status === "gul" || i.status === "rød");
+  if (!bad.length) return null;
+  // The palette has one alert colour (gold) and no red, so severity is carried
+  // by the per-row status tag rather than by tinting the banner two ways.
+  return (
+    <div style={{
+      border: "1px solid var(--line)", borderLeft: "3px solid var(--gold)",
+      background: "#fff", borderRadius: 2, padding: "14px 18px", marginBottom: 20,
+    }}>
+      <div className="eyebrow" style={{ color: "var(--gold)", marginBottom: 8 }}>
+        {bad.length === 1 ? "1 integrasjon svarer ikke" : bad.length + " integrasjoner svarer ikke"}
+      </div>
+      {bad.map((i) => (
+        <div key={i.key} style={{ display: "flex", gap: 12, alignItems: "baseline", flexWrap: "wrap", marginTop: 4 }}>
+          <span className="tag" style={{ minWidth: 54, textAlign: "center" }}>{i.status.toUpperCase()}</span>
+          <span style={{ fontWeight: 500 }}>{i.label}</span>
+          <span className="mut" style={{ fontSize: 12 }}>
+            {i.last_ok_at
+              ? "sist OK " + fmtReceived(i.last_ok_at)
+              : "har aldri svart"}
+            {i.last_error ? " · " + i.last_error : ""}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// UKEPLAN SOLO DRIFT, resolved against the wall clock.
+function DagsRamme({ routineItems, houseRules }) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    // Tick on the minute boundary — a page left open overnight would
+    // otherwise keep highlighting yesterday's block.
+    let iv;
+    const to = setTimeout(() => {
+      setNow(new Date());
+      iv = setInterval(() => setNow(new Date()), 60000);
+    }, (60 - new Date().getSeconds()) * 1000);
+    return () => { clearTimeout(to); if (iv) clearInterval(iv); };
+  }, []);
+
+  const items = routineItems || [];
+  const frame = items.filter((i) => i.weekday == null);
+  if (!frame.length) return null;
+
+  const dow = now.getDay() === 0 ? 7 : now.getDay();
+  const mins = now.getHours() * 60 + now.getMinutes();
+  const active = frame.find((b) => mins >= b.start_min && mins < b.end_min) || null;
+  const today = items.filter((i) => i.weekday === dow);
+  const byBlock = (b) => today.filter((i) => i.block === b);
+  const rules = (houseRules || []).filter((r) => r.kind === "regel");
+  const apenSak = (houseRules || []).find((r) => r.kind === "apen_sak");
+  const cuts = frame.filter((b) => b.drop_rank).sort((a, b) => a.drop_rank - b.drop_rank);
+
+  return (
+    <>
+      <div className="rule" />
+      <div className="sechead">
+        <span className="eyebrow">Dagens ramme · {DAY_KEYS[now.getDay()]}</span>
+        <span className="mut" style={{ fontSize: 11 }}>UKEPLAN SOLO DRIFT v1 · tider er ankere, ikke lover</span>
+      </div>
+
+      <div style={{ border: "1px solid var(--line)", background: "#fff", padding: "12px 18px", marginBottom: 14 }}>
+        <span className="eyebrow" style={{ color: "var(--navy)", marginRight: 14 }}>NÅ</span>
+        {active ? (
+          <>
+            <span style={{ fontVariantNumeric: "tabular-nums", marginRight: 12 }}>{hhmm(active.start_min)}–{hhmm(active.end_min)}</span>
+            <strong>{active.block} — {active.text}</strong>
+            {active.never_drop ? <span className="tag gold" style={{ marginLeft: 10 }}>Kuttes aldri</span> : null}
+          </>
+        ) : (
+          <span className="mut">{dow >= 6 ? "Helg — ingen fast ramme." : "Utenfor arbeidsrammen (07:30–16:00)."}</span>
+        )}
+      </div>
+
+      <div style={{ border: "1px solid var(--line)", background: "#fff" }}>
+        {frame.map((b, i) => {
+          const isNow = active && active.id === b.id;
+          const past = !isNow && b.end_min <= mins;
+          return (
+            <div key={b.id} style={{
+              display: "grid", gridTemplateColumns: "104px 116px 1fr", gap: 12, alignItems: "baseline",
+              padding: "10px 18px",
+              borderTop: i ? "1px solid var(--line)" : "none",
+              background: isNow ? "var(--cream)" : "transparent",
+              opacity: past ? 0.45 : 1,
+            }}>
+              <span style={{ fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{hhmm(b.start_min)}–{hhmm(b.end_min)}</span>
+              <span className="eyebrow" style={{ fontSize: 10 }}>{b.block}</span>
+              <div>
+                <div style={{ fontWeight: isNow ? 600 : 500 }}>
+                  {b.text}
+                  {b.drop_rank ? <span className="mut" style={{ fontSize: 10, marginLeft: 10 }}>KUTT {b.drop_rank}</span> : null}
+                </div>
+                {b.detail ? <div className="mut" style={{ fontSize: 12, marginTop: 2 }}>{b.detail}</div> : null}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {today.length ? (
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 0, border: "1px solid var(--line)", borderTop: "none", background: "#fff" }}>
+          {["CEO-BLOKK", "FYSISK", "ELLERS"].map((blk) => (
+            <div key={blk} style={{ padding: "14px 18px", borderRight: "1px solid var(--line)" }}>
+              <div className="eyebrow" style={{ fontSize: 10, marginBottom: 6 }}>{blk}</div>
+              {byBlock(blk).length ? byBlock(blk).map((i) => (
+                <div key={i.id} style={{ marginBottom: 6 }}>
+                  <div style={{ fontWeight: 500 }}>
+                    {i.text}
+                    {i.never_drop ? <span className="mut" style={{ fontSize: 10, marginLeft: 8, color: "var(--gold)" }}>ALDRI KUTT</span> : null}
+                  </div>
+                  {i.detail ? <div className="mut" style={{ fontSize: 12 }}>{i.detail}</div> : null}
+                </div>
+              )) : <span className="mut">—</span>}
+            </div>
+          ))}
+        </div>
+      ) : null}
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 16, marginTop: 16 }}>
+        <div style={{ border: "1px solid var(--line)", borderLeft: "3px solid var(--gold)", background: "#fff", padding: "14px 18px" }}>
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Når dagen ryker · kutt i rekkefølge</div>
+          {cuts.map((b, i) => (
+            <div key={b.id} style={{ marginBottom: 4 }}>
+              <span className="mut" style={{ marginRight: 8 }}>{i + 1}.</span>{b.block}
+            </div>
+          ))}
+          <div className="mut" style={{ fontSize: 12, marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
+            Kuttes aldri: {frame.filter((b) => b.never_drop).map((b) => b.block.toLowerCase()).join(", ")}, samt mating/høsting planlagt i dag.
+          </div>
+        </div>
+        <div style={{ border: "1px solid var(--line)", borderLeft: "3px solid var(--navy)", background: "#fff", padding: "14px 18px" }}>
+          <div className="eyebrow" style={{ marginBottom: 10 }}>Faste regler</div>
+          {rules.map((r) => (
+            <div key={r.text} style={{ marginBottom: 7 }}>
+              <div style={{ fontWeight: 500 }}>{r.text}</div>
+              {r.detail ? <div className="mut" style={{ fontSize: 12 }}>{r.detail}</div> : null}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {apenSak ? (
+        <div style={{ border: "1px solid var(--line)", borderLeft: "3px solid var(--gold)", background: "#fff", padding: "14px 18px", marginTop: 16 }}>
+          <div className="eyebrow" style={{ color: "var(--gold)", marginBottom: 6 }}>Åpen sak</div>
+          <div style={{ fontWeight: 500 }}>{apenSak.text}</div>
+          {apenSak.detail ? <div className="mut" style={{ fontSize: 12, marginTop: 3 }}>{apenSak.detail}</div> : null}
+        </div>
+      ) : null}
+    </>
+  );
+}
+
 function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbox }) {
   const inbox = data.inbox || [];
   const inboxCounts = data.inboxCounts || { total: 0, urgent: 0 };
@@ -368,6 +534,7 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
   return (
     <div>
       <span className="eyebrow">Oversikt · Brief</span>
+      <HelseBanner integrations={data.integrations} />
       <div className="hero">
         {avvikToday === 0 ? "Ingen avvik i dag." : avvikToday + (avvikToday === 1 ? " avvik i dag." : " avvik i dag.")}
         <span className="li"> {outsideNow === 0 ? "Alt innenfor mål." : outsideNow + " utenfor mål."}</span>
@@ -385,6 +552,7 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
           </div>
         ))}
       </div>
+      <DagsRamme routineItems={data.routineItems} houseRules={data.houseRules} />
       <div className="rule" />
       <div className="sechead">
         <span className="eyebrow">Helsestatus · Drift</span>

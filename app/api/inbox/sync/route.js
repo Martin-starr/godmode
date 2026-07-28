@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { json, guarded, withWatchdog } from "@/lib/http";
 import { fetchGmailThreads, classifyThread } from "@/lib/bridge";
+import { tracked } from "@/lib/integrations";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -11,7 +12,10 @@ export const maxDuration = 30;
 // priority, draft_body and stars survive every sync untouched.
 export const POST = guarded(
   async () => {
-    const threads = await fetchGmailThreads();
+    // tracked() records the outcome either way, so a bridge that starts
+    // refusing calls shows up on the Brief the same day instead of being
+    // discovered weeks later from a stale "Sist synk" line.
+    const threads = await tracked("gmail", () => fetchGmailThreads());
     const sql = db();
 
     const seen = new Set();
