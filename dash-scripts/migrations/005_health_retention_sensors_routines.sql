@@ -3,10 +3,8 @@
 -- Four independent concerns, one migration because they share the same
 -- deploy window. Every statement is idempotent; re-running is safe.
 --
--- Apply with:
---   psql "$DASH_DATABASE_URL" -f dash-scripts/migrations/005_health_retention_sensors_routines.sql
-
-begin;
+-- Apply with (-1 = one transaction, so a failure rolls the whole thing back):
+--   psql "$DASH_DATABASE_URL" -1 -f dash-scripts/migrations/005_health_retention_sensors_routines.sql
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 1. CONNECTOR HEALTH
@@ -75,13 +73,16 @@ create index if not exists readings_archive_row_idx  on dash.readings_archive (r
 create index if not exists readings_archive_date_idx on dash.readings_archive (date);
 
 create or replace function dash.archive_reading() returns trigger as $$
+declare
+  r dash.readings%rowtype;
 begin
+  -- On DELETE there is no NEW; on INSERT/UPDATE we want the post-change row.
+  if tg_op = 'DELETE' then r := old; else r := new; end if;
   insert into dash.readings_archive
     (op, row_id, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source)
-  select
-    lower(tg_op),
-    r.id, r.system, r.date, r.temp, r.ph, r.fukt, r.for_l, r.notat, r.avvik, r.logged_by, r.source
-  from (select coalesce(new, old).*) as r;
+  values
+    (lower(tg_op), r.id, r.system, r.date, r.temp, r.ph, r.fukt, r.for_l,
+     r.notat, r.avvik, r.logged_by, r.source);
   return null;  -- AFTER trigger; return value is ignored
 end;
 $$ language plpgsql security definer;
@@ -105,12 +106,17 @@ create trigger readings_archive_immutable_trg
   before update or delete on dash.readings_archive
   for each row execute function dash.archive_is_immutable();
 
--- Backfill whatever is already in the live table, once.
+-- Backfill whatever is already in the live table. Guarded per-row rather than
+-- per-table: a table-level "have we backfilled?" check archives nothing when
+-- dash.readings is empty and then re-archives everything on the next run.
 insert into dash.readings_archive
   (op, row_id, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source)
-select 'backfill', id, system, date, temp, ph, fukt, for_l, notat, avvik, logged_by, source
-from dash.readings
-where not exists (select 1 from dash.readings_archive where op = 'backfill');
+select 'backfill', r.id, r.system, r.date, r.temp, r.ph, r.fukt, r.for_l,
+       r.notat, r.avvik, r.logged_by, r.source
+from dash.readings r
+where not exists (
+  select 1 from dash.readings_archive a where a.row_id = r.id
+);
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- 3. AUTOLOGGER INGEST (Ecowitt WH52 → GW1200 → dashboard)
@@ -277,5 +283,3 @@ create table if not exists dash.house_rules (
   active integer not null default 1,
   sort   integer not null default 0
 );
-
-commit;
