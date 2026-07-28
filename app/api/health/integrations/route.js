@@ -3,6 +3,8 @@ import { statuses } from "@/lib/integrations";
 
 export const runtime = "nodejs";
 export const maxDuration = 15;
+// Reads the session cookie, so it can never be prerendered.
+export const dynamic = "force-dynamic";
 
 // One call the Brief page can poll to answer "is anything quietly dead?".
 // `worst` is precomputed so the caller doesn't have to re-derive severity
