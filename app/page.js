@@ -1782,7 +1782,27 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
       const cleaned = pasted.trim().replace(/^```(json)?/i, "").replace(/```$/, "").trim();
       const parsed = JSON.parse(cleaned);
       const list = (Array.isArray(parsed) ? parsed : parsed.ops || []).filter((o) => o && o.op);
-      showProposal(list);
+
+      // Same id-validation the AI path enforces server-side (see
+      // app/api/braindump/route.js). Without it a pasted answer that references
+      // a stale or hallucinated id could delete something real — the paste
+      // path skips the server, so if the client doesn't filter, nothing does.
+      const taskIds = new Set((data.tasks || []).map((t) => Number(t.id)));
+      const projectIds = new Set((data.projects || []).map((p) => Number(p.id)));
+      const checkIds = new Set((data.checklist || []).map((c) => Number(c.id)));
+      const dropped = [];
+      const safe = list.filter((o) => {
+        const needTask = ["update_task", "complete_task", "reopen_task", "delete_task"].includes(o.op);
+        const needProject = ["update_project", "delete_project"].includes(o.op);
+        const needCheck = o.op === "toggle_check";
+        if (needTask && !taskIds.has(Number(o.id))) { dropped.push(o); return false; }
+        if (needProject && !projectIds.has(Number(o.id))) { dropped.push(o); return false; }
+        if (needCheck && !checkIds.has(Number(o.id))) { dropped.push(o); return false; }
+        if (o.op === "add_check" && !projectIds.has(Number(o.project_id))) { dropped.push(o); return false; }
+        return true;
+      });
+      if (dropped.length) showToast(`${dropped.length} operasjon${dropped.length === 1 ? "" : "er"} droppet — refererer til ting som ikke finnes`);
+      showProposal(safe);
     } catch {
       showToast("Ugyldig JSON — lim inn hele svaret fra Claude");
     }
