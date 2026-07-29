@@ -30,12 +30,16 @@ create table if not exists dash.integrations (
   muted_until           timestamptz
 );
 
+-- Intervals are set to how often the source ACTUALLY produces data, not to how
+-- fast we would like to know. applog is 24h because logging is a once-or-twice
+-- daily human act — at 60 min it would go red every single night and the alert
+-- would be trained into noise within a week.
 insert into dash.integrations (key, label, expected_interval_min) values
-  ('gmail',      'Innboks · Gmail',            null),
-  ('applog',     'Produksjonslogg · appen',    60),
-  ('autologger', 'Autologger · Ecowitt',       30),
-  ('ai',         'AI-funksjoner',              null),
-  ('hygiene',    'Hygienisering · Center 374', null)
+  ('gmail',      'Innboks · Gmail',            null),   -- on demand ("Synk nå")
+  ('applog',     'Produksjonslogg · appen',    1440),   -- "logg hver dag"
+  ('autologger', 'Autologger · Ecowitt',       30),     -- gateway posts continuously
+  ('ai',         'AI-funksjoner',              null),   -- on demand
+  ('hygiene',    'Hygienisering · Center 374', null)    -- manual import
 on conflict (key) do nothing;
 
 -- ─────────────────────────────────────────────────────────────────────────
