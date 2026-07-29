@@ -264,6 +264,19 @@ button, input, select, textarea { font-family: inherit; }
   .lnk { padding: 10px 10px; font-size: 12.5px; }
   .tbtn { padding: 10px 13px; min-height: 40px; }
   .chk { padding: 8px 0; min-height: 36px; }
+  /* .setrow and .trange are non-wrapping flex rows. On a 390px phone their
+     children measure ~480px against a 350px column, and .main clips overflow
+     rather than scrolling it — so "Avbryt" and "Slett" on the system-edit row
+     ran off the right edge and could not be reached at all. Wrapping makes the
+     row grow taller instead of wider. */
+  .setrow { flex-wrap: wrap; gap: 10px; }
+  .trange { flex-wrap: wrap; }
+  /* The threshold fields are 13px, so iOS zooms the page on focus and does not
+     zoom back out — same reason .input/.select/.ta are bumped to 16px above. */
+  .tin { font-size: 16px; }
+  /* 24px is well under the 44px minimum touch target; the star was easy to miss
+     and easy to hit by accident on a neighbouring row. */
+  .star-btn { padding: 10px 12px; min-height: 44px; min-width: 44px; }
   .kpirow { grid-template-columns: 1fr 1fr; }
   .kpi { border-bottom: 1px solid var(--line2); }
   .statgrid { grid-template-columns: 1fr 1fr; gap: 20px; }
