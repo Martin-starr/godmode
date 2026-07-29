@@ -125,6 +125,36 @@ export async function GET(req) {
     }
   }
 
+  // 4. Sensors — checked per probe, not just per gateway. The `autologger`
+  // connector only proves the GW1200 is still posting; a single battery-powered
+  // probe can go flat while the gateway keeps cheerfully reporting the other
+  // six. Silence from one channel is the failure that hides best.
+  const probes = await sql`select distinct on (channel)
+      channel, system, temp, measured_at
+    from dash.sensor_readings order by channel, measured_at desc`;
+  for (const p of probes) {
+    const ageMin = (now.getTime() - new Date(p.measured_at).getTime()) / 60000;
+    if (ageMin > 120) {
+      problems.push({
+        key: "probe:" + p.channel,
+        severity: 2,
+        line:
+          `[GUL] Sensor ${p.system} (kanal ${p.channel}) har vært stille i ` +
+          `${Math.round(ageMin / 60)} t — sjekk batteri.`,
+      });
+      continue; // A stale reading's value proves nothing; don't also alert on it.
+    }
+    if (bad(p.temp, tg.temp)) {
+      problems.push({
+        key: `probe-temp:${today}:${p.channel}`,
+        severity: 3,
+        line:
+          `[RØD] Sensor ${p.system} (kanal ${p.channel}) måler ${p.temp}°C ` +
+          `(mål ${tg.temp.min}–${tg.temp.max}).`,
+      });
+    }
+  }
+
   // Send only what hasn't been sent recently.
   const fresh = [];
   for (const p of problems) {

@@ -479,6 +479,76 @@ function DagsRamme({ routineItems, houseRules }) {
   );
 }
 
+// Live values from the Ecowitt soil probes.
+//
+// Renders nothing until the first reading arrives, so it stays invisible until
+// the hardware is actually paired rather than sitting there as an empty
+// promise. Once data exists it cannot be missed — which is the whole point:
+// the readings were being written and never read.
+function SensorStrip({ sensorLatest }) {
+  const rows = sensorLatest || [];
+  if (!rows.length) return null;
+
+  const now = Date.now();
+  const age = (r) => Math.round((now - new Date(r.measured_at).getTime()) / 60000);
+  // The gateway posts continuously (expected_interval_min 30). Past an hour a
+  // probe is not "a bit behind", it has stopped — usually a flat battery.
+  const stale = rows.filter((r) => age(r) > 60).length;
+  const unnamed = rows.filter((r) => /^Kanal \d+$/.test(r.system)).length;
+
+  const fmt = (v, unit) => (v == null ? "–" : Math.round(v * 10) / 10 + unit);
+  const ago = (m) => (m < 60 ? m + " min siden" : Math.round(m / 60) + " t siden");
+
+  return (
+    <>
+      <div className="rule" />
+      <div className="sechead">
+        <span className="eyebrow">Sensorer · autologger</span>
+        <span className="mut" style={{ fontSize: 11 }}>
+          {rows.length} {rows.length === 1 ? "kanal" : "kanaler"}
+          {stale ? " · " + stale + " svarer ikke" : ""}
+          {unnamed ? " · " + unnamed + " uten navn" : ""}
+        </span>
+      </div>
+      {unnamed ? (
+        <div className="mut" style={{ fontSize: 12, marginBottom: 10 }}>
+          Gi kanalene navn under Innstillinger → Sensorer, ellers er målingene
+          vanskelige å tolke i ettertid.
+        </div>
+      ) : null}
+      <div style={{ border: "1px solid var(--line)", borderRadius: 2, background: "#fff" }}>
+        {rows.map((r, i) => {
+          const m = age(r);
+          const dead = m > 60;
+          return (
+            <div key={r.channel} style={{
+              display: "grid", gridTemplateColumns: "auto 1fr auto auto auto auto",
+              gap: 14, alignItems: "baseline", padding: "11px 18px",
+              borderTop: i ? "1px solid var(--line2)" : "none",
+              opacity: dead ? 0.5 : 1,
+            }}>
+              <span className="mut" style={{ fontVariantNumeric: "tabular-nums", fontSize: 11 }}>
+                CH{r.channel}
+              </span>
+              <span style={{ fontWeight: 500 }}>{r.system}</span>
+              <span style={{ fontVariantNumeric: "tabular-nums" }}>{fmt(r.temp, "°C")}</span>
+              <span style={{ fontVariantNumeric: "tabular-nums" }} className="mut">
+                {fmt(r.moisture, "%")}
+              </span>
+              <span style={{ fontVariantNumeric: "tabular-nums" }} className="mut">
+                {r.ec == null ? "–" : Math.round(r.ec) + " µS"}
+              </span>
+              <span className="mut" style={{ fontSize: 11, color: dead ? "var(--gold)" : undefined }}>
+                {dead ? "stille " + ago(m) : ago(m)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </>
+  );
+}
+
 function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbox }) {
   const inbox = data.inbox || [];
   const inboxCounts = data.inboxCounts || { total: 0, urgent: 0 };
@@ -552,6 +622,7 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
           </div>
         ))}
       </div>
+      <SensorStrip sensorLatest={data.sensorLatest} />
       <DagsRamme routineItems={data.routineItems} houseRules={data.houseRules} />
       <div className="rule" />
       <div className="sechead">
@@ -2242,7 +2313,7 @@ function HygieneView({ canEdit }) {
 /* Innstillinger                                                       */
 /* ------------------------------------------------------------------ */
 
-function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSystem, updateSystem, deleteSystem, addMember, updateMember, deleteMember }) {
+function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSystem, updateSystem, deleteSystem, addMember, updateMember, deleteMember, saveSensorMap }) {
   const isAdmin = data.user?.access === "Admin";
   const [memberAdding, setMemberAdding] = useState(false);
   const EMPTY_MEMBER = { name: "", role: "", access: "Redigering", password: "" };
@@ -2317,6 +2388,19 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
     />
   );
 
+  // A channel is listed if it has been mapped OR has ever reported a reading.
+  // Driving it off actual traffic means a newly paired sensor appears here on
+  // its own, rather than waiting for someone to know it exists and add it.
+  const sensorChannels = (() => {
+    const byCh = new Map();
+    for (const m of data.sensorMap || []) byCh.set(m.channel, { channel: m.channel, system: m.system });
+    for (const r of data.sensorLatest || []) {
+      const e = byCh.get(r.channel) || { channel: r.channel, system: "" };
+      byCh.set(r.channel, { ...e, reading: r });
+    }
+    return [...byCh.values()].sort((a, b) => a.channel - b.channel);
+  })();
+
   return (
     <div>
       <span className="eyebrow">Konto</span>
@@ -2372,6 +2456,48 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
               </div>
             );
           })}
+          <div className="sechead" style={{ marginTop: 36 }}>
+            <span className="eyebrow">Sensorer</span>
+            <span className="mut" style={{ fontSize: 11 }}>Ecowitt · kanal → system</span>
+          </div>
+          {sensorChannels.length === 0 ? (
+            <div className="mut" style={{ fontSize: 12, padding: "12px 0" }}>
+              Ingen sensorer har meldt seg ennå. Kanaler dukker opp her av seg selv
+              så snart gatewayen sender sin første måling.
+            </div>
+          ) : (
+            sensorChannels.map((ch) => {
+              const r = ch.reading;
+              const mins = r ? Math.round((Date.now() - new Date(r.measured_at).getTime()) / 60000) : null;
+              return (
+                <div className="setrow" key={ch.channel}>
+                  <div>
+                    <div className={"sl" + (ch.system ? "" : " mut")}>Kanal {ch.channel}</div>
+                    <div className="ss">
+                      {r
+                        ? fmtVal(r.temp, "°") + " · " + fmtVal(r.moisture, "%") + " fukt · " +
+                          (mins < 60 ? mins + " min siden" : Math.round(mins / 60) + " t siden")
+                        : "ingen målinger ennå"}
+                    </div>
+                  </div>
+                  <span className="trange">
+                    <select
+                      className="select"
+                      style={{ width: "auto", padding: "9px 11px", fontSize: 12 }}
+                      value={ch.system || ""}
+                      disabled={!canEdit}
+                      onChange={(e) => e.target.value && saveSensorMap(ch.channel, e.target.value)}
+                    >
+                      <option value="">— velg system —</option>
+                      {data.systems.map((s) => (
+                        <option key={s.id} value={s.id}>{s.id}</option>
+                      ))}
+                    </select>
+                  </span>
+                </div>
+              );
+            })
+          )}
           <div className="sechead" style={{ marginTop: 36 }}>
             <span className="eyebrow">Team</span>
             {isAdmin ? (
@@ -3424,6 +3550,28 @@ export default function App() {
     await api("/api/partners/" + id, { method: "DELETE" });
   };
 
+  // Names a sensor channel. The server also re-labels readings already stored
+  // under the "Kanal N" placeholder, so naming a channel late doesn't split its
+  // history into two apparent systems.
+  const saveSensorMap = async (channel, system) => {
+    const res = await api("/api/sensors", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ channel, system }),
+    });
+    if (!res.ok) return reportError(res, "Kunne ikke lagre kanalen.");
+    setData((d) => ({
+      ...d,
+      sensorMap: [
+        ...(d.sensorMap || []).filter((m) => m.channel !== channel),
+        { channel, system, label: "", active: 1 },
+      ].sort((a, b) => a.channel - b.channel),
+      sensorLatest: (d.sensorLatest || []).map((r) =>
+        r.channel === channel ? { ...r, system } : r
+      ),
+    }));
+  };
+
   const addSystem = async (id) => {
     const res = await api("/api/systems", {
       method: "POST",
@@ -3648,6 +3796,7 @@ export default function App() {
               saveTargets={saveTargets}
               canEdit={editable}
               addSystem={addSystem}
+              saveSensorMap={saveSensorMap}
               updateSystem={updateSystem}
               deleteSystem={deleteSystem}
               addMember={addMember}

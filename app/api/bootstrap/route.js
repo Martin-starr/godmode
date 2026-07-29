@@ -71,6 +71,14 @@ export const GET = guarded(async (req, ctx, user) => {
   const integrations = await sql`select key, label, expected_interval_min, last_ok_at,
       last_error, last_error_at, consecutive_failures, muted_until
     from dash.integrations order by key`;
+  // Newest reading per sensor channel. Cheap (one row per channel, max 16) and
+  // carried in the bootstrap so the Brief can show live sensor values without
+  // a second round trip. The full history is behind /api/sensors.
+  const sensorLatest = await sql`select distinct on (channel)
+      channel, system, temp, moisture, ec, battery, measured_at
+    from dash.sensor_readings order by channel, measured_at desc`;
+  const sensorMap = await sql`select channel, system, label, active
+    from dash.sensor_map order by channel`;
   step("payload queries done (" + readings.length + " readings)");
 
   return json({
@@ -91,6 +99,8 @@ export const GET = guarded(async (req, ctx, user) => {
     routineItems,
     houseRules,
     integrations: integrations.map((r) => ({ ...r, status: classify(r) })),
+    sensorLatest,
+    sensorMap,
     aiEnabled: !!process.env.ANTHROPIC_API_KEY,
     aiModel: process.env.ANTHROPIC_API_KEY ? process.env.DASH_AI_MODEL || "claude-opus-4-8" : null,
   });
