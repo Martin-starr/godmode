@@ -2,6 +2,7 @@ import { db } from "@/lib/db";
 import { canEdit } from "@/lib/auth";
 import { json, guarded } from "@/lib/http";
 import { classify } from "@/lib/integrations";
+import { activeModel } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 25;
@@ -102,6 +103,6 @@ export const GET = guarded(async (req, ctx, user) => {
     sensorLatest,
     sensorMap,
     aiEnabled: !!process.env.ANTHROPIC_API_KEY,
-    aiModel: process.env.ANTHROPIC_API_KEY ? process.env.DASH_AI_MODEL || "claude-opus-4-8" : null,
+    aiModel: process.env.ANTHROPIC_API_KEY ? activeModel() : null,
   });
 });

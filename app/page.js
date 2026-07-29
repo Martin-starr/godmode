@@ -352,9 +352,82 @@ function HelseBanner({ integrations }) {
   );
 }
 
-// UKEPLAN SOLO DRIFT, resolved against the wall clock.
-function DagsRamme({ routineItems, houseRules }) {
+// The tick box. Renders an inert placeholder (not nothing) for read-only users
+// so the grid columns still line up between the two cases.
+function RoutineTick({ item, tickable, busy, onToggle }) {
+  if (!tickable) return <span />;
+  return (
+    <button
+      className="rtick"
+      onClick={onToggle}
+      disabled={busy}
+      aria-label={(item.done ? "Angre" : "Merk som gjort") + ": " + item.text}
+      title={item.done ? "Gjort" + (item.done_by ? " av " + item.done_by : "") : "Merk som gjort"}
+      style={{
+        border: "1px solid " + (item.done ? "var(--navy)" : "var(--line)"),
+        background: item.done ? "var(--navy)" : "#fff",
+        color: "#fff",
+        cursor: busy ? "wait" : "pointer",
+        opacity: busy ? 0.5 : 1,
+      }}
+    >
+      {item.done ? "✓" : ""}
+    </button>
+  );
+}
+
+// UKEPLAN SOLO DRIFT, resolved against the wall clock — and tickable.
+//
+// The plan used to render straight from the bootstrap payload, which showed
+// what to do and recorded nothing about whether it happened. It now loads from
+// /api/routines so each item carries its done state for today, and ticking
+// writes a dated record. For a plan whose first rule is "Logg hver dag —
+// loggen er beviset overfor inspeksjonen", the record is the point.
+function DagsRamme({ routineItems, houseRules, canEdit }) {
   const [now, setNow] = useState(() => new Date());
+  const [live, setLive] = useState(null);
+  const [busy, setBusy] = useState(null);
+
+  const today = new Date().toISOString().slice(0, 10);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await api("/api/routines?date=" + today);
+        if (!res.ok || cancelled) return;
+        setLive(await res.json());
+      } catch { /* falls back to the bootstrap copy, just without tick state */ }
+    })();
+    return () => { cancelled = true; };
+  }, [today]);
+
+  const toggle = async (item) => {
+    if (!canEdit || busy) return;
+    const next = !item.done;
+    setBusy(item.id);
+    // Optimistic — a checkbox that waits on a round trip feels broken on a
+    // phone with one bar of signal out by the beds.
+    setLive((s) => s && ({
+      ...s,
+      items: s.items.map((i) => (i.id === item.id ? { ...i, done: next } : i)),
+    }));
+    try {
+      const res = await api("/api/routines", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ item_id: item.id, date: today, done: next }),
+      });
+      if (!res.ok) throw new Error("failed");
+    } catch {
+      setLive((s) => s && ({
+        ...s,
+        items: s.items.map((i) => (i.id === item.id ? { ...i, done: !next } : i)),
+      }));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   useEffect(() => {
     // Tick on the minute boundary — a page left open overnight would
     // otherwise keep highlighting yesterday's block.
@@ -366,15 +439,19 @@ function DagsRamme({ routineItems, houseRules }) {
     return () => { clearTimeout(to); if (iv) clearInterval(iv); };
   }, []);
 
-  const items = routineItems || [];
+  // Prefer the live payload (carries done state); fall back to the bootstrap
+  // copy so the plan still renders if /api/routines is slow or fails.
+  const items = (live && live.items) || routineItems || [];
   const frame = items.filter((i) => i.weekday == null);
   if (!frame.length) return null;
 
   const dow = now.getDay() === 0 ? 7 : now.getDay();
   const mins = now.getHours() * 60 + now.getMinutes();
   const active = frame.find((b) => mins >= b.start_min && mins < b.end_min) || null;
-  const today = items.filter((i) => i.weekday === dow);
-  const byBlock = (b) => today.filter((i) => i.block === b);
+  const todaysRows = items.filter((i) => i.weekday === dow);
+  const byBlock = (b) => todaysRows.filter((i) => i.block === b);
+  const cov = live && live.coverage;
+  const tickable = canEdit && !!live;
   const rules = (houseRules || []).filter((r) => r.kind === "regel");
   const apenSak = (houseRules || []).find((r) => r.kind === "apen_sak");
   const cuts = frame.filter((b) => b.drop_rank).sort((a, b) => a.drop_rank - b.drop_rank);
@@ -384,7 +461,11 @@ function DagsRamme({ routineItems, houseRules }) {
       <div className="rule" />
       <div className="sechead">
         <span className="eyebrow">Dagens ramme · {DAY_KEYS[now.getDay()]}</span>
-        <span className="mut" style={{ fontSize: 11 }}>UKEPLAN SOLO DRIFT v1 · tider er ankere, ikke lover</span>
+        <span className="mut" style={{ fontSize: 11 }}>
+          {cov
+            ? `${cov.required_done}/${cov.required_total} kuttes-aldri gjort · ${cov.done}/${cov.total} totalt`
+            : "UKEPLAN SOLO DRIFT v1 · tider er ankere, ikke lover"}
+        </span>
       </div>
 
       <div style={{ border: "1px solid var(--line)", background: "#fff", padding: "12px 18px", marginBottom: 14 }}>
@@ -406,27 +487,38 @@ function DagsRamme({ routineItems, houseRules }) {
           const past = !isNow && b.end_min <= mins;
           return (
             <div key={b.id} style={{
-              display: "grid", gridTemplateColumns: "104px 116px 1fr", gap: 12, alignItems: "baseline",
+              display: "grid", gridTemplateColumns: "28px 104px 116px 1fr", gap: 12, alignItems: "baseline",
               padding: "10px 18px",
               borderTop: i ? "1px solid var(--line)" : "none",
               background: isNow ? "var(--cream)" : "transparent",
-              opacity: past ? 0.45 : 1,
+              // A ticked block is done, not gone — dim it like a past block so
+              // the eye skips it, but never hide it. The full day has to stay
+              // readable as a record.
+              opacity: past || b.done ? 0.45 : 1,
             }}>
+              <RoutineTick item={b} tickable={tickable} busy={busy === b.id} onToggle={() => toggle(b)} />
               <span style={{ fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{hhmm(b.start_min)}–{hhmm(b.end_min)}</span>
               <span className="eyebrow" style={{ fontSize: 10 }}>{b.block}</span>
               <div>
-                <div style={{ fontWeight: isNow ? 600 : 500 }}>
+                <div style={{
+                  fontWeight: isNow ? 600 : 500,
+                  textDecoration: b.done ? "line-through" : "none",
+                }}>
                   {b.text}
                   {b.drop_rank ? <span className="mut" style={{ fontSize: 10, marginLeft: 10 }}>KUTT {b.drop_rank}</span> : null}
+                  {b.never_drop ? <span style={{ fontSize: 10, marginLeft: 10, color: "var(--gold)" }}>ALDRI KUTT</span> : null}
                 </div>
                 {b.detail ? <div className="mut" style={{ fontSize: 12, marginTop: 2 }}>{b.detail}</div> : null}
+                {b.done && b.done_by ? (
+                  <div className="mut" style={{ fontSize: 11, marginTop: 2 }}>✓ {b.done_by}</div>
+                ) : null}
               </div>
             </div>
           );
         })}
       </div>
 
-      {today.length ? (
+      {todaysRows.length ? (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 0, border: "1px solid var(--line)", borderTop: "none", background: "#fff" }}>
           {["CEO-BLOKK", "FYSISK", "ELLERS"].map((blk) => (
             <div key={blk} style={{ padding: "14px 18px", borderRight: "1px solid var(--line)" }}>
@@ -623,7 +715,7 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
         ))}
       </div>
       <SensorStrip sensorLatest={data.sensorLatest} />
-      <DagsRamme routineItems={data.routineItems} houseRules={data.houseRules} />
+      <DagsRamme routineItems={data.routineItems} houseRules={data.houseRules} canEdit={canEdit} />
       <div className="rule" />
       <div className="sechead">
         <span className="eyebrow">Helsestatus · Drift</span>
