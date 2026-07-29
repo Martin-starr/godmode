@@ -9,7 +9,13 @@ export const maxDuration = 60;
 // inserts every thread with a heuristic one-liner ("Økonomi — sjekk beløp og
 // forfall"); this route replaces those with a real summary and corrects
 // category/priority, so important mail is flagged for the right reason.
-// Runs on the 15 newest open rows per call — the "AI-triage" button.
+// Runs on the 15 newest open rows per call.
+//
+// Two auth paths:
+//   1. Session with edit rights — the "AI-triage" button in Innstillinger.
+//   2. Bearer CRON_SECRET — the Vercel cron. Without a scheduled call the
+//      priority counts on Brief are guesswork until someone remembers to
+//      press the button; a mail flagged wrong isn't flagged.
 
 const SCHEMA = {
   type: "object",
@@ -42,12 +48,11 @@ const SYSTEM =
   "Nyhetsbrev, sosiale varsler og automatiske kvitteringer uten frist: noise=true. Ikke finn på innhold som ikke " +
   "står i utdraget.";
 
-export const POST = guarded(
-  async () => {
-    if (!aiEnabled()) {
-      return err("AI er ikke konfigurert — legg inn ANTHROPIC_API_KEY på Vercel-prosjektet verminord-dash.", 503);
-    }
-    const sql = db();
+async function enrich() {
+  if (!aiEnabled()) {
+    return err("AI er ikke konfigurert — legg inn ANTHROPIC_API_KEY på Vercel-prosjektet verminord-dash.", 503);
+  }
+  const sql = db();
     const rows = await withWatchdog(
       () => sql`select id, sender, subject, summary, snippet, category, priority from dash.inbox
         where status = 'open' order by received_at desc limit 15`
@@ -96,7 +101,20 @@ export const POST = guarded(
       );
       updated += res.length;
     }
-    return json({ oppdatert: updated });
-  },
-  { edit: true, watchdog: false }
-);
+  return json({ oppdatert: updated });
+}
+
+export async function POST(req) {
+  // Cron path — Vercel calls with a bearer secret and no session cookie.
+  const secret = process.env.CRON_SECRET;
+  if (secret && req.headers.get("authorization") === "Bearer " + secret) {
+    try {
+      return await enrich();
+    } catch (e) {
+      console.error("enrich cron failed:", e.message);
+      return err("Enrich cron feilet: " + e.message, 500);
+    }
+  }
+  // Human path — the AI-triage button. Session + edit rights required.
+  return guarded(enrich, { edit: true, watchdog: false })(req);
+}
