@@ -194,6 +194,9 @@ button, input, select, textarea { font-family: inherit; }
 .tin { width: 64px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 2px; font-size: 13px; text-align: center; }
 .tin:focus { border-color: var(--navy); outline: none; }
 .mut { color: var(--muted); font-size: 12px; }
+/* Routine tick box. 24px is the visual size; the mobile block below grows the
+   hit area to 44px without changing how it looks. */
+.rtick { position: relative; width: 24px; height: 24px; min-width: 24px; padding: 0; border-radius: 2px; line-height: 1; font-size: 13px; }
 
 /* Innboks */
 .star-btn { background: none; border: 0; font-size: 16px; padding: 2px 4px; cursor: pointer; line-height: 1; }
@@ -277,6 +280,10 @@ button, input, select, textarea { font-family: inherit; }
   /* 24px is well under the 44px minimum touch target; the star was easy to miss
      and easy to hit by accident on a neighbouring row. */
   .star-btn { padding: 10px 12px; min-height: 44px; min-width: 44px; }
+  /* Grow the tick's hit area to ~44px on touch WITHOUT resizing the box —
+     it sits in a 28px grid column, so growing the element itself would
+     overflow the row. An absolutely-positioned overlay costs no layout. */
+  .rtick::after { content: ""; position: absolute; inset: -10px; }
   .kpirow { grid-template-columns: 1fr 1fr; }
   .kpi { border-bottom: 1px solid var(--line2); }
   .statgrid { grid-template-columns: 1fr 1fr; gap: 20px; }
