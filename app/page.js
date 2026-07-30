@@ -1744,7 +1744,10 @@ function BraindumpPanel({ data, showToast, refreshAll }) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
-      timeoutMs: 35000,
+      // Must clear the server's own 50s ceiling (see app/api/braindump/route.js)
+      // with room to spare, same margin inbox/enrich uses (55s client / 60s
+      // Vercel maxDuration).
+      timeoutMs: 55000,
     });
     setBusy(false);
     if (!res.ok) {
