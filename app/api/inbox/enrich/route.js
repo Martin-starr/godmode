@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { json, err, guarded, withWatchdog } from "@/lib/http";
-import { aiEnabled, claude } from "@/lib/ai";
+import { aiEnabled, claude, draftReply } from "@/lib/ai";
+import { ok as markOk, fail as markFail } from "@/lib/integrations";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -16,6 +17,14 @@ export const maxDuration = 60;
 //   2. Bearer CRON_SECRET — the Vercel cron. Without a scheduled call the
 //      priority counts on Brief are guesswork until someone remembers to
 //      press the button; a mail flagged wrong isn't flagged.
+//
+// After triage, best-effort drafts ONE email that needs a reply and has none
+// yet (never touches Gmail — see lib/ai.js's draftReply). One per run, not
+// all of them: this shares the same 60s budget as the triage call above it,
+// and the cron runs hourly, so the backlog clears steadily without risking
+// the whole call timing out over a burst of drafts. A draft failure is
+// logged and swallowed — the triage result the caller actually asked for
+// must never be lost because the bonus step underneath it had a bad moment.
 
 const SCHEMA = {
   type: "object",
@@ -59,25 +68,36 @@ async function enrich() {
     );
     if (!rows.length) return json({ oppdatert: 0 });
 
-    const raw = await claude({
-      system: SYSTEM,
-      messages: [
-        {
-          role: "user",
-          content: rows
-            .map(
-              (m) =>
-                "id=" + m.id + "\nFra: " + m.sender + "\nEmne: " + m.subject +
-                (m.snippet ? "\nUtdrag: " + String(m.snippet).slice(0, 500) : "") +
-                (m.summary ? "\nNåværende vurdering: " + m.summary : "")
-            )
-            .join("\n\n---\n\n"),
-        },
-      ],
-      maxTokens: 2500,
-      timeoutMs: 45000,
-      outputFormat: { type: "json_schema", schema: SCHEMA },
-    });
+    let raw;
+    try {
+      raw = await claude({
+        system: SYSTEM,
+        messages: [
+          {
+            role: "user",
+            content: rows
+              .map(
+                (m) =>
+                  "id=" + m.id + "\nFra: " + m.sender + "\nEmne: " + m.subject +
+                  (m.snippet ? "\nUtdrag: " + String(m.snippet).slice(0, 500) : "") +
+                  (m.summary ? "\nNåværende vurdering: " + m.summary : "")
+              )
+              .join("\n\n---\n\n"),
+          },
+        ],
+        maxTokens: 2500,
+        timeoutMs: 45000,
+        outputFormat: { type: "json_schema", schema: SCHEMA },
+      });
+    } catch (e) {
+      // dash.integrations.ai is otherwise never written — every AI feature
+      // is on-demand, so nothing else calls ok()/fail() for it. This is the
+      // one path that runs unattended on a schedule, which makes it the
+      // right place to prove the key and model are actually still working.
+      await markFail("ai", e.message);
+      throw e;
+    }
+    await markOk("ai");
 
     let parsed;
     try {
@@ -101,7 +121,24 @@ async function enrich() {
       );
       updated += res.length;
     }
-  return json({ oppdatert: updated });
+
+    let drafted = 0;
+    try {
+      const [needsDraft] = await withWatchdog(
+        () => sql`select id, sender, subject, summary, snippet, received_at from dash.inbox
+          where status = 'open' and category = 'Svar kreves' and draft_body = ''
+          order by received_at desc limit 1`
+      );
+      if (needsDraft) {
+        const text = await draftReply(needsDraft, { timeoutMs: 20000 });
+        await withWatchdog(() => sql`update dash.inbox set draft_body = ${text} where id = ${needsDraft.id}`);
+        drafted = 1;
+      }
+    } catch (e) {
+      console.error("enrich: auto-draft skipped:", e.message);
+    }
+
+  return json({ oppdatert: updated, utkast: drafted });
 }
 
 export async function POST(req) {
