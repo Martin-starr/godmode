@@ -15,7 +15,11 @@ async function api(path, opts = {}) {
   const ctrl = new AbortController();
   const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
-    return await fetch(path, { ...rest, signal: ctrl.signal });
+    // Every view here is live operational data — a compliance log, an
+    // inbox, a health status. There is no case where a cached response is
+    // ever preferable to a fresh one, and mobile Safari in particular will
+    // reuse a GET response on a flaky connection unless told not to.
+    return await fetch(path, { ...rest, cache: "no-store", signal: ctrl.signal });
   } catch {
     return {
       ok: false,
@@ -486,8 +490,8 @@ function DagsRamme({ routineItems, houseRules, canEdit }) {
           const isNow = active && active.id === b.id;
           const past = !isNow && b.end_min <= mins;
           return (
-            <div key={b.id} style={{
-              display: "grid", gridTemplateColumns: "28px 104px 116px 1fr", gap: 12, alignItems: "baseline",
+            <div className="rrow" key={b.id} style={{
+              display: "grid", gridTemplateColumns: "28px 220px 1fr", gap: 12, alignItems: "baseline",
               padding: "10px 18px",
               borderTop: i ? "1px solid var(--line)" : "none",
               background: isNow ? "var(--cream)" : "transparent",
@@ -496,9 +500,13 @@ function DagsRamme({ routineItems, houseRules, canEdit }) {
               // readable as a record.
               opacity: past || b.done ? 0.45 : 1,
             }}>
-              <RoutineTick item={b} tickable={tickable} busy={busy === b.id} onToggle={() => toggle(b)} />
-              <span style={{ fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{hhmm(b.start_min)}–{hhmm(b.end_min)}</span>
-              <span className="eyebrow" style={{ fontSize: 10 }}>{b.block}</span>
+              <span className="rrow-tick">
+                <RoutineTick item={b} tickable={tickable} busy={busy === b.id} onToggle={() => toggle(b)} />
+              </span>
+              <div style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
+                <span style={{ fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{hhmm(b.start_min)}–{hhmm(b.end_min)}</span>
+                <span className="eyebrow" style={{ fontSize: 10 }}>{b.block}</span>
+              </div>
               <div>
                 <div style={{
                   fontWeight: isNow ? 600 : 500,
@@ -2425,6 +2433,311 @@ function HygieneView({ canEdit }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Fôring & batcher                                                    */
+/* ------------------------------------------------------------------ */
+
+const FEED_RANGES = [["30", "30D"], ["90", "90D"], ["365", "1 år"]];
+const EMPTY_BATCH = { batch_code: "", system: "", started_at: "", harvested_at: "", volume_l: "", weight_kg: "", moisture_pct: "", notes: "" };
+const BATCH_STATUSES = ["aktiv", "høstet", "arkivert"];
+
+// Fôring is a REPORT, not a form — feed volume is already captured on the
+// same log entry as pH/temp/moisture (dash.readings_all.for_l), by design,
+// so there is deliberately no separate input here to keep in sync with that.
+// Batcher IS a form: harvest logging doesn't exist anywhere yet, on paper or
+// otherwise, so this is built ahead of the first real batch rather than
+// reverse-engineered from data that isn't there.
+function FeedingBatchesView({ data, canEdit, showToast }) {
+  const [tab, setTab] = useState("foring");
+  const [feed, setFeed] = useState(null);
+  const [feedDays, setFeedDays] = useState("30");
+  const [feedLoading, setFeedLoading] = useState(true);
+
+  const [batches, setBatches] = useState(null);
+  const [form, setForm] = useState(EMPTY_BATCH);
+  const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState(EMPTY_BATCH);
+  const [busy, setBusy] = useState(false);
+
+  const loadFeed = async (days) => {
+    setFeedLoading(true);
+    const res = await api("/api/feeding?days=" + days);
+    if (res.ok) setFeed(await res.json());
+    setFeedLoading(false);
+  };
+  const loadBatches = async () => {
+    const res = await api("/api/batches");
+    if (res.ok) setBatches((await res.json()).batches);
+  };
+
+  useEffect(() => { loadFeed(feedDays); }, [feedDays]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (tab === "batcher" && batches === null) loadBatches(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const systems = data.systems.map((s) => s.id);
+
+  const submitBatch = async () => {
+    if (!form.system || busy) return;
+    setBusy(true);
+    const res = await api("/api/batches", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    });
+    setBusy(false);
+    if (!res.ok) { if (showToast) showToast(await failMsg(res, "Kunne ikke lagre batchen.")); return; }
+    const created = await res.json();
+    setBatches((b) => [created, ...(b || [])]);
+    setForm(EMPTY_BATCH);
+    setAdding(false);
+  };
+
+  const startEdit = (b) => {
+    setEditingId(b.id);
+    setEditForm({
+      batch_code: b.batch_code || "", system: b.system,
+      started_at: b.started_at || "", harvested_at: b.harvested_at || "",
+      volume_l: b.volume_l ?? "", weight_kg: b.weight_kg ?? "", moisture_pct: b.moisture_pct ?? "",
+      notes: b.notes || "", status: b.status,
+    });
+  };
+
+  const saveEdit = async (id) => {
+    const res = await api("/api/batches", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...editForm }),
+    });
+    if (!res.ok) { if (showToast) showToast(await failMsg(res, "Kunne ikke lagre.")); return; }
+    const updated = await res.json();
+    setBatches((b) => b.map((x) => (x.id === id ? updated : x)));
+    setEditingId(null);
+  };
+
+  const removeBatch = async (id) => {
+    if (!window.confirm("Slette denne batchen?")) return;
+    setBatches((b) => b.filter((x) => x.id !== id));
+    const res = await api("/api/batches?id=" + id, { method: "DELETE" });
+    if (!res.ok && showToast) showToast("Kunne ikke slette — last siden på nytt.");
+  };
+
+  return (
+    <div>
+      <span className="eyebrow">Drift</span>
+      <div className="hero">Fôring &amp; batcher</div>
+      <div className="herosub">Input og output — hva som mates inn, hva som høstes ut.</div>
+      <div className="rule" />
+
+      <div className="sechead">
+        <div className="toggle">
+          <button className={"tbtn " + (tab === "foring" ? "on" : "")} onClick={() => setTab("foring")}>Fôring</button>
+          <button className={"tbtn " + (tab === "batcher" ? "on" : "")} onClick={() => setTab("batcher")}>Batcher</button>
+        </div>
+      </div>
+
+      {tab === "foring" ? (
+        <>
+          <div className="sechead">
+            <span className="eyebrow">Fôringshistorikk</span>
+            <div className="toggle">
+              {FEED_RANGES.map(([v, label]) => (
+                <button key={v} className={"tbtn " + (feedDays === v ? "on" : "")} onClick={() => setFeedDays(v)}>{label}</button>
+              ))}
+            </div>
+          </div>
+
+          {feedLoading ? (
+            <p className="mut">Laster …</p>
+          ) : !feed || !feed.totals.total_entries ? (
+            <div style={{ padding: "32px 0", textAlign: "center" }}>
+              <span className="mut">Ingen fôring loggført i denne perioden.</span>
+            </div>
+          ) : (
+            <>
+              <div className="kpirow" style={{ marginBottom: 24 }}>
+                <div className="kpi">
+                  <div className="k">Totalt fôret</div>
+                  <div className="v">{Math.round(feed.totals.total_liters)} L</div>
+                  <div className="c">{feed.totals.total_entries} loggføringer</div>
+                </div>
+                <div className="kpi">
+                  <div className="k">Siste fôring</div>
+                  <div className="v" style={{ fontSize: 20 }}>{feed.totals.siste_foring ? fmtDate(feed.totals.siste_foring) : "—"}</div>
+                </div>
+                {feed.bySystem.slice(0, 2).map((s) => (
+                  <div className="kpi" key={s.system}>
+                    <div className="k">{s.system}</div>
+                    <div className="v">{Math.round(s.liters)} L</div>
+                    <div className="c">siste: {fmtDate(s.siste)}</div>
+                  </div>
+                ))}
+              </div>
+
+              {feed.bySystem.length > 2 ? (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16, marginBottom: 24 }}>
+                  {feed.bySystem.map((s) => (
+                    <div className="setrow" key={s.system} style={{ padding: "8px 0" }}>
+                      <div className="sl">{s.system}</div>
+                      <span className="trange"><span className="pill">{Math.round(s.liters)} L</span></span>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+
+              <div className="tscroll">
+                <table>
+                  <thead><tr><th>Dato</th><th>System</th><th>Liter</th><th>Loggføringer</th></tr></thead>
+                  <tbody>
+                    {feed.rows.map((r, i) => (
+                      <tr key={r.date + r.system + i}>
+                        <td>{fmtDate(r.date)}</td>
+                        <td>{r.system}</td>
+                        <td>{Math.round(r.liters * 10) / 10} L</td>
+                        <td className="mut">{r.entries}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
+        </>
+      ) : (
+        <>
+          <div className="sechead">
+            <span className="eyebrow">Batcher</span>
+            {canEdit ? (
+              <button className="btn ghost sm" onClick={() => setAdding(!adding)}>{adding ? "Avbryt" : "+ Ny batch"}</button>
+            ) : null}
+          </div>
+
+          {adding ? (
+            <div style={{ border: "1px solid var(--line)", padding: 18, marginBottom: 20, background: "#fff" }}>
+              <div className="f2" style={{ marginBottom: 12 }}>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>System</label>
+                  <select className="select" value={form.system} onChange={(e) => setForm({ ...form, system: e.target.value })}>
+                    <option value="">— velg —</option>
+                    {systems.map((s) => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Batch-kode</label>
+                  <input className="input" placeholder="Valgfritt, f.eks. B-2026-01" value={form.batch_code} onChange={(e) => setForm({ ...form, batch_code: e.target.value })} />
+                </div>
+              </div>
+              <div className="f2" style={{ marginBottom: 12 }}>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Startet</label>
+                  <input className="input" type="date" value={form.started_at} onChange={(e) => setForm({ ...form, started_at: e.target.value })} />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Høstet (valgfritt)</label>
+                  <input className="input" type="date" value={form.harvested_at} onChange={(e) => setForm({ ...form, harvested_at: e.target.value })} />
+                </div>
+              </div>
+              <div className="f2" style={{ marginBottom: 12 }}>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Volum (L)</label>
+                  <input className="input" type="number" value={form.volume_l} onChange={(e) => setForm({ ...form, volume_l: e.target.value })} />
+                </div>
+                <div className="field" style={{ marginBottom: 0 }}>
+                  <label>Vekt (kg)</label>
+                  <input className="input" type="number" value={form.weight_kg} onChange={(e) => setForm({ ...form, weight_kg: e.target.value })} />
+                </div>
+              </div>
+              <div className="field" style={{ marginBottom: 12 }}>
+                <label>Notater</label>
+                <textarea className="ta" style={{ minHeight: 60 }} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+              </div>
+              <button className="btn sm" disabled={!form.system || busy} onClick={submitBatch}>Lagre batch</button>
+            </div>
+          ) : null}
+
+          {batches === null ? (
+            <p className="mut">Laster …</p>
+          ) : batches.length === 0 ? (
+            <div style={{ padding: "32px 0", textAlign: "center" }}>
+              <span className="mut">Ingen batcher registrert ennå. Loggingen starter når høstesystemet er klart.</span>
+            </div>
+          ) : (
+            <div className="tscroll">
+              <table>
+                <thead><tr><th>Batch</th><th>System</th><th>Startet</th><th>Høstet</th><th>Volum / vekt</th><th>Status</th><th /></tr></thead>
+                <tbody>
+                  {batches.map((b) => editingId === b.id ? (
+                    <tr key={b.id}>
+                      <td colSpan={7} style={{ paddingRight: 0 }}>
+                        <div className="f2" style={{ marginBottom: 12 }}>
+                          <div className="field" style={{ marginBottom: 0 }}>
+                            <label>Batch-kode</label>
+                            <input className="input" value={editForm.batch_code} onChange={(e) => setEditForm({ ...editForm, batch_code: e.target.value })} />
+                          </div>
+                          <div className="field" style={{ marginBottom: 0 }}>
+                            <label>System</label>
+                            <select className="select" value={editForm.system} onChange={(e) => setEditForm({ ...editForm, system: e.target.value })}>
+                              {systems.map((s) => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <div className="f2" style={{ marginBottom: 12 }}>
+                          <div className="field" style={{ marginBottom: 0 }}>
+                            <label>Startet</label>
+                            <input className="input" type="date" value={editForm.started_at} onChange={(e) => setEditForm({ ...editForm, started_at: e.target.value })} />
+                          </div>
+                          <div className="field" style={{ marginBottom: 0 }}>
+                            <label>Høstet</label>
+                            <input className="input" type="date" value={editForm.harvested_at} onChange={(e) => setEditForm({ ...editForm, harvested_at: e.target.value })} />
+                          </div>
+                        </div>
+                        <div className="f2" style={{ marginBottom: 12 }}>
+                          <div className="field" style={{ marginBottom: 0 }}>
+                            <label>Volum (L)</label>
+                            <input className="input" type="number" value={editForm.volume_l} onChange={(e) => setEditForm({ ...editForm, volume_l: e.target.value })} />
+                          </div>
+                          <div className="field" style={{ marginBottom: 0 }}>
+                            <label>Vekt (kg)</label>
+                            <input className="input" type="number" value={editForm.weight_kg} onChange={(e) => setEditForm({ ...editForm, weight_kg: e.target.value })} />
+                          </div>
+                          <div className="field" style={{ marginBottom: 0 }}>
+                            <label>Status</label>
+                            <select className="select" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+                              {BATCH_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+                            </select>
+                          </div>
+                        </div>
+                        <button className="btn sm" onClick={() => saveEdit(b.id)}>Lagre</button>{" "}
+                        <button className="lnk" onClick={() => setEditingId(null)}>Avbryt</button>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={b.id}>
+                      <td>{b.batch_code || <span className="mut">—</span>}</td>
+                      <td>{b.system}</td>
+                      <td>{b.started_at ? fmtDate(b.started_at) : "—"}</td>
+                      <td>{b.harvested_at ? fmtDate(b.harvested_at) : "—"}</td>
+                      <td className="mut">{[b.volume_l ? Math.round(b.volume_l) + " L" : null, b.weight_kg ? Math.round(b.weight_kg) + " kg" : null].filter(Boolean).join(" · ") || "—"}</td>
+                      <td><span className={"tag " + (b.status === "høstet" ? "navy" : "")}>{b.status}</span></td>
+                      <td className="rt">
+                        {canEdit ? (
+                          <>
+                            <button className="lnk" onClick={() => startEdit(b)}>Endre</button>{" "}
+                            <button className="lnk g" onClick={() => removeBatch(b.id)}>Slett</button>
+                          </>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* Innstillinger                                                       */
 /* ------------------------------------------------------------------ */
 
@@ -2909,6 +3222,14 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
   const [lastSync, setLastSync] = useState(data.inboxLastSync || null);
   const [drafting, setDrafting] = useState(null);
   const searchTimer = useRef(null);
+  // Guards against out-of-order responses: the mount fetch (default tab) and
+  // a fast tab tap right after it race, and without this the SLOWER response
+  // can land after the faster one and silently overwrite it with the wrong
+  // tab's data — the count badge (driven by the same query) stays right while
+  // the list underneath goes empty or shows something else. Every call gets a
+  // ticket; a response is applied only if it is still the newest ticket
+  // issued by the time it resolves.
+  const requestSeq = useRef(0);
 
   const tabDef = (key) => INBOX_TABS.find(([k]) => k === key)[2];
 
@@ -2917,6 +3238,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     const src = params.source ?? source;
     const search = params.q ?? q;
     const off = params.offset ?? 0;
+    const myTicket = ++requestSeq.current;
 
     setLoading(true);
     const qs = new URLSearchParams({ status: t.status, limit: "50", offset: String(off) });
@@ -2926,8 +3248,13 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     if (search) qs.set("q", search);
 
     const res = await api("/api/inbox?" + qs);
+    // A newer request has been issued since this one went out — its result
+    // is already applied or on the way, and applying this stale one now
+    // would overwrite it. Drop it silently.
+    if (myTicket !== requestSeq.current) return;
     if (res.ok) {
       const body = await res.json();
+      if (myTicket !== requestSeq.current) return;
       if (off > 0) {
         setItems((prev) => {
           const seen = new Set(prev.map((m) => m.id));
@@ -3041,7 +3368,12 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
       return;
     }
     const body = await res.json();
-    if (showToast) showToast("AI-triage ferdig: " + body.oppdatert + " e-poster vurdert på nytt");
+    if (showToast) {
+      showToast(
+        "AI-triage ferdig: " + body.oppdatert + " e-poster vurdert på nytt" +
+        (body.utkast ? " · 1 utkast laget" : "")
+      );
+    }
     fetchInbox({ offset: 0 });
   };
 
@@ -3366,6 +3698,7 @@ const NAV_DRIFT = [
   ["brief", "Brief"],
   ["logg", "Logg"],
   ["systemer", "Systemer"],
+  ["foring", "Fôring & batcher"],
   ["hygienisering", "Hygienisering"],
 ];
 const NAV_ARBEID = [
@@ -3882,6 +4215,7 @@ export default function App() {
             />
           )}
           {view === "systemer" && <SystemsView data={data} activeSystem={activeSystem} setActiveSystem={setActiveSystem} />}
+          {view === "foring" && <FeedingBatchesView data={data} canEdit={editable} showToast={showToast} />}
           {view === "hygienisering" && <HygieneView canEdit={editable} />}
           {view === "sop" && <FilesView data={data} uploadFiles={uploadFiles} removeFile={removeFile} updateFile={updateFile} canEdit={editable} />}
           {view === "oppgaver" && <TasksView data={data} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} canEdit={editable} showToast={showToast} refreshAll={boot} />}

@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { json, err, guarded, withWatchdog } from "@/lib/http";
-import { aiEnabled, claude } from "@/lib/ai";
+import { aiEnabled, draftReply } from "@/lib/ai";
 
 export const runtime = "nodejs";
 export const maxDuration = 30;
@@ -24,22 +24,7 @@ export const POST = guarded(
     if (!rows.length) return err("Fant ikke e-posten.", 404);
     const m = rows[0];
 
-    const text = await claude({
-      system:
-        "Skriv et utkast til svar på e-posten under. Kort, vennlig og profesjonelt. " +
-        "Ikke finn på fakta, priser eller datoer — bruk plassholdere i klammer der noe må fylles inn, f.eks. [dato]. " +
-        "Signer med 'Martin / Verminord'. Returner KUN selve e-postteksten, uten emnelinje og uten kommentarer.",
-      messages: [
-        {
-          role: "user",
-          content:
-            "Fra: " + m.sender + "\nEmne: " + m.subject + "\nMottatt: " + m.received_at +
-            (m.summary ? "\nOppsummering: " + m.summary : "") +
-            (m.snippet ? "\n\nUtdrag av e-posten:\n" + m.snippet : ""),
-        },
-      ],
-      maxTokens: 700,
-    });
+    const text = await draftReply(m);
 
     const updated = await withWatchdog(
       () => sql`update dash.inbox set draft_body = ${text} where id = ${id} returning ${sql.unsafe(COLS)}`
