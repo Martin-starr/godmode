@@ -3,7 +3,11 @@ import { json, err, guarded, withWatchdog } from "@/lib/http";
 import { aiEnabled, claude } from "@/lib/ai";
 
 export const runtime = "nodejs";
-export const maxDuration = 30;
+// 30s was tuned for a short dump; a longer one (state + several paragraphs,
+// 2000 max_tokens of structured JSON) can genuinely take longer to think
+// through than to fail. Matches inbox/enrich's budget, which carries a
+// similar shape of call.
+export const maxDuration = 60;
 
 // Turns a free-text braindump into structured operations against tasks and
 // projects. Parse-only: the client shows the ops as a checklist and applies
@@ -93,6 +97,12 @@ export const POST = guarded(
       messages: [{ role: "user", content: text }],
       maxTokens: 2000,
       outputFormat: { type: "json_schema", schema: OPS_SCHEMA },
+      // Explicit, not the 25s default in lib/ai.js — that default is sized for
+      // small calls like the connectivity test. This one carries the full
+      // task/project state plus however long the dump is, and cutting it off
+      // at 25s is exactly what just happened: a real, in-progress answer
+      // aborted and reported back as a generic failure.
+      timeoutMs: 50000,
     });
 
     let parsed;
