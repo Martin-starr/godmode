@@ -1,0 +1,100 @@
+name: Scheduled jobs
+
+# Scheduling lives HERE, not in vercel.json.
+#
+# Why: the Vercel account is on the Hobby plan, which rejects any cron that runs
+# more than once per day. The hourly watchdog added in #26 therefore made every
+# fresh production build fail validation — silently, because a failed build just
+# leaves the previous deployment live. Production sat pinned to a redeploy of a
+# pre-cron build from 2026-07-30 while #29–#32 merged and never shipped, and
+# `0b5fd03` ("trigger fresh Vercel deployment (diagnostic)") is the commit
+# someone pushed while trying to work out why.
+#
+# The routes already authenticate with `Authorization: Bearer $CRON_SECRET`
+# (see docs/overvaking.md) precisely so they can be driven from outside Vercel.
+# Nothing about the application changed — only who does the calling.
+#
+# vercel.json keeps an explicit empty `crons: []` rather than dropping the key,
+# so the next person to reach for a Vercel cron finds the empty list and this
+# comment instead of quietly re-breaking the build.
+#
+# Known trade-off: GitHub's scheduled runs are best-effort and can fire late
+# under load — treat the hour as approximate. Fine for a watchdog whose job is
+# "notice within the hour"; not fine for anything that must land on the minute.
+# Nothing here does.
+#
+# A non-2xx response fails the job on purpose. A red X in the Actions tab is the
+# outer layer of monitoring — the watchdog cannot report its own death, which is
+# the limitation called out in app/api/health/check/route.js. This covers it,
+# alongside the external uptime check described in docs/overvaking.md.
+
+on:
+  schedule:
+    - cron: "0 * * * *"    # health/check     — hourly
+    - cron: "15 * * * *"   # inbox/enrich     — hourly, offset so the two don't collide
+    - cron: "0 7 1 * *"    # compliance/gaps  — monthly, 1st at 07:00 UTC
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Which job to run now
+        required: true
+        default: health
+        type: choice
+        options: [health, inbox, compliance]
+
+concurrency:
+  group: scheduled-jobs
+  cancel-in-progress: false
+
+jobs:
+  call:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Resolve endpoint
+        id: pick
+        env:
+          TRIGGER: ${{ github.event_name == 'workflow_dispatch' && inputs.job || github.event.schedule }}
+        run: |
+          case "$TRIGGER" in
+            health|"0 * * * *")        echo "endpoint=/api/health/check"    >> "$GITHUB_OUTPUT" ;;
+            inbox|"15 * * * *")        echo "endpoint=/api/inbox/enrich"    >> "$GITHUB_OUTPUT" ;;
+            compliance|"0 7 1 * *")    echo "endpoint=/api/compliance/gaps" >> "$GITHUB_OUTPUT" ;;
+            *)
+              # An unmapped schedule would otherwise run this workflow and call
+              # nothing — a green tick for work that never happened, which is the
+              # exact class of silent failure this file exists to remove.
+              echo "::error::Unrecognised trigger '$TRIGGER'. Add it to the case above or remove the cron."
+              exit 1
+              ;;
+          esac
+
+      - name: Call ${{ steps.pick.outputs.endpoint }}
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: ${{ vars.DASH_BASE_URL || 'https://dash.verminord.app' }}
+          ENDPOINT: ${{ steps.pick.outputs.endpoint }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET repo secret is not set — the endpoint would answer 401 and nothing would run."
+            exit 1
+          fi
+
+          # --retry covers a cold lambda or a brief 5xx; it deliberately does not
+          # retry a 401, which is a configuration error that retrying cannot fix.
+          code=$(curl -sS -o response.txt -w '%{http_code}' \
+            --max-time 90 --retry 2 --retry-delay 5 --retry-connrefused \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${BASE_URL}${ENDPOINT}")
+
+          echo "HTTP ${code} — ${BASE_URL}${ENDPOINT}"
+          head -c 2000 response.txt || true
+          echo
+
+          case "$code" in
+            2*) ;;
+            401|403) echo "::error::${code} — CRON_SECRET does not match the value deployed on Vercel."; exit 1 ;;
+            *)       echo "::error::${code} from ${ENDPOINT}."; exit 1 ;;
+          esac
