@@ -59,6 +59,33 @@ npx vercel build --prod
 npx vercel deploy --prebuilt --prod
 ```
 
+## Planlagte jobber (cron)
+
+Kjøres fra **GitHub Actions**, ikke fra `vercel.json`
+(`.github/workflows/scheduled-jobs.yml`):
+
+| Jobb | Endepunkt | Frekvens |
+|---|---|---|
+| Vakthund | `/api/health/check` | Hver time |
+| Innboks-triage | `/api/inbox/enrich` | Hver time (:15) |
+| Dokumentasjonskontroll | `/api/compliance/gaps` | Månedlig, 1. kl. 07:00 UTC |
+
+Vercel-kontoen er på **Hobby**, som avviser enhver cron som kjører oftere enn
+daglig. Den timesbaserte vakthunden fra #26 gjorde derfor at *hver eneste ferske
+produksjonsbygging feilet* — stille, siden en mislykket bygging bare lar forrige
+deploy bli stående. Produksjon sto låst til en redeploy av en pre-cron-bygging
+fra 2026-07-30 mens #29–#32 ble merget uten å nå ut.
+
+`vercel.json` beholder derfor en tom `crons: []` med vilje. **Ikke legg crons
+tilbake der** uten å oppgradere til Vercel Pro først.
+
+Krever repo-secret `CRON_SECRET` (samme verdi som env-variabelen på Vercel).
+Valgfri repo-variabel `DASH_BASE_URL` overstyrer `https://dash.verminord.app`.
+Jobbene kan kjøres manuelt fra Actions-fanen («Run workflow» → velg jobb).
+
+Et ikke-2xx-svar feiler jobben med rødt kryss i Actions. Det er ytterste
+overvåkingslag: vakthunden kan ikke melde fra om sin egen død.
+
 ## Lokal utvikling
 
 ```bash
