@@ -29,9 +29,14 @@ export const dynamic = "force-dynamic";
 
 const DEFAULT_DAYS = 35;
 
-// §19 (forordning 142/2011, alternativ behandling): the gate Verminord runs
-// under is three consecutive days at 55 °C or above, documented at a minimum
-// of two measurement points per day. One probe is an anecdote, not a record.
+// The §19 gate as recorded in SOP-pakke v2.0: three consecutive days at 55 °C
+// or above, documented at a minimum of two measurement points per day. One
+// probe is an anecdote, not a record.
+//
+// Deliberately no paragraph citation here beyond "§19" — the SOP is the
+// authority this code follows, and a half-remembered forskrift reference in a
+// comment is worse than none: it invites someone to trust it in a tilsyn
+// conversation. If the thresholds move, they move in the SOP first.
 const HYG_MIN_TEMP = 55;
 const HYG_MIN_DAYS = 3;
 const HYG_MIN_POINTS = 2;
@@ -346,9 +351,14 @@ async function buildReport(sql, days) {
 }
 
 function parseDays(req) {
-  const raw = Number(new URL(req.url).searchParams.get("days"));
-  if (!Number.isFinite(raw)) return DEFAULT_DAYS;
-  return Math.min(365, Math.max(1, Math.round(raw)));
+  // Note the explicit null check: an absent param is null, and Number(null) is
+  // 0, which would silently clamp the window to a single day — a report that
+  // finds almost nothing and looks like good news.
+  const raw = new URL(req.url).searchParams.get("days");
+  if (raw === null || raw.trim() === "") return DEFAULT_DAYS;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return DEFAULT_DAYS;
+  return Math.min(365, Math.max(1, Math.round(n)));
 }
 
 // Vercel cron calls are authenticated by CRON_SECRET; a bare public URL would
@@ -379,7 +389,7 @@ async function runCron(req) {
     const shown = fresh.slice(0, 25);
     const lines = [
       `Dokumentasjonskontroll ${report.window.from} – ${report.window.to} ` +
-        `(${report.window.days} dager):`,
+        `(${report.window.days} ${report.window.days === 1 ? "dag" : "dager"}):`,
       "",
       ...shown.map((g) => "• " + g.line),
     ];
