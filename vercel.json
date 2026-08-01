@@ -1,6 +1,7 @@
 {
   "crons": [
     { "path": "/api/health/check", "schedule": "0 * * * *" },
-    { "path": "/api/inbox/enrich", "schedule": "15 * * * *" }
+    { "path": "/api/inbox/enrich", "schedule": "15 * * * *" },
+    { "path": "/api/compliance/gaps", "schedule": "0 7 1 * *" }
   ]
 }

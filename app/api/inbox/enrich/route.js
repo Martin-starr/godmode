@@ -125,7 +125,7 @@ async function enrich() {
     let drafted = 0;
     try {
       const [needsDraft] = await withWatchdog(
-        () => sql`select id, sender, subject, summary, snippet, received_at from dash.inbox
+        () => sql`select id, sender, subject, summary, snippet, received_at, category from dash.inbox
           where status = 'open' and category = 'Svar kreves' and draft_body = ''
           order by received_at desc limit 1`
       );
