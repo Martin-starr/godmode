@@ -292,11 +292,13 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--mark)}
   border:1px solid rgba(255,255,255,.1);
   box-shadow:0 20px 46px -14px rgba(0,0,0,.82),0 1px 0 rgba(0,0,0,.5),
     inset 0 1px 0 rgba(255,255,255,.07);
-  opacity:0;visibility:hidden;transform:translateY(6px) scale(.975);transform-origin:50% 100%;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transform:translateY(6px) scale(.975);transform-origin:50% 100%;
   transition:opacity var(--t) var(--e),transform var(--t) var(--e),visibility var(--t)}
-#tbar.on{opacity:1;visibility:visible;transform:none}
+#tbar.on{opacity:1;visibility:visible;pointer-events:auto;transform:none}
 #tbar button{display:flex;align-items:center;gap:5px;padding:0 9px;cursor:pointer;color:var(--txt-2);
-  background:0;border:0;font-family:var(--mn);font-size:10.5px;transition:var(--t-fast) var(--e);
+  background:0;border:0;font-family:var(--mn);font-size:10.5px;
+  transition:background var(--t-fast) var(--e),color var(--t-fast) var(--e),transform var(--t-fast);
   max-width:140px;overflow:hidden;height:100%}
 #tbar button:hover{background:rgba(255,255,255,.08);color:var(--txt)}
 #tbar button:active{transform:translateY(.5px)}
@@ -316,9 +318,10 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--mark)}
   -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
   border:1px solid rgba(255,255,255,.1);
   box-shadow:0 26px 58px -12px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06);
-  opacity:0;visibility:hidden;transform:translateY(-5px) scale(.988);transform-origin:0 0;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transform:translateY(-5px) scale(.988);transform-origin:0 0;
   transition:opacity var(--t) var(--e),transform var(--t) var(--e),visibility var(--t)}
-#pop.on{opacity:1;visibility:visible;transform:none}
+#pop.on{opacity:1;visibility:visible;pointer-events:auto;transform:none}
 #pop .ph{padding:11px 13px 9px;border-bottom:1px solid var(--edge);flex:0 0 auto}
 #pop .pb{overflow-y:auto;flex:1}
 #pop .ctl{padding:12px 13px 14px}
@@ -351,9 +354,10 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--mark)}
   -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
   border:1px solid rgba(255,255,255,.1);
   box-shadow:0 24px 54px -12px rgba(0,0,0,.82),inset 0 1px 0 rgba(255,255,255,.06);
-  opacity:0;visibility:hidden;transform:translateY(-4px) scale(.985);transform-origin:0 0;
+  opacity:0;visibility:hidden;pointer-events:none;
+  transform:translateY(-4px) scale(.985);transform-origin:0 0;
   transition:opacity var(--t-fast) var(--e),transform var(--t-fast) var(--e),visibility var(--t-fast)}
-#menu.on{opacity:1;visibility:visible;transform:none}
+#menu.on{opacity:1;visibility:visible;pointer-events:auto;transform:none}
 #menu button{display:flex;width:100%;background:0;border:0;color:var(--txt-2);cursor:pointer;
   padding:7px 13px;font-size:12px;text-align:left;align-items:center;gap:9px;
   transition:var(--t-fast) var(--e)}
@@ -696,6 +700,7 @@ function apply(op){
   var el=nodeOf(op.id),inv=null,i;
   if(!el&&op.k!=='multi')return null;
   state.mute++;
+  try{
   if(op.k==='html'){
     inv={k:'html',id:op.id,html:el.innerHTML};
     el.innerHTML=op.html; stamp(el);
@@ -707,13 +712,21 @@ function apply(op){
          p:el.parentNode&&el.parentNode.nodeType===1?idOf(el.parentNode):null,
          b:el.nextElementSibling?idOf(el.nextElementSibling):null};
     if(op.p===null){ if(el.parentNode)el.parentNode.removeChild(el); }
-    else { var p=nodeOf(op.p); if(p)p.insertBefore(el,op.b?nodeOf(op.b):null); }
+    else { var p=nodeOf(op.p);
+      if(p){
+        /* reg deliberately holds detached nodes, so the recorded sibling may no
+           longer be a child of p — a page that removes its own DOM (cookie bar,
+           carousel) sets that up. Appending is the correct degradation; throwing
+           here used to destroy the only inverse and lose the element for good. */
+        var bn=op.b?nodeOf(op.b):null;
+        p.insertBefore(el,(bn&&bn.parentNode===p)?bn:null);
+      } }
   } else if(op.k==='multi'){
     var iv=[];
     for(i=0;i<op.ops.length;i++){var r=apply(op.ops[i]);if(r)iv.unshift(r);}
     inv={k:'multi',ops:iv};
   }
-  unmute();
+  } finally { unmute(); }   /* an unbalanced mute deafens the layers observer for the session */
   return inv;
 }
 function push(op,inv,label,detail){          /* caller already mutated */
@@ -725,19 +738,21 @@ function push(op,inv,label,detail){          /* caller already mutated */
   after(op);
 }
 function commit(op,label,detail){push(op,apply(op),label,detail)}
-function undo(){
-  var e=state.undo.pop();
-  if(!e)return toast('Ingenting å angre');
+function step(from,to,verb){
+  var e=from[from.length-1];
+  if(!e)return toast(verb==='Angret'?'Ingenting å angre':'Ingenting å gjenta');
   if(state.editing)endEdit(false);
-  state.redo.push({op:e.inv,inv:apply(e.inv),label:e.label});
-  after(e.inv);toast('Angret — '+e.label);
+  var inv;
+  /* Keep the entry until the inverse has applied. Popping first meant one failed
+     apply threw away the only way back. */
+  try{ inv=apply(e.inv); }
+  catch(x){ toast('Kunne ikke '+(verb==='Angret'?'angre':'gjenta')+' — siden har endret seg'); return; }
+  from.pop();
+  to.push({op:e.inv,inv:inv,label:e.label});
+  after(e.inv);toast(verb+' — '+e.label);
 }
-function redo(){
-  var e=state.redo.pop();
-  if(!e)return toast('Ingenting å gjenta');
-  state.undo.push({op:e.inv,inv:apply(e.inv),label:e.label});
-  after(e.inv);toast('Gjentatt — '+e.label);
-}
+function undo(){step(state.undo,state.redo,'Angret')}
+function redo(){step(state.redo,state.undo,'Gjentatt')}
 function logEdit(label,op,detail){
   var id=op.id||(op.ops&&op.ops[0]&&op.ops[0].id),el=id?nodeOf(id):null;
   state.log.push({t:Date.now(),label:label,
@@ -772,6 +787,7 @@ document.addEventListener('drop',function(e){
   if(e.dataTransfer&&e.dataTransfer.files[0])load(e.dataTransfer.files[0])});
 
 function resetSession(){
+  state.src='';          /* the html branch of load() re-assigns it immediately */
   state.notes=[];state.seq=0;state.tweaks={};state.tokens={};state.log=[];
   state.undo=[];state.redo=[];state.selId=null;state.editing=null;state.open={};
   state.nowSec=null;reg={};idn=0;
@@ -967,6 +983,21 @@ function bindFrame(){
   d.addEventListener('mouseleave',function(){
     $('#hover').classList.remove('on');$('#hint').classList.remove('on')});
 
+  /* Registered ahead of the mode handler and independent of it: with no mode
+     chosen, a click on a link used to navigate the iframe, discarding the stamped
+     document, the undo stack and the session. */
+  d.addEventListener('click',function(e){
+    var a=e.target.closest&&e.target.closest('a[href],area[href]');
+    if(a)e.preventDefault();
+  },true);
+  d.addEventListener('submit',function(e){e.preventDefault()},true);
+  ['dragover','drop'].forEach(function(ev){
+    d.addEventListener(ev,function(e){
+      e.preventDefault();
+      var f=ev==='drop'&&e.dataTransfer&&e.dataTransfer.files[0];
+      if(f)load(f);
+    },true);
+  });
   d.addEventListener('click',function(e){
     if(!state.mode)return;
     if(state.editing&&nodeOf(state.editing)&&nodeOf(state.editing).contains(e.target))return;
@@ -1030,7 +1061,12 @@ function bindFrame(){
 $('#plate').addEventListener('click',function(e){
   if(state.kind!=='plate'||state.mode!=='mark')return;
   var r=this.getBoundingClientRect();
-  openEditor(null,{x:(e.clientX-r.left)/r.width*100,y:(e.clientY-r.top)/r.height*100});
+  /* A PDF renders at scale 2.2 — several thousand px tall — so the plate is
+     nearly always scrolled. Measuring against the visible box put the pin, and
+     the coordinates in the brief, hundreds of px away from the click. */
+  var w=this.scrollWidth||r.width,h=this.scrollHeight||r.height;
+  openEditor(null,{x:(e.clientX-r.left+this.scrollLeft)/w*100,
+                   y:(e.clientY-r.top+this.scrollTop)/h*100});
 });
 
 /* ══ G · MODES + OVERLAYS ══ */
@@ -1189,19 +1225,26 @@ $('#e-save').onclick=function(){
 
 /* ══ PINS + LIST ══ */
 function positionPins(){
-  var wrap=$('#pins');wrap.innerHTML='';
-  var pr=$('#plate').getBoundingClientRect();
+  var wrap=$('#pins'),plate=$('#plate');wrap.innerHTML='';
+  var pr=plate.getBoundingClientRect();
+  /* #pins is inset:0 inside a scrolling plate, so it scrolls with the content
+     while being sized to the visible box. Size it to the content instead. */
+  var pw=pr.width,ph=pr.height;
+  if(state.kind==='plate'){
+    pw=plate.scrollWidth||pw;ph=plate.scrollHeight||ph;
+    wrap.style.width=pw+'px';wrap.style.height=ph+'px';
+  } else {wrap.style.width='';wrap.style.height='';}
   state.notes.forEach(function(n,i){
-    var x,y,gone=false,el=n.eid?liveOf(n.eid):null;
+    var x,y,gone=false,hidden=false,el=n.eid?liveOf(n.eid):null;
     if(el){
       var r=el.getBoundingClientRect();
-      if(r.width===0&&r.height===0){gone=true;}
+      if(r.width===0&&r.height===0){hidden=true;}
       else{x=r.left+10;y=r.top+10;if(y<0||y>pr.height)return;}
     } else if(n.eid){gone=true;}
-    if(gone||!el){
+    if(gone||hidden||!el){
       if(!n.pt)return;
-      x=n.pt.x/100*pr.width;y=n.pt.y/100*pr.height;
-      gone=!!n.eid;
+      x=n.pt.x/100*pw;y=n.pt.y/100*ph;
+      gone=!!n.eid&&!el;      /* orphaned only if the element is really detached */
     }
     var p=document.createElement('div');
     p.className='pin'+(n.intent==='behold'?' k':n.intent==='spor'?' q':'')+(gone?' gone':'');
@@ -1381,7 +1424,9 @@ function doDelete(id){
   if(el.parentNode===state.doc.body&&state.doc.body.children.length<2)
     return toast('Kan ikke slette det siste elementet');
   var nm=label(el),i=idOf(el);
-  if(state.editing===i)endEdit(false);
+  /* Also when the edit is on a descendant — otherwise selectEl ended it after
+     the delete and buried a no-op undo step on top of it. */
+  if(state.editing&&(state.editing===i||el.contains(nodeOf(state.editing))))endEdit(false);
   var nxt=el.nextElementSibling||el.previousElementSibling||el.parentNode;
   commit({k:'place',id:i,p:null},'slettet',nm);
   state.selId=nxt&&nxt.nodeType===1&&nxt!==state.doc.body?idOf(nxt):null;
@@ -1463,7 +1508,14 @@ function insertEl(kind){
   var el=tmp.firstElementChild;
   var parent,before;
   if(host&&host.parentNode&&host.parentNode.nodeType===1){
-    parent=host.parentNode;before=host.nextSibling;
+    /* Climb out of text-only hosts first. A div inside a <p> is legal via the
+       DOM but not via the parser, so the export re-parsed differently from the
+       mockup on screen. */
+    var h=host;
+    while(h.parentNode&&h.parentNode.nodeType===1&&h.parentNode!==d.body&&
+          /^(P|H[1-6]|SPAN|EM|STRONG|B|I|U|SMALL|CODE|LABEL|A|CITE|ABBR)$/.test(h.parentNode.tagName))
+      h=h.parentNode;
+    parent=h.parentNode;before=h.nextSibling;
   } else {parent=d.body;before=null;}
   parent.insertBefore(el,before);
   unmute();
@@ -2304,6 +2356,10 @@ function bindLayDrag(row,id){
     var src=liveOf(layDragId),ref=liveOf(id);
     if(!src||!ref||src.contains(ref))return toast('Kan ikke legge et lag inni seg selv');
     if(!ref.parentNode||ref.parentNode.nodeType!==1)return;
+    /* Before/after within one level only. Dropping onto a nested row used to
+       move the element into that row's parent with nothing signalling it. */
+    while(ref&&ref.parentNode!==src.parentNode)ref=ref.parentElement;
+    if(!ref||ref===src)return toast('Kan bare flyttes innenfor samme nivå');
     var p=idOf(ref.parentNode);
     var b=before?idOf(ref):(ref.nextElementSibling?idOf(ref.nextElementSibling):null);
     commit({k:'place',id:layDragId,p:p,b:b},'flyttet',label(src));
@@ -2326,7 +2382,10 @@ function markNow(){
 }
 var mo=null,bumpT=null,bumps=0,bumpT0=0;
 function watchDom(){
-  var W=state.doc.defaultView;
+  /* fr.onload also fires for a document we did not mount (a navigation we
+     failed to block), so never assume state.doc is still live. */
+  if(!state.doc||!state.doc.body)return;
+  var W=state.doc.defaultView;if(!W)return;
   if(!W.MutationObserver)return;
   if(mo)mo.disconnect();
   bumps=0;$('#laywarn').hidden=true;
@@ -2345,7 +2404,10 @@ $('#lay-again').onclick=function(){
   $('#laywarn').hidden=true;watchDom();stampNew();layersRefresh();};
 var io=null;
 function watchSections(){
-  var W=state.doc.defaultView;
+  /* fr.onload also fires for a document we did not mount (a navigation we
+     failed to block), so never assume state.doc is still live. */
+  if(!state.doc||!state.doc.body)return;
+  var W=state.doc.defaultView;if(!W)return;
   if(!W.IntersectionObserver)return;
   if(io)io.disconnect();
   var tops=[].filter.call(state.doc.body.children,function(e){
@@ -2408,8 +2470,12 @@ function exportHTML(o){
   var q=function(s){return [].slice.call(c.querySelectorAll(s))};
   q('[contenteditable]').forEach(function(e){
     e.removeAttribute('contenteditable');e.removeAttribute('spellcheck');});
-  if(o.dropHidden)q('*').forEach(function(e){
-    if(e.style&&e.style.display==='none'&&e.parentNode)e.parentNode.removeChild(e);});
+  /* Only elements the user hid — state.tweaks records exactly that. The old
+     blanket test also destroyed dialogs and dropdowns the original page had
+     hidden inline, while sparing anything hidden by a CSS class. */
+  if(o.dropHidden)q('[data-dd-id]').forEach(function(e){
+    var t=state.tweaks[e.getAttribute('data-dd-id')];
+    if(t&&t['display']==='none'&&e.parentNode)e.parentNode.removeChild(e);});
   /* The export is a snapshot of the live DOM, so anything the page's own script
      already built is baked in. Left in place, the script runs again in the export
      and builds it a second time — so a static mockup wants the scripts gone. */
@@ -2417,6 +2483,7 @@ function exportHTML(o){
     if(e.parentNode)e.parentNode.removeChild(e);});
   q('[data-dd-tf]').forEach(function(e){e.removeAttribute('data-dd-tf')});
   var cur=c.querySelector('#dd-cursor');if(cur&&cur.parentNode)cur.parentNode.removeChild(cur);
+  q('[style=""]').forEach(function(e){e.removeAttribute('style')});   /* left by undoing a style op */
   if(!o.keepIds){
     q('[data-dd-id]').forEach(function(e){e.removeAttribute('data-dd-id')});
     if(c.hasAttribute('data-dd-id'))c.removeAttribute('data-dd-id');
@@ -2438,9 +2505,12 @@ function buildBrief(){
   var sorted=state.notes.slice().sort(function(a,b){return order[a.prio]-order[b.prio]});
   if(sorted.length){
     md+='---\n\n## Merknader\n\n';
+    /* Pins and the rail number by insertion order; the brief sorts by priority.
+       Renumbering here made "1." in the handover point at a different pin. */
+    var pin={};state.notes.forEach(function(x,j){pin[x.id]=j+1});
     sorted.forEach(function(n,i){
       var gone=n.eid&&!liveOf(n.eid);
-      md+='**'+(i+1)+'. '+NAMES[n.intent].toUpperCase()+' · '+n.prio+'** — '+n.reg+
+      md+='**'+(pin[n.id]||i+1)+'. '+NAMES[n.intent].toUpperCase()+' · '+n.prio+'** — '+n.reg+
           (gone?' _(elementet er slettet)_':'')+'\n\n';
       if(n.sel)md+='- Velger: `'+n.sel+'`\n';
       if(n.pt)md+='- Posisjon: x '+n.pt.x.toFixed(1)+'% · y '+n.pt.y.toFixed(1)+'%\n';
@@ -2544,21 +2614,29 @@ $('#b-reset').onclick=function(e){
 };
 
 /* ══ Q · AUTOSAVE ══ */
-var asT=null,asWarned=false;
+var asT=null,asWarned=0;
 function autosave(){
   if(!state.doc)return;
   clearTimeout(asT);
   asT=setTimeout(function(){
     try{
-      var s=JSON.stringify({v:2,name:state.name,ts:Date.now(),
+      var s=JSON.stringify({v:3,name:state.name,ts:Date.now(),
         html:exportHTML({keepIds:true}),notes:state.notes,
-        tokens:state.tokens,log:state.log.slice(-200)});
+        tokens:state.tokens,tweaks:state.tweaks,log:state.log.slice(-200)});
       if(s.length>2400000){
-        if(!asWarned){asWarned=true;toast('For stor for autolagring — last ned HTML i stedet')}
+        /* Drop the old value too. Keeping it let "Fortsett der du slapp" offer a
+           document older than the work on screen, which reads as data loss. */
+        try{localStorage.removeItem('dd.save')}catch(x){}
+        if(Date.now()-asWarned>15000){asWarned=Date.now();
+          toast('For stor for autolagring — last ned HTML i stedet')}
         return;
       }
       localStorage.setItem('dd.save',s);
-    }catch(x){}
+    }catch(x){
+      try{localStorage.removeItem('dd.save')}catch(y){}
+      if(Date.now()-asWarned>15000){asWarned=Date.now();
+        toast('Kunne ikke autolagre — last ned HTML i stedet')}
+    }
   },1200);
 }
 function checkResume(){
@@ -2577,10 +2655,15 @@ function doRestore(p){
   resetSession();
   state.name=p.name||'gjenopprettet.html';$('#fname').textContent=state.name;
   state.src=p.html;
-  var notes=p.notes||[],log=p.log||[];
+  var notes=p.notes||[],log=p.log||[],tweaks=p.tweaks||{},tok=p.tokens||{};
   mountHTML(p.html,true);
   setTimeout(function(){
     state.notes=notes;state.seq=notes.length;state.log=log;
+    /* mountHTML re-scans tokens from the source, so the overrides and the
+       element adjustments have to be merged back or the brief's two CSS
+       sections come back empty while the page still looks edited. */
+    state.tweaks=tweaks;
+    Object.keys(tok).forEach(function(k){if(k.charAt(0)==='~')state.tokens[k]=tok[k]});
     renderNotes();
     toast('Gjenopprettet — angre-historikken starter på nytt');
   },300);
@@ -2610,10 +2693,13 @@ function route(e){
     if(state.selId)return deselect();
     return;
   }
-  if(meta&&(k==='z'||k==='Z')){e.preventDefault();if(e.shiftKey)redo();else undo();return;}
-  if(meta&&(k==='y'||k==='Y')){e.preventDefault();redo();return;}
-
+  /* Undo is claimed by the active field first. Reaching the document stack from
+     inside a textarea silently reverted the artwork while the user typed prose. */
   if(state.editing){
+    if(meta&&(k==='z'||k==='Z'||k==='y'||k==='Y')){
+      e.preventDefault();
+      try{state.doc.execCommand(e.shiftKey||/y/i.test(k)?'redo':'undo')}catch(x){}
+      return;}
     if(meta&&/^[biu]$/i.test(k)){e.preventDefault();return;}
     if(k==='Enter'&&meta){e.preventDefault();endEdit(true);return;}
     if(k==='Enter'){e.preventDefault();
@@ -2622,11 +2708,14 @@ function route(e){
     return;
   }
   if(typing)return;
+  if(meta&&(k==='z'||k==='Z')){e.preventDefault();if(e.shiftKey)redo();else undo();return;}
+  if(meta&&(k==='y'||k==='Y')){e.preventDefault();redo();return;}
 
   if(meta&&(k==='d'||k==='D')){if(state.selId){e.preventDefault();doDup()}return;}
   if((k==='Delete'||k==='Backspace')&&state.mode==='edit'&&state.selId){
     e.preventDefault();doDelete();return;}
-  if(k==='Enter'&&state.selId&&state.mode==='edit'){e.preventDefault();startEdit(state.selId);return;}
+  if(k==='Enter'&&state.selId&&state.mode==='edit'&&tn!=='button'&&tn!=='a'){
+    e.preventDefault();startEdit(state.selId);return;}
   if(/^Arrow/.test(k)&&state.selId&&state.mode==='edit'){
     e.preventDefault();
     var d=e.shiftKey?10:1;

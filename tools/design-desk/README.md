@@ -60,12 +60,20 @@ weight a family does not have, so a derived spec would silently break half the l
   per-element adjustments, and a chronological log of every edit made in the desk.
 - **HTML** — the edited document as a clean standalone file. Editor attributes are
   stripped, chosen webfonts are kept, and variable overrides become a readable
-  `:root{…}` block. `Fjern skjulte` drops hidden elements; `Fjern skript` makes it a
-  static mockup — worth ticking for any page whose own JavaScript builds DOM, since the
-  export already contains what that script produced.
+  `:root{…}` block. `Fjern skjulte` drops the elements *you* hid — never ones the page
+  itself had hidden. `Fjern skript` makes it a static mockup — worth ticking for any page
+  whose own JavaScript builds DOM, since the export already contains what that script
+  produced.
 
 Work is autosaved to the browser after every change; reload and a **Fortsett der du
 slapp** strip offers it back. Undo history is not part of that snapshot.
+
+Two limits worth knowing, because they are the ones you can feel. Only the most recent
+session is kept, so opening a second file discards the first one's copy. And embedded
+photos blow past the browser's storage budget quickly — when a snapshot is too big to
+save, the desk says so and **deletes the old one rather than keeping it**, since a strip
+offering a document older than what is on screen reads as data loss. Download the HTML
+for anything you want to keep.
 
 ## Undo
 
@@ -116,8 +124,16 @@ slider that animates on each commit is a slider that fights you.
 ```
 node tools/design-desk/test/smoke.mjs      # 84 checks, regression + new features
 node tools/design-desk/test/starters.mjs   # 52 checks, each starter standalone and in the desk
+node tools/design-desk/test/regress.mjs    # 39 checks, one per defect found in review
 node tools/design-desk/test/shots.mjs      # renders PNGs of each UI state for review
 ```
+
+`regress.mjs` is the important one to keep green. Each block reproduces a defect that
+was found in an adversarial review and confirmed in a real browser before being fixed —
+undo surviving a page that mutates its own DOM, ⌘Z belonging to whatever field you are
+typing in, links never navigating the plate away, pin coordinates on a scrolled image
+plate, a restored session bringing its CSS back and not just its looks. If one of those
+blocks goes red, a fix has been undone rather than a test having drifted.
 
 All need Chromium and `playwright`; they resolve it from a global install so the repo
 picks up no dependencies. The suites deliberately ignore console errors from
