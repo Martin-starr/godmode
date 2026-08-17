@@ -21,24 +21,43 @@
   --keep:#4FB3A5;      /* keep this */
   --ask:#7E8BF0;       /* question */
   --cut:#E05C4B;       /* editing — changes the artifact */
+  --hair:#3A4046;      /* hairlines that need to read on --rail */
   --ui:'Archivo',Helvetica,sans-serif;
   --mn:'IBM Plex Mono',ui-monospace,monospace;
   --e:cubic-bezier(.2,.9,.3,1);
-  --rail-w:330px;
+  --t-fast:.12s; --t:.2s; --t-slow:.42s;
+  --rail-w:334px;
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.19'/%3E%3C/svg%3E");
 }
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{height:100%}
+/* Author display rules outrank the UA's [hidden] sheet, which had left an
+   invisible iframe on image plates, the resume strip always showing, and the
+   export options visible on the brief tab. One rule closes the whole family. */
+[hidden]{display:none!important}
 body{background:var(--room);color:var(--txt);font-family:var(--ui);font-weight:400;
-  font-size:13px;overflow:hidden;-webkit-font-smoothing:antialiased}
+  font-size:13px;overflow:hidden;-webkit-font-smoothing:antialiased;
+  scrollbar-width:thin;scrollbar-color:var(--ridge) transparent}
 button,input,select,textarea{font-family:inherit;color:inherit}
+:focus-visible{outline:1px solid var(--mark);outline-offset:1px}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--ridge);border:3px solid var(--rail)}
+::-webkit-scrollbar-thumb:hover{background:#3F464E}
+::selection{background:var(--mark);color:#15171A}
 .lbl{font-family:var(--ui);font-variation-settings:'wdth' 68;font-weight:500;font-size:9px;
   letter-spacing:.22em;text-transform:uppercase;color:var(--txt-3)}
 .num{font-family:var(--mn);font-weight:400;font-size:11px;color:var(--txt-2);font-variant-numeric:tabular-nums}
 
 /* ── LAYOUT ── */
 #app{display:grid;grid-template-columns:1fr var(--rail-w);height:100vh}
+/* Grain and vignette live in the room, never on the plate — the instrument may
+   have texture, the artifact must not. The noise is desaturated on purpose:
+   coloured grain would tint every colour judgement made against it. */
 #stage{position:relative;overflow:hidden;display:grid;place-items:center;
-  background:radial-gradient(120% 90% at 50% 42%,#1D2126 0%,#15171A 62%,#101215 100%)}
+  background:var(--grain),
+    radial-gradient(125% 105% at 50% 50%,rgba(0,0,0,0) 38%,rgba(0,0,0,.42) 100%),
+    radial-gradient(120% 90% at 50% 42%,#1D2126 0%,#15171A 62%,#101215 100%)}
 #rail{position:relative;background:var(--rail);border-left:1px solid var(--edge);
   display:flex;flex-direction:column;overflow:hidden}
 
@@ -66,16 +85,14 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 #modehint.on{opacity:1}
 
 /* ── THE LIT PLATE ── */
-#plate{position:relative;background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.06),
-  0 40px 90px -20px rgba(0,0,0,.75),0 0 120px -30px rgba(255,255,255,.07);
-  transition:width .45s var(--e),height .45s var(--e);display:none}
-#plate.on{display:block}
+#plate{position:relative;background:#fff;box-shadow:0 0 0 1px rgba(255,255,255,.07),
+  0 44px 96px -22px rgba(0,0,0,.78),0 0 130px -30px rgba(255,255,255,.075);
+  transition:width var(--t-slow) var(--e),height var(--t-slow) var(--e);display:none}
+#plate.on{display:block;animation:plateIn .6s var(--e) both}
+@keyframes plateIn{from{opacity:0;transform:translateY(16px) scale(.986)}to{opacity:1;transform:none}}
+#plate.mark{cursor:crosshair}
 #frame{width:100%;height:100%;border:0;display:block;background:#fff}
 #img{width:100%;height:auto;display:block}
-/* The display:block rules above outrank the UA's [hidden]{display:none}, which
-   left an invisible 150px iframe sitting on top of image and PDF plates —
-   eating clicks in the top strip and pushing the artwork down. */
-#plate>[hidden]{display:none}
 #pins{position:absolute;inset:0;pointer-events:none;z-index:22;overflow:hidden}
 .pin{position:absolute;width:22px;height:22px;border-radius:50%;background:var(--mark);color:#15171A;
   font-family:var(--mn);font-weight:500;font-size:11px;line-height:22px;text-align:center;cursor:pointer;
@@ -101,18 +118,35 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 #sel.ed #seltag{background:var(--ask);color:#fff}
 
 /* ── DROP ZONE ── */
-#drop{text-align:center;max-width:420px;padding:2rem}
+#drop{text-align:center;max-width:452px;padding:2rem;position:relative;z-index:2}
 #drop.hide{display:none}
-#drop h1{font-variation-settings:'wdth' 88;font-weight:300;font-size:34px;letter-spacing:-.02em;
-  line-height:1.1;margin-bottom:14px}
-#drop p{color:var(--txt-2);font-size:13px;line-height:1.65;margin-bottom:22px}
-#drop .zone{border:1px dashed var(--ridge);padding:34px 22px;cursor:pointer;transition:.22s var(--e)}
-#drop .zone:hover,#drop .zone.hot{border-color:var(--mark);background:rgba(232,163,61,.05)}
-#drop .zone .lbl{margin-bottom:8px;display:block}
-#drop .fmt{margin-top:18px;display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+#drop>*{animation:dropIn .62s var(--e) both}
+#drop>.kick{animation-delay:.05s}
+#drop>h1{animation-delay:.12s}
+#drop>p{animation-delay:.19s}
+#drop>.zone{animation-delay:.26s}
+#drop>.fmt{animation-delay:.33s}
+#drop>#resume{animation-delay:.4s}
+@keyframes dropIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+#drop .kick{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:20px}
+#drop .kick:before,#drop .kick:after{content:'';height:1px;width:34px;background:var(--ridge)}
+#drop h1{font-variation-settings:'wdth' 88;font-weight:300;font-size:40px;letter-spacing:-.025em;
+  line-height:1.06;margin-bottom:15px}
+#drop p{color:var(--txt-2);font-size:13px;line-height:1.7;margin-bottom:24px;
+  max-width:37ch;margin-left:auto;margin-right:auto}
+#drop .zone{border:1px dashed var(--hair);padding:36px 22px;cursor:pointer;
+  transition:var(--t) var(--e);position:relative;
+  background:rgba(255,255,255,.016);box-shadow:inset 0 1px 0 rgba(255,255,255,.03)}
+#drop .zone:hover,#drop .zone.hot{border-color:var(--mark);
+  background:radial-gradient(120% 140% at 50% 0,rgba(232,163,61,.09),rgba(232,163,61,.02) 70%);
+  box-shadow:inset 0 0 40px -18px rgba(232,163,61,.5)}
+#drop .zone .lbl{margin-bottom:8px;display:block;transition:color var(--t)}
+#drop .zone:hover .lbl{color:var(--mark)}
+#drop .fmt{margin-top:20px;display:flex;gap:13px;justify-content:center;flex-wrap:wrap}
 #drop .fmt span{font-family:var(--mn);font-size:10px;color:var(--txt-3)}
-#resume{border:1px solid var(--ridge);padding:13px;margin-top:16px;text-align:left;
-  display:flex;align-items:center;gap:10px}
+#resume{border:1px solid var(--ridge);padding:13px;margin-top:18px;text-align:left;
+  display:flex;align-items:center;gap:10px;
+  background:linear-gradient(rgba(232,163,61,.05),rgba(232,163,61,0))}
 #resume .rt{flex:1;overflow:hidden}
 #resume .rt b{display:block;font-family:var(--mn);font-size:11px;color:var(--txt-2);font-weight:400;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -133,6 +167,15 @@ button,input,select,textarea{font-family:inherit;color:inherit}
 .grp.fold>.lbl:after{content:'–';font-family:var(--mn);font-size:12px;color:var(--txt-3)}
 .grp.fold.shut>.lbl:after{content:'+'}
 .grp.fold.shut>*:not(.lbl){display:none}
+/* The controls assemble when you pick something new — not on every commit. */
+#elemctl.fresh>.grp{animation:grpIn .38s var(--e) both}
+#elemctl.fresh>.grp:nth-child(1){animation-delay:.02s}
+#elemctl.fresh>.grp:nth-child(2){animation-delay:.07s}
+#elemctl.fresh>.grp:nth-child(3){animation-delay:.11s}
+#elemctl.fresh>.grp:nth-child(4){animation-delay:.15s}
+#elemctl.fresh>.grp:nth-child(5){animation-delay:.18s}
+#elemctl.fresh>.grp:nth-child(6){animation-delay:.21s}
+@keyframes grpIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
 .ctl{padding:8px 14px 12px}
 .ctl .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:6px}
 .ctl .top>span:first-child{font-variation-settings:'wdth' 68;font-weight:500;font-size:9px;
@@ -140,7 +183,14 @@ button,input,select,textarea{font-family:inherit;color:inherit}
   text-overflow:ellipsis;white-space:nowrap}
 .ctl .top .rt{display:flex;align-items:center;gap:3px;flex:0 0 auto}
 .ctl .nv{width:68px;background:#101215;border:1px solid var(--ridge);color:var(--txt-2);
-  font-family:var(--mn);font-size:10.5px;padding:2px 5px;text-align:right}
+  font-family:var(--mn);font-size:10.5px;padding:2px 5px;text-align:right;
+  font-variant-numeric:tabular-nums;transition:border-color var(--t-fast)}
+.ctl .nv:hover{border-color:var(--hair)}
+.selhd{padding:0 14px 14px}
+.selhd .sn{font-variation-settings:'wdth' 84;font-weight:400;font-size:14.5px;line-height:1.3;
+  letter-spacing:-.008em;margin-bottom:6px;color:var(--txt)}
+.selhd .sp{font-family:var(--mn);font-size:9.5px;color:var(--txt-3);word-break:break-all;
+  line-height:1.5}
 .ctl .rs{background:0;border:0;color:var(--txt-3);cursor:pointer;font-family:var(--mn);font-size:11px;
   padding:0 2px;opacity:0;transition:.14s var(--e)}
 .ctl:hover .rs,.ctl:focus-within .rs{opacity:1}
@@ -164,8 +214,9 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--mark)}
 .chips{display:flex;gap:5px;flex-wrap:wrap;padding:0 14px 12px}
 .chip{background:var(--edge);border:1px solid var(--ridge);color:var(--txt-3);padding:6px 9px;cursor:pointer;
   font-variation-settings:'wdth' 68;font-weight:500;font-size:9px;letter-spacing:.14em;text-transform:uppercase;
-  white-space:nowrap}
-.chip:hover{color:var(--txt)}
+  white-space:nowrap;transition:var(--t-fast) var(--e)}
+.chip:hover{color:var(--txt);border-color:var(--hair)}
+.chip:active{transform:translateY(1px)}
 .chip.on{background:var(--txt);color:#15171A;border-color:transparent}
 .chip[data-i=endre].on{background:var(--mark)}.chip[data-i=fjern].on{background:var(--cut);color:#fff}
 .chip[data-i=legg].on{background:#6FA8DC;color:#15171A}.chip[data-i=spor].on{background:var(--ask);color:#fff}
@@ -203,12 +254,19 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--mark)}
   line-height:1.5;text-align:left}
 #laywarn button{margin-top:6px}
 #laytree{padding-bottom:8px}
-.lay{display:flex;align-items:center;gap:5px;padding:5px 8px 5px 0;cursor:pointer;white-space:nowrap;
-  border-bottom:1px solid rgba(35,39,44,.55)}
+.lay{position:relative;display:flex;align-items:center;gap:5px;padding:5px 8px 5px 0;cursor:pointer;
+  white-space:nowrap;border-bottom:1px solid rgba(35,39,44,.55);transition:background var(--t-fast)}
+/* One hairline per nested row, drawn at its own indent, so sibling runs read as
+   a connected branch instead of a ragged stack of paddings. */
+.lay.nest:before{content:'';position:absolute;left:calc(var(--ind,0px) - 5px);top:0;bottom:0;
+  width:1px;background:var(--edge)}
 .lay:hover{background:var(--edge)}
-.lay.on{background:var(--edge);box-shadow:inset 2px 0 0 var(--keep)}
-.lay.now{box-shadow:inset 2px 0 0 var(--mark)}
-.lay.on.now{box-shadow:inset 2px 0 0 var(--keep),inset 4px 0 0 var(--mark)}
+.lay.now:after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--mark)}
+.lay.on{background:var(--edge)}
+.lay.on:after{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--keep)}
+.lay.on.now:after{background:linear-gradient(var(--keep) 50%,var(--mark) 50%)}
+#laytree.fresh .lay{animation:layIn .3s var(--e) both}
+@keyframes layIn{from{opacity:0;transform:translateX(-5px)}to{opacity:1;transform:none}}
 .lay .tw{width:13px;text-align:center;font-family:var(--mn);font-size:9px;color:var(--txt-3);flex:0 0 auto}
 .lay .ic{width:13px;text-align:center;font-family:var(--mn);font-size:9px;color:var(--txt-3);flex:0 0 auto}
 .lay .nm{flex:1;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--txt)}
@@ -226,29 +284,44 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--mark)}
 .lay .more{color:var(--txt-3);font-family:var(--mn);font-size:10px}
 
 /* ── FLOATING TOOLBAR ── */
-#tbar{position:fixed;z-index:45;display:none;align-items:stretch;background:var(--rail);
-  border:1px solid var(--ridge);box-shadow:0 14px 40px -8px rgba(0,0,0,.72);height:30px;
-  padding:0 2px;white-space:nowrap}
-#tbar.on{display:flex}
-#tbar button{display:flex;align-items:center;gap:5px;padding:0 8px;cursor:pointer;color:var(--txt-2);
-  background:0;border:0;font-family:var(--mn);font-size:10.5px;transition:.14s var(--e);
-  max-width:136px;overflow:hidden;height:100%}
-#tbar button:hover{background:var(--edge);color:var(--txt)}
+/* Glass, not a slab — it floats over the work and has to read as a lens on it,
+   not another panel. Hidden with visibility so it can be measured and animated. */
+#tbar{position:fixed;z-index:45;display:flex;align-items:stretch;height:32px;padding:0 2px;
+  white-space:nowrap;background:rgba(26,29,33,.91);   /* opaque enough to stay legible over any artwork */
+  -webkit-backdrop-filter:blur(16px) saturate(1.25);backdrop-filter:blur(16px) saturate(1.25);
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 20px 46px -14px rgba(0,0,0,.82),0 1px 0 rgba(0,0,0,.5),
+    inset 0 1px 0 rgba(255,255,255,.07);
+  opacity:0;visibility:hidden;transform:translateY(6px) scale(.975);transform-origin:50% 100%;
+  transition:opacity var(--t) var(--e),transform var(--t) var(--e),visibility var(--t)}
+#tbar.on{opacity:1;visibility:visible;transform:none}
+#tbar button{display:flex;align-items:center;gap:5px;padding:0 9px;cursor:pointer;color:var(--txt-2);
+  background:0;border:0;font-family:var(--mn);font-size:10.5px;transition:var(--t-fast) var(--e);
+  max-width:140px;overflow:hidden;height:100%}
+#tbar button:hover{background:rgba(255,255,255,.08);color:var(--txt)}
+#tbar button:active{transform:translateY(.5px)}
 #tbar button.on{background:var(--mark);color:#15171A}
-#tbar button i{font-size:8px;color:var(--txt-3);font-style:normal}
+#tbar button i{font-size:8px;color:var(--txt-3);font-style:normal;transition:var(--t-fast)}
+#tbar button:hover i{color:var(--txt-2)}
 #tbar button.on i{color:#15171A}
-#tbar button b{font-weight:400;overflow:hidden;text-overflow:ellipsis;max-width:96px}
-#tbar button.ac{font-size:12px;padding:0 7px}
+#tbar button b{font-weight:400;overflow:hidden;text-overflow:ellipsis;max-width:98px;
+  letter-spacing:.01em}
+#tbar button.ac{font-size:12px;padding:0 8px}
 #tbar button.dg:hover{background:var(--cut);color:#fff}
-#tbar .dv{width:1px;background:var(--ridge);margin:5px 3px;flex:0 0 auto}
-#tbar .dot{width:12px;height:12px;border:1px solid var(--ridge);display:block;flex:0 0 auto}
-#pop{position:fixed;z-index:46;display:none;background:var(--rail);border:1px solid var(--ridge);
-  box-shadow:0 20px 52px -10px rgba(0,0,0,.75);width:252px;max-height:min(60vh,400px);
-  flex-direction:column;overflow:hidden}
-#pop.on{display:flex}
-#pop .ph{padding:10px 13px 8px;border-bottom:1px solid var(--edge);flex:0 0 auto}
+#tbar .dv{width:1px;background:rgba(255,255,255,.11);margin:6px 4px;flex:0 0 auto}
+#tbar .dot{width:13px;height:13px;display:block;flex:0 0 auto;
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),0 1px 2px rgba(0,0,0,.4)}
+#pop{position:fixed;z-index:46;display:flex;flex-direction:column;overflow:hidden;
+  width:254px;max-height:min(60vh,404px);background:rgba(26,29,33,.94);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 26px 58px -12px rgba(0,0,0,.8),inset 0 1px 0 rgba(255,255,255,.06);
+  opacity:0;visibility:hidden;transform:translateY(-5px) scale(.988);transform-origin:0 0;
+  transition:opacity var(--t) var(--e),transform var(--t) var(--e),visibility var(--t)}
+#pop.on{opacity:1;visibility:visible;transform:none}
+#pop .ph{padding:11px 13px 9px;border-bottom:1px solid var(--edge);flex:0 0 auto}
 #pop .pb{overflow-y:auto;flex:1}
-#pop .ctl{padding:11px 13px 13px}
+#pop .ctl{padding:12px 13px 14px}
 #pop .chips{padding:11px 13px}
 @media(max-width:1080px){#tbar button.opt{display:none}}
 
@@ -273,12 +346,18 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--mark)}
   border-bottom:1px solid var(--edge);flex:0 0 auto}
 
 /* ── CONTEXT MENU ── */
-#menu{position:fixed;z-index:55;display:none;background:var(--rail);border:1px solid var(--ridge);
-  box-shadow:0 18px 46px -10px rgba(0,0,0,.75);min-width:186px;padding:4px 0}
-#menu.on{display:block}
+#menu{position:fixed;z-index:55;display:block;min-width:192px;padding:4px 0;
+  background:rgba(26,29,33,.95);
+  -webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);
+  border:1px solid rgba(255,255,255,.1);
+  box-shadow:0 24px 54px -12px rgba(0,0,0,.82),inset 0 1px 0 rgba(255,255,255,.06);
+  opacity:0;visibility:hidden;transform:translateY(-4px) scale(.985);transform-origin:0 0;
+  transition:opacity var(--t-fast) var(--e),transform var(--t-fast) var(--e),visibility var(--t-fast)}
+#menu.on{opacity:1;visibility:visible;transform:none}
 #menu button{display:flex;width:100%;background:0;border:0;color:var(--txt-2);cursor:pointer;
-  padding:7px 13px;font-size:12px;text-align:left;align-items:center;gap:9px}
-#menu button:hover{background:var(--edge);color:var(--txt)}
+  padding:7px 13px;font-size:12px;text-align:left;align-items:center;gap:9px;
+  transition:var(--t-fast) var(--e)}
+#menu button:hover{background:rgba(255,255,255,.07);color:var(--txt)}
 #menu button.dg:hover{background:var(--cut);color:#fff}
 #menu button span{margin-left:auto;font-family:var(--mn);font-size:9.5px;color:var(--txt-3)}
 #menu button:hover span{color:inherit;opacity:.7}
@@ -340,6 +419,7 @@ input:focus,textarea:focus,select:focus{outline:0;border-color:var(--mark)}
     <div id="modehint"></div>
 
     <div id="drop">
+      <span class="kick lbl">Design Desk</span>
       <h1>Legg arbeidet på bordet.</h1>
       <p>Slipp inn en fil du har fått — nettside, plakat, etikett, visittkort.
          Marker hva som skal endres, eller slå på <b>Rediger</b> og bygg om mockupen direkte.</p>
@@ -718,20 +798,36 @@ function load(f){
 }
 function showPlate(){$('#drop').classList.add('hide');$('#plate').classList.add('on');}
 
+var mountPoll=null;
 function mountHTML(txt,quiet){
   state.kind='html';
   var fr=$('#frame'); $('#img').hidden=true; fr.hidden=false;
-  fr.onload=function(){                       /* assigned BEFORE srcdoc */
-    state.doc=fr.contentDocument;
-    stamp(state.doc.body);
+  if(mountPoll){clearInterval(mountPoll);mountPoll=null;}
+  var done=false;
+  /* The iframe's load event waits for every webfont and stylesheet the page
+     links. On a real page that means the plate is visible but Marker, Lag and
+     System are quietly dead for a second or more. So we start as soon as the
+     DOM is parsed and keep load as the fallback. */
+  function ready(){
+    if(done)return;
+    var d=fr.contentDocument;
+    if(!d||!d.body||(!d.body.children.length&&d.readyState==='loading'))return;
+    done=true;
+    if(mountPoll){clearInterval(mountPoll);mountPoll=null;}
+    state.doc=d;
+    stamp(d.body);
     scanTokens(state.src||txt);
     bindFrame(); watchDom(); watchSections();
     $('#nolay').hidden=true;$('#laybox').hidden=false;
-    renderNotes(); clearElem(); layersRefresh(); buildInsChips();
+    layFresh=true;
+    renderNotes(); clearElem(); layersRefresh(); buildInsChips(); setCursor();
     syncUndoBtns();
     if(!quiet)toast('Lastet — '+state.name+' · trykk R for å redigere');
-  };
+  }
+  fr.onload=function(){ready();watchSections();};   /* re-measure once fonts settle */
   fr.srcdoc=txt;
+  mountPoll=setInterval(ready,50);
+  setTimeout(function(){if(mountPoll){clearInterval(mountPoll);mountPoll=null;}},20000);
   showPlate(); setWidth(0);
 }
 function mountImage(src){
@@ -954,8 +1050,22 @@ function setMode(m){
   var mh=$('#modehint');
   if(state.mode){mh.textContent=HINTS[state.mode];mh.classList.add('on');}
   else mh.classList.remove('on');
+  $('#plate').classList.toggle('mark',state.mode==='mark');
+  setCursor();
   if(state.mode==='mark')deselect();
   sync();
+}
+/* The cursor is the cheapest possible answer to "is this click about to change
+   the artwork?" — crosshair means you are annotating, arrow means you are not. */
+function setCursor(over){
+  if(!state.doc)return;
+  var d=state.doc,s=d.getElementById('dd-cursor');
+  if(!s){
+    s=d.createElement('style');s.id='dd-cursor';
+    (d.head||d.documentElement).appendChild(s);
+  }
+  var c=over||(state.mode==='mark'?'crosshair':'');
+  s.textContent=c?'*{cursor:'+c+'!important}':'';
 }
 $('#t-mark').onclick=function(){setMode('mark')};
 $('#t-pick').onclick=function(){setMode('pick')};
@@ -1435,7 +1545,7 @@ function dragStart(e,id){
   var el=liveOf(id);if(!el)return;
   var p=vpt(e,true),b=basePos(el);
   state.drag={id:id,x0:p.x,y0:p.y,bx:b.x,by:b.y,css:el.style.cssText,moved:false,checked:false};
-  state.doc.body.style.userSelect='none';
+  state.doc.body.style.userSelect='none';setCursor('grabbing');
 }
 function dragMove(e,inFrame){
   var g=state.drag;if(!g)return;
@@ -1449,7 +1559,7 @@ function dragMove(e,inFrame){
     var ok=guardMove(el,function(){moveTo(el,g.bx+dx,g.by+dy)},dx,dy);
     if(!ok){
       el.style.cssText=g.css;state.drag=null;
-      state.doc.body.style.userSelect='';
+      state.doc.body.style.userSelect='';setCursor();
       toast('Dette elementet kan ikke flyttes fritt — bruk Flytt opp/ned');
       sync();return;
     }
@@ -1460,7 +1570,7 @@ function dragMove(e,inFrame){
 function dragEnd(){
   var g=state.drag;if(!g)return;
   state.drag=null;
-  if(state.doc)state.doc.body.style.userSelect='';
+  if(state.doc){state.doc.body.style.userSelect='';setCursor();}
   var el=liveOf(g.id);
   if(el&&g.moved){
     recordMove(g.id,el);
@@ -1960,8 +2070,9 @@ function grp(key,title,shut,fold){
     g.classList.toggle('shut');state.grp[key]=g.classList.contains('shut');};
   return g;
 }
+var lastRailSel=null;
 function clearElem(){
-  unbindV('rail');
+  unbindV('rail');lastRailSel=null;
   $('#noelem').hidden=false;$('#elemctl').hidden=true;$('#elemctl').innerHTML='';
   closeFontRail();
 }
@@ -1977,13 +2088,15 @@ function renderElem(){
   $('#noelem').hidden=true;
   var pane=$('#p-elem'),psc=pane.scrollTop;
   var box=$('#elemctl');box.hidden=false;box.innerHTML='';
+  box.classList.toggle('fresh',lastRailSel!==state.selId);
+  lastRailSel=state.selId;
   var sel=path(el),k=kindOf(el);
 
   var hd=document.createElement('div');hd.className='grp';
   hd.innerHTML='<span class="lbl">Valgt element</span>'+
-    '<div style="padding:0 14px 13px"><div style="font-size:12.5px;margin-bottom:5px">'+
-    esc(snip(el))+'</div><div class="num" style="font-size:9.5px;color:var(--txt-3);'+
-    'word-break:break-all">'+esc(sel)+'</div></div>';
+    '<div class="selhd"><div class="sn"></div><div class="sp"></div></div>';
+  hd.querySelector('.sn').textContent=snip(el);
+  hd.querySelector('.sp').textContent=sel;
   box.appendChild(hd);
 
   /* — SKRIFT — */
@@ -2109,12 +2222,18 @@ function layName(el){
   return tagName(el);
 }
 function opened(id,depth){var v=state.open[id];return v===undefined?depth<1:v}
+var layN=0,layFresh=true;
 function layersRefresh(){
   var t=$('#laytree');if(!t)return;
   if(!state.doc){t.innerHTML='';return;}
   var pane=$('#p-lay'),sc=pane.scrollTop;
   var frag=document.createDocumentFragment();
+  layN=0;
   walkLay(state.doc.body,0,frag);
+  /* The rows only stagger in on the first build after a mount. Replaying it on
+     every DOM mutation would turn a working panel into a flickering one. */
+  t.classList.toggle('fresh',layFresh);
+  layFresh=false;
   t.innerHTML='';t.appendChild(frag);
   pane.scrollTop=sc;
   markLayerSel();markNow();
@@ -2125,9 +2244,12 @@ function walkLay(parent,depth,frag){
   kids.forEach(function(el){
     var id=idOf(el),leaf=isLeaf(el),op=opened(id,depth);
     var row=document.createElement('div');
-    row.className='lay'+(el.style.display==='none'?' hid':'');
+    row.className='lay'+(el.style.display==='none'?' hid':'')+(depth?' nest':'');
     row.dataset.id=id;row.draggable=true;
-    row.style.paddingLeft=(8+depth*11)+'px';
+    var ind=8+depth*11;
+    row.style.paddingLeft=ind+'px';
+    row.style.setProperty('--ind',ind+'px');
+    row.style.animationDelay=Math.min(layN++,26)*11+'ms';
     row.innerHTML='<span class="tw">'+(leaf?'':(op?'−':'+'))+'</span>'+
       '<span class="ic">'+(ICON[el.tagName]||'T')+'</span>'+
       '<span class="nm"></span><span class="tg">'+el.tagName.toLowerCase()+'</span>'+
@@ -2294,6 +2416,7 @@ function exportHTML(o){
   if(o.dropScripts)q('script').forEach(function(e){
     if(e.parentNode)e.parentNode.removeChild(e);});
   q('[data-dd-tf]').forEach(function(e){e.removeAttribute('data-dd-tf')});
+  var cur=c.querySelector('#dd-cursor');if(cur&&cur.parentNode)cur.parentNode.removeChild(cur);
   if(!o.keepIds){
     q('[data-dd-id]').forEach(function(e){e.removeAttribute('data-dd-id')});
     if(c.hasAttribute('data-dd-id'))c.removeAttribute('data-dd-id');

@@ -80,14 +80,46 @@ PDFs (first page) and images mount as a flat plate: annotation and the brief wor
 editing, layers and the toolbar say why they are unavailable. Pins are stored as
 percentages, so they survive width changes.
 
+## Starter pages
+
+`starters/` holds four finished pages to drop into the desk when you are building a
+mockup from nothing rather than marking up someone else's file. Each is a distinct
+aesthetic position, not a variation on one template:
+
+| File | Direction |
+|------|-----------|
+| `redaksjonell.html` | Editorial journal — Newsreader, asymmetric grid, drop cap, dot-leader contents, marginalia |
+| `konstruksjon.html` | Brutalist spec sheet — Archivo Black on Space Mono, 2px rules, safety orange, exposed grid |
+| `stillhet.html` | Quiet luxury — Cormorant Garamond, enormous air, one hairline, an off-axis product block |
+| `jordnaer.html` | Warm organic — Fraunces, grain, soil speckle, rounded cards, dark hero |
+
+All four are built to be edited, not just looked at:
+
+- Colours and type live in `:root`, so the System tab can restyle the whole page at once.
+- Sections are semantic with a heading first, so the Layers tree reads as
+  "Om oss / Tre kort / Rutenett" rather than a wall of `div`.
+- No scripts and no external images — every graphic is inline SVG or CSS, so they work
+  offline and the HTML export is genuinely self-contained.
+
+## The desk's own look
+
+The chrome is deliberately quiet: cool graphite, desaturated grain in the room and never
+on the plate, one accent. A proofing tool that has its own colour cast lies to you about
+the artwork, so the design investment goes into type scale, density, motion and hairlines
+rather than into colour. Motion is orchestrated at three moments only — the plate lifting
+in on mount, the layers tree staggering on first build, and the rail assembling when you
+select something new — and is deliberately absent from every repeated action, because a
+slider that animates on each commit is a slider that fights you.
+
 ## Tests
 
 ```
-node tools/design-desk/test/smoke.mjs     # 84 checks, regression + new features
-node tools/design-desk/test/shots.mjs     # renders PNGs of each UI state for review
+node tools/design-desk/test/smoke.mjs      # 84 checks, regression + new features
+node tools/design-desk/test/starters.mjs   # 52 checks, each starter standalone and in the desk
+node tools/design-desk/test/shots.mjs      # renders PNGs of each UI state for review
 ```
 
-Both need Chromium and `playwright`; they resolve it from a global install so the repo
-picks up no dependencies. `smoke.mjs` deliberately ignores console errors from
+All need Chromium and `playwright`; they resolve it from a global install so the repo
+picks up no dependencies. The suites deliberately ignore console errors from
 `fonts.googleapis.com` — a sandbox without egress is expected, and the font URL table is
 validated separately with `curl`.
