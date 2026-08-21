@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<title>Fixture — markedsside</title>
+<style>
+:root{--brand:#e0443c;--ink:#16181c;--paper:#fdfcfa;--muted:#6b7280}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font:16px/1.55 Georgia,serif}
+section{padding:72px 32px}
+h1{font-size:52px;line-height:1.05;letter-spacing:-.02em;margin-bottom:18px}
+h2{font-size:30px;margin-bottom:14px}
+p{color:var(--muted);max-width:56ch;margin-bottom:14px}
+.hero{background:var(--brand);color:#fff}
+.hero p{color:rgba(255,255,255,.85)}
+.row{display:flex;gap:24px;flex-wrap:wrap}
+.card{position:relative;flex:1 1 220px;padding:28px;background:#fff;border:1px solid #e6e3de}
+.badge{position:absolute;top:-10px;right:-10px;background:var(--brand);color:#fff;
+  padding:4px 10px;font-size:12px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.tile{background:#eceae6;padding:34px;text-align:center}
+.btn{display:inline-block;padding:14px 26px;background:var(--ink);color:#fff;text-decoration:none}
+footer{padding:44px 32px;background:var(--ink);color:#fff}
+</style>
+</head>
+<body>
+<header class="hero">
+  <h1>Legg arbeidet på bordet.</h1>
+  <p>En fiktiv markedsside som brukes til å teste desken. Den har seksjoner, bilder,
+     et rutenett, en flex-rad og et absolutt plassert merke.</p>
+  <a class="btn" href="#kontakt">Ta kontakt</a>
+</header>
+
+<section id="om">
+  <h2>Om oss</h2>
+  <p>Vi lager ting. Denne teksten finnes for at det skal være noe å redigere.</p>
+  <img alt="Plassholder" width="320" height="180"
+    src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='320' height='180'%3E%3Crect width='320' height='180' fill='%23d9d5cf'/%3E%3C/svg%3E">
+</section>
+
+<section id="kort">
+  <h2>Tre kort</h2>
+  <div class="row">
+    <div class="card"><span class="badge">Nyhet</span><h3>Kort én</h3><p>Med et merke oppe til høyre.</p></div>
+    <div class="card"><h3>Kort to</h3><p>Uten merke.</p></div>
+    <div class="card"><h3>Kort tre</h3><p>Også uten merke.</p></div>
+  </div>
+</section>
+
+<section id="rutenett">
+  <h2>Rutenett</h2>
+  <div class="grid">
+    <div class="tile">En</div><div class="tile">To</div><div class="tile">Tre</div>
+  </div>
+</section>
+
+<section class="cta" id="kontakt">
+  <h2>Klar til å begynne?</h2>
+  <p>Denne seksjonen finnes for å bli slettet i testen.</p>
+  <a class="btn" href="#">Kom i gang</a>
+</section>
+
+<footer>
+  <p style="color:rgba(255,255,255,.7)">© 2026 Fiktiv AS</p>
+</footer>
+
+<script>
+/* Proves that undo does not destroy script-made DOM: an innerHTML-snapshot
+   undo would wipe this node, an inverse-op undo keeps it. */
+var d=document.createElement('div');
+d.id='js-made';
+d.style.cssText='padding:10px 32px;background:#111;color:#0f0;font:12px monospace';
+d.textContent='laget av skript ved innlasting';
+document.body.appendChild(d);
+</script>
+</body>
+</html>

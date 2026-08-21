@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Konstruksjon — brutalistisk startside</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --base:#E9E7E2;
+  --black:#0A0A0A;
+  --safety:#FF4D00;
+  --grey:#6E6E6A;
+  --line:2px;
+  --display:'Archivo Black',Impact,sans-serif;
+  --mono:'Space Mono','Courier New',monospace;
+  --pad:22px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--base);color:var(--black);font-family:var(--mono);font-size:13px;
+  line-height:1.5;-webkit-font-smoothing:antialiased}
+.grid{display:grid;grid-template-columns:repeat(12,1fr)}
+.lab{font-family:var(--mono);font-weight:700;font-size:10px;letter-spacing:.18em;
+  text-transform:uppercase}
+.b{border:var(--line) solid var(--black)}
+.bt{border-top:var(--line) solid var(--black)}
+.bb{border-bottom:var(--line) solid var(--black)}
+.br{border-right:var(--line) solid var(--black)}
+
+/* ── HEADER ── */
+header{border-bottom:var(--line) solid var(--black)}
+header .bar{display:flex;justify-content:space-between;align-items:center;
+  padding:9px var(--pad);border-bottom:var(--line) solid var(--black);
+  background:var(--black);color:var(--base);flex-wrap:wrap;gap:12px}
+header h1{font-family:var(--display);font-size:clamp(48px,13.4vw,166px);line-height:.94;
+  letter-spacing:-.045em;text-transform:uppercase;padding:24px var(--pad) 16px;
+  word-break:break-word}
+header h1 span{color:var(--safety)}
+header .sub{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
+  border-top:var(--line) solid var(--black)}
+header .sub div{padding:13px var(--pad);border-right:var(--line) solid var(--black)}
+header .sub div:last-child{border-right:0}
+header .sub b{display:block;font-size:15px;margin-top:5px;font-weight:700}
+
+/* ── SPESIFIKASJON ── */
+#spesifikasjon{border-bottom:var(--line) solid var(--black)}
+#spesifikasjon h2{font-family:var(--display);font-size:26px;text-transform:uppercase;
+  letter-spacing:-.02em;padding:16px var(--pad);border-bottom:var(--line) solid var(--black);
+  background:var(--safety)}
+table{width:100%;border-collapse:collapse}
+th,td{text-align:left;padding:11px var(--pad);border-bottom:1px solid rgba(10,10,10,.22);
+  vertical-align:top}
+th{width:26%;font-weight:700;font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  border-right:var(--line) solid var(--black)}
+td{font-size:14px}
+tr:last-child th,tr:last-child td{border-bottom:0}
+
+/* ── MODULER ── */
+#moduler{border-bottom:var(--line) solid var(--black)}
+#moduler h2{font-family:var(--display);font-size:26px;text-transform:uppercase;
+  letter-spacing:-.02em;padding:16px var(--pad);border-bottom:var(--line) solid var(--black)}
+#moduler .set{display:grid;grid-template-columns:repeat(auto-fit,minmax(238px,1fr))}
+#moduler .mod{padding:var(--pad);border-right:var(--line) solid var(--black);
+  border-bottom:var(--line) solid var(--black);min-height:186px;display:flex;
+  flex-direction:column;justify-content:space-between}
+#moduler .mod .no{font-family:var(--display);font-size:44px;line-height:.9;
+  letter-spacing:-.04em;color:var(--safety)}
+#moduler .mod h3{font-family:var(--display);font-size:17px;text-transform:uppercase;
+  letter-spacing:-.012em;margin:14px 0 7px}
+#moduler .mod p{font-size:13px;color:var(--grey);line-height:1.55}
+#moduler .mod.fill{background:var(--black);color:var(--base)}
+#moduler .mod.fill p{color:rgba(233,231,226,.66)}
+
+/* ── PROSESS: a stepped bar, drawn with borders only ── */
+#prosess{border-bottom:var(--line) solid var(--black);padding:0 0 var(--pad)}
+#prosess h2{font-family:var(--display);font-size:26px;text-transform:uppercase;
+  letter-spacing:-.02em;padding:16px var(--pad);border-bottom:var(--line) solid var(--black)}
+#prosess .steps{display:flex;flex-wrap:wrap;padding:var(--pad) var(--pad) 0;gap:0}
+#prosess .step{flex:1 1 152px;border:var(--line) solid var(--black);
+  padding:15px 16px 17px;position:relative;background:var(--base);margin-left:calc(var(--line) * -1)}
+#prosess .step:first-child{margin-left:0}
+#prosess .step:nth-child(even){margin-top:22px}
+#prosess .step .lab{color:var(--safety)}
+#prosess .step h3{font-family:var(--display);font-size:14px;text-transform:uppercase;
+  margin:9px 0 6px;letter-spacing:-.01em}
+#prosess .step p{font-size:12px;color:var(--grey);line-height:1.5}
+
+/* ── KONTAKT ── */
+#kontakt{display:grid;grid-template-columns:1fr;border-bottom:var(--line) solid var(--black)}
+@media(min-width:820px){#kontakt{grid-template-columns:1.35fr 1fr}}
+#kontakt .big{padding:var(--pad);border-right:var(--line) solid var(--black)}
+#kontakt .big h2{font-family:var(--display);font-size:clamp(28px,5vw,54px);line-height:.94;
+  text-transform:uppercase;letter-spacing:-.035em;margin-bottom:16px}
+#kontakt .big a{display:inline-block;background:var(--black);color:var(--base);
+  text-decoration:none;padding:14px 24px;font-weight:700;font-size:11px;
+  letter-spacing:.18em;text-transform:uppercase}
+#kontakt .side{padding:var(--pad)}
+#kontakt .side p{font-size:14px;margin-bottom:13px}
+footer{padding:15px var(--pad);display:flex;justify-content:space-between;gap:14px;
+  flex-wrap:wrap;background:var(--black);color:var(--base)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="bar">
+    <span class="lab">Konstruksjon AS — Verksted for bygg i tre</span>
+    <span class="lab">Est. 1974 / Orgnr 918 226 441</span>
+  </div>
+  <h1>Bygget for<br>å <span>stå</span></h1>
+  <div class="sub">
+    <div><span class="lab">Leveringstid</span><b>6–9 uker</b></div>
+    <div><span class="lab">Spennvidde</span><b>opptil 24 m</b></div>
+    <div><span class="lab">Materiale</span><b>Limtre, gran</b></div>
+    <div><span class="lab">Sertifisering</span><b>PEFC / CE</b></div>
+  </div>
+</header>
+
+<section id="spesifikasjon">
+  <h2>Spesifikasjon</h2>
+  <table>
+    <tr><th>Bæresystem</th><td>Limtre GL30c, søyle og bjelke, momentstive knutepunkt i stål S355.</td></tr>
+    <tr><th>Toleranse</th><td>± 2 mm på kappet lengde. Alle hull forborret på verksted.</td></tr>
+    <tr><th>Overflate</th><td>Ubehandlet som standard. Jernvitriol eller linolje på forespørsel.</td></tr>
+    <tr><th>Brannklasse</th><td>R30 uten kledning. R60 med 15 mm gipsplate.</td></tr>
+    <tr><th>Montasje</th><td>To montører, mobilkran. Typisk fire dager for 300 m².</td></tr>
+    <tr><th>Dokumentasjon</th><td>FDV-perm, statiske beregninger og as-built-tegninger ved overlevering.</td></tr>
+  </table>
+</section>
+
+<section id="moduler">
+  <h2>Moduler</h2>
+  <div class="set">
+    <div class="mod">
+      <div class="no">01</div>
+      <div><h3>Grunnramme</h3><p>Fundamentbolter og sviller. Settes ut med totalstasjon før reising.</p></div>
+    </div>
+    <div class="mod fill">
+      <div class="no">02</div>
+      <div><h3>Rammeverk</h3><p>Søyler og hovedbjelker. Reises som ferdige rammer på bakken.</p></div>
+    </div>
+    <div class="mod">
+      <div class="no">03</div>
+      <div><h3>Takflate</h3><p>Massivtreelementer, 200 mm. Legges direkte på hovedbjelke.</p></div>
+    </div>
+    <div class="mod">
+      <div class="no">04</div>
+      <div><h3>Kledning</h3><p>Vertikal låvepanel, 22 mm, med lufting bak. Monteres til slutt.</p></div>
+    </div>
+  </div>
+</section>
+
+<section id="prosess">
+  <h2>Prosess</h2>
+  <div class="steps">
+    <div class="step"><span class="lab">Uke 00</span><h3>Befaring</h3><p>Vi måler opp og ser på grunnforhold.</p></div>
+    <div class="step"><span class="lab">Uke 02</span><h3>Tegning</h3><p>Snitt og plan til godkjenning.</p></div>
+    <div class="step"><span class="lab">Uke 04</span><h3>Produksjon</h3><p>Kapping og boring på verksted.</p></div>
+    <div class="step"><span class="lab">Uke 08</span><h3>Reising</h3><p>Fire dager på plassen.</p></div>
+    <div class="step"><span class="lab">Uke 09</span><h3>Overlevering</h3><p>Perm, tegninger, nøkkel.</p></div>
+  </div>
+</section>
+
+<section id="kontakt">
+  <div class="big">
+    <h2>Skal du bygge noe som skal vare i hundre år?</h2>
+    <p style="margin-bottom:20px;color:var(--grey);max-width:44ch">Send oss målene og en
+      skisse. Du får et prisanslag innen fem arbeidsdager, uten forpliktelser.</p>
+    <a href="#">Be om anslag</a>
+  </div>
+  <div class="side">
+    <p><span class="lab">Verksted</span><br>Industrivegen 12, 4340 Bryne</p>
+    <p><span class="lab">Telefon</span><br>51 77 20 40</p>
+    <p><span class="lab">Post</span><br>verksted@konstruksjon.no</p>
+  </div>
+</section>
+
+<footer>
+  <span class="lab">Konstruksjon AS</span>
+  <span class="lab">Alt tegnet og kappet i Rogaland</span>
+</footer>
+
+</body>
+</html>
