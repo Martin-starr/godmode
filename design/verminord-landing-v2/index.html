@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verminord — norsk premium-vermikompost, produsert på Jæren</title>
+<meta name="description" content="VermiCast er norskprodusert vermikompost fra Jæren. Lab-dokumentert ved ALS Norge, Debio-registrert og Mattilsynet-registrert.">
+<link rel="preload" href="fonts/ibm-plex-sans-variable.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="verminord.css">
+</head>
+<body>
+<!-- PAGE:START -->
+<div class="page" data-page="hjem">
+
+  <!-- ========== topbar ========== -->
+  <div class="shell">
+    <header class="topbar">
+      <a class="wordmark" href="index.html">Verminord</a>
+      <a class="topbar-link" href="#engros">For forhandlere</a>
+    </header>
+  </div>
+
+  <!-- ========== SKJERM 1 — hero ========== -->
+  <div class="shell">
+    <section class="hero">
+      <p class="eyebrow">VermiCast</p>
+      <h1>Norsk premium-vermikompost, produsert på Jæren</h1>
+      <p class="ingress">Jeg har dyrket med vermikompost i snart 20 år. Nå produserer jeg den selv — lab-dokumentert ved ALS Norge, Debio-registrert og Mattilsynet-registrert.</p>
+      <div class="hero-actions">
+        <a class="btn btn--gold" href="#engros">Engrosvilkår og prøvesekk</a>
+        <a class="quiet-link" href="#hvor-mye">Dyrker du selv? Regn ut hvor mye du trenger →</a>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== SKJERM 1 — dokumentasjonsstripe ========== -->
+  <div class="shell">
+    <section class="sect sect--tight" aria-label="Dokumentasjon">
+      <div class="dok-grid">
+        <article class="dok-card">
+          <p class="dok-plain">Fullt moden. Ingen ettermodning i sekken.</p>
+          <p class="dok-figure">Rottegrad V</p>
+        </article>
+        <article class="dok-card">
+          <p class="dok-plain">Laveste tungmetallklasse i norsk regelverk.</p>
+          <p class="dok-figure">Klasse I</p>
+        </article>
+        <article class="dok-card">
+          <p class="dok-plain">Ingen salmonella i produktet.</p>
+          <p class="dok-figure">Salmonella ikke påvist</p>
+        </article>
+        <article class="dok-card">
+          <p class="dok-plain">Lav og balansert næring — jordforbedring, ikke hurtiggjødsel.</p>
+          <p class="dok-figure">N 0,49&nbsp;% · P 0,20&nbsp;% · K 0,22&nbsp;%</p>
+        </article>
+      </div>
+      <p class="dok-source">Analysert av ALS Norge, rapport NO2604972.</p>
+    </section>
+  </div>
+
+  <!-- ========== engros — dit hero-knappen peker ========== -->
+  <div class="shell">
+    <section class="sect engros" id="engros">
+      <p class="eyebrow">For forhandlere</p>
+      <h2>Engrosvilkår og prøvesekk</h2>
+      <p class="lead">VermiCast leveres i 5-liters vevd PP-sekk, EXW Klepp. Ta kontakt, så sender jeg vilkår, full analyserapport og en prøvesekk du kan se på selv.</p>
+
+      <form class="form" method="post" action="#engros" novalidate>
+        <div class="field">
+          <label for="e-navn">Navn</label>
+          <input id="e-navn" name="navn" type="text" autocomplete="name">
+        </div>
+        <div class="field">
+          <label for="e-firma">Butikk eller firma</label>
+          <input id="e-firma" name="firma" type="text" autocomplete="organization">
+        </div>
+        <div class="field">
+          <label for="e-epost">E-post</label>
+          <input id="e-epost" name="epost" type="email" autocomplete="email" inputmode="email">
+        </div>
+        <div class="field">
+          <label for="e-melding">Kort om hva dere selger i dag</label>
+          <textarea id="e-melding" name="melding" rows="3"></textarea>
+        </div>
+        <button class="btn btn--navy" type="submit">Be om vilkår og prøvesekk</button>
+      </form>
+    </section>
+  </div>
+
+  <!-- ========== SKJERM 2 — overgang ========== -->
+  <div class="shell">
+    <section class="statement">
+      <p>Du kan gjødsle en død jord så mye du vil.</p>
+      <p>Den blir ikke levende av det.</p>
+    </section>
+  </div>
+
+  <!-- ========== SKJERM 2 + 3 — kalkulator ========== -->
+  <div class="shell">
+    <section class="sect kalk" id="hvor-mye">
+      <h2>Hvor mye trenger du?</h2>
+      <p class="kalk-intro">Fortell meg hva du dyrker, så regner jeg ut hvor mye vermikompost det går med.</p>
+
+      <div class="kalk-box" id="kalk-box" aria-live="polite">
+        <noscript>
+          <p class="lead">Toppdress 100–200&nbsp;g/m² på våren, eller bland inn i jorda før planting. I potter: bland inn 5–10&nbsp;% i pottejorda. Det er nok.</p>
+        </noscript>
+      </div>
+    </section>
+  </div>
+
+  <!-- ========== bunn ========== -->
+  <div class="shell">
+    <footer class="footer">
+      <div class="footer-grid">
+        <div>
+          <a class="wordmark" href="index.html">Verminord</a>
+          <p>Verminord AS · org.nr. 935&nbsp;948&nbsp;878<br>
+             Orstadvegen 229, 4353 Klepp Stasjon<br>
+             Rogaland, Norge</p>
+        </div>
+        <div>
+          <h3>Dokumentasjon</h3>
+          <p>Analysert av ALS Norge, rapport NO2604972. Debio-registrert, Mattilsynet-registrert og gjødselvareregistrert. Full rapport sendes på forespørsel.</p>
+        </div>
+        <div id="personvern">
+          <h3>Personvern</h3>
+          <p>Legger du igjen e-postadressen din, bruker jeg den til å sende det du ba om — og til å svare deg. Ingenting deles videre, og du kan be meg slette den når som helst.</p>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+</div>
+<!-- PAGE:END -->
+<script src="kalkulator.js"></script>
+</body>
+</html>
