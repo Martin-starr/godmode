@@ -56,10 +56,21 @@ jobs:
         env:
           TRIGGER: ${{ github.event_name == 'workflow_dispatch' && inputs.job || github.event.schedule }}
         run: |
+          # The method is part of the endpoint's contract, not a detail curl can
+          # guess. /api/inbox/enrich exports POST only, so the GET this workflow
+          # used to send came back 405 every hour from the day scheduling moved
+          # here — a red X and an alert mail, hourly, for a triage run that never
+          # happened. Each endpoint now names the verb it actually answers.
           case "$TRIGGER" in
-            health|"0 * * * *")        echo "endpoint=/api/health/check"    >> "$GITHUB_OUTPUT" ;;
-            inbox|"15 * * * *")        echo "endpoint=/api/inbox/enrich"    >> "$GITHUB_OUTPUT" ;;
-            compliance|"0 7 1 * *")    echo "endpoint=/api/compliance/gaps" >> "$GITHUB_OUTPUT" ;;
+            health|"0 * * * *")
+              echo "endpoint=/api/health/check"    >> "$GITHUB_OUTPUT"
+              echo "method=GET"                    >> "$GITHUB_OUTPUT" ;;
+            inbox|"15 * * * *")
+              echo "endpoint=/api/inbox/enrich"    >> "$GITHUB_OUTPUT"
+              echo "method=POST"                   >> "$GITHUB_OUTPUT" ;;
+            compliance|"0 7 1 * *")
+              echo "endpoint=/api/compliance/gaps" >> "$GITHUB_OUTPUT"
+              echo "method=POST"                   >> "$GITHUB_OUTPUT" ;;
             *)
               # An unmapped schedule would otherwise run this workflow and call
               # nothing — a green tick for work that never happened, which is the
@@ -69,11 +80,12 @@ jobs:
               ;;
           esac
 
-      - name: Call ${{ steps.pick.outputs.endpoint }}
+      - name: Call ${{ steps.pick.outputs.method }} ${{ steps.pick.outputs.endpoint }}
         env:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           BASE_URL: ${{ vars.DASH_BASE_URL || 'https://dash.verminord.app' }}
           ENDPOINT: ${{ steps.pick.outputs.endpoint }}
+          METHOD: ${{ steps.pick.outputs.method }}
         run: |
           set -euo pipefail
 
@@ -86,15 +98,17 @@ jobs:
           # retry a 401, which is a configuration error that retrying cannot fix.
           code=$(curl -sS -o response.txt -w '%{http_code}' \
             --max-time 90 --retry 2 --retry-delay 5 --retry-connrefused \
+            -X "${METHOD}" \
             -H "Authorization: Bearer ${CRON_SECRET}" \
             "${BASE_URL}${ENDPOINT}")
 
-          echo "HTTP ${code} — ${BASE_URL}${ENDPOINT}"
+          echo "HTTP ${code} — ${METHOD} ${BASE_URL}${ENDPOINT}"
           head -c 2000 response.txt || true
           echo
 
           case "$code" in
             2*) ;;
             401|403) echo "::error::${code} — CRON_SECRET does not match the value deployed on Vercel."; exit 1 ;;
+            405)     echo "::error::405 — ${ENDPOINT} does not answer ${METHOD}. Check which handler the route exports and fix the method in the case above."; exit 1 ;;
             *)       echo "::error::${code} from ${ENDPOINT}."; exit 1 ;;
           esac
