@@ -195,7 +195,7 @@ After installation, these commands are available inside Claude Code:
 | **development** | 7 | backend, frontend, database, Python, React, mobile |
 | **infrastructure** | 7 | Docker, CI/CD, deploy, DNS/SSL, monitoring, server setup |
 | **multimodel** | 7 | GPT advisor, Gemini advisor, adversarial review, LLM council |
-| **design** | 5 | UI/UX pro max, components, mobile design, screen-to-code |
+| **design** | 18 | UI/UX pro max, components, mobile design, screen-to-code, taste/anti-slop frontend, brand kits, design-reference image generation |
 | **data** | 5 | scraping, data analysis, knowledge graphs |
 | **workflow** | 5 | dispute, interview, planning, self-improve |
 | **quality** | 4 | code review, batch operations, integration checks |
@@ -257,7 +257,7 @@ GODMODE/
   skills/
     security/           --> 8 security skills
     development/        --> 7 development skills
-    design/             --> 5 design skills
+    design/             --> 18 design skills (13 vendored, see design/VENDORED.md)
     ...                 --> 50+ skills total
   rules/
     delegator/          --> GPT/Gemini delegation rules
