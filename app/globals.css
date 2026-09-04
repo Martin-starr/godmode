@@ -243,7 +243,7 @@ button, input, select, textarea { font-family: inherit; }
   .brand, .navk, .sidefoot { display: none; }
   .nav {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(4, 1fr); /* 11 sections → 3 rows of 4 */
     padding: 0;
     width: 100%;
   }
@@ -258,7 +258,7 @@ button, input, select, textarea { font-family: inherit; }
     min-height: 44px;
   }
   .navItem.on { border-left: 0; border-top-color: var(--gold); }
-  .main { padding-bottom: calc(104px + env(safe-area-inset-bottom)); }
+  .main { padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
   .wrap { padding: 22px 20px 60px; }
   .mlogout { display: inline; }
   /* 16px inputs stop iOS Safari from zooming the page on focus */
@@ -331,7 +331,7 @@ button, input, select, textarea { font-family: inherit; }
   max-width: min(420px, calc(100vw - 48px));
 }
 @media (max-width: 820px) {
-  .toast.global { bottom: calc(112px + env(safe-area-inset-bottom)); right: 16px; left: 16px; }
+  .toast.global { bottom: calc(158px + env(safe-area-inset-bottom)); right: 16px; left: 16px; }
 }
 
 /* Modal (enlarged project card) */

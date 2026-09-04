@@ -1,6 +1,6 @@
 # Verminord SEO-agent — plan
 
-*Skrevet 2026-09-04. Status: forslag til godkjenning. Ingen kode er skrevet ennå.*
+*Skrevet 2026-09-04. Status: godkjent av Martin samme dag og bygget i PR #40. Se `seo/README.md` for hvordan det virker og `SETUP-CHECKLIST.md` for det som gjenstår.*
 
 Dette dokumentet er planen Martin godkjenner. `MASTER-PROMPT.md` i samme mappe er
 prompten som bygger alt i én økt når planen er godkjent. `SETUP-CHECKLIST.md` er

@@ -98,3 +98,13 @@ med samme navn:
 | `SERPER_API_KEY` | Nei, men anbefalt | SERP side om side, nyheter, lead-søk |
 | `OPENAI_API_KEY`, `GEMINI_API_KEY`, `PERPLEXITY_API_KEY` | Nei | AI-synlighet på den motoren |
 | `PSI_API_KEY` | Nei | Ingenting (høyere kvote) |
+
+## Valgfrie variabler (GitHub → Settings → Secrets and variables → Actions → Variables)
+
+| Navn | Hva |
+|---|---|
+| `DASH_AI_MODEL` | Overstyr Claude-modellen for brevet (standard er den appen bruker). |
+| `OPENAI_MODEL`, `GEMINI_MODEL` | Overstyr modell-id for AI-synlighet hvis standardvalget blir utdatert (`gpt-5`, `gemini-2.5-flash`). |
+| `ALERT_FROM` | Avsender for brevet når domenet er verifisert i Resend, f.eks. `Verminord <agent@verminord.no>`. |
+| `DASH_BASE_URL` | Lenken i brevet (standard `https://dash.verminord.app`). |
+| `SKIP_ADS` | Sett til `1` for å hoppe over annonsesteget helt. |

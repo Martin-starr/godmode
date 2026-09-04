@@ -80,6 +80,21 @@ export const GET = guarded(async (req, ctx, user) => {
     from dash.sensor_readings order by channel, measured_at desc`;
   const sensorMap = await sql`select channel, system, label, active
     from dash.sensor_map order by channel`;
+  // The SEO agent's schema is optional at boot: if migration 008 is not
+  // applied yet, Brief simply has no SEO block. Three cheap queries,
+  // sequential like everything else here.
+  let seo = null;
+  try {
+    const [tot] = await sql`select
+        coalesce(sum(clicks) filter (where date >= current_date - 9 and date < current_date - 2), 0)::int as clicks7,
+        coalesce(sum(clicks) filter (where date >= current_date - 16 and date < current_date - 9), 0)::int as clicks_prev
+      from seo.gsc_daily where page = '*' and query = '*'`;
+    const [un] = await sql`select count(*)::int as n from seo.pulse where not read`;
+    const latest = await sql`select id, at, source, severity, title from seo.pulse order by at desc, id desc limit 3`;
+    seo = { clicks7: tot.clicks7, clicksPrev: tot.clicks_prev, unread: un.n, latest };
+  } catch (e) {
+    console.warn("bootstrap: seo-skjema ikke tilgjengelig:", e.message);
+  }
   step("payload queries done (" + readings.length + " readings)");
 
   return json({
@@ -102,6 +117,7 @@ export const GET = guarded(async (req, ctx, user) => {
     integrations: integrations.map((r) => ({ ...r, status: classify(r) })),
     sensorLatest,
     sensorMap,
+    seo,
     aiEnabled: !!process.env.ANTHROPIC_API_KEY,
     aiModel: process.env.ANTHROPIC_API_KEY ? activeModel() : null,
   });
