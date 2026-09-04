@@ -1,0 +1,98 @@
+name: SEO ukesjobb
+
+# Why this is its own workflow and not a line in scheduled-jobs.yml: that
+# file curls an endpoint on Vercel and is done in seconds. This job runs the
+# collectors itself — Node, a headless Chromium for the ad libraries, ten to
+# twenty minutes of API calls — none of which fits a Hobby-plan lambda. The
+# dashboard only reads what lands in Supabase.
+#
+# 03:30 UTC Monday = 05:30 Oslo in summer, 04:30 in winter. GitHub's cron is
+# best-effort and can start late under load; three hours of slack before the
+# 07:00 brief is the point of the early hour.
+#
+# A non-zero exit fails the job on purpose (seo/run.mjs exits 1 only when the
+# brief could not be sent). A red X here is the outer layer of monitoring.
+
+on:
+  schedule:
+    - cron: "30 3 * * 1"
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Hvilket steg (all = hele kjeden)
+        required: true
+        default: all
+        type: choice
+        options: [all, gsc, ga4, psi, serp, competitors, brreg, ads, news, ai, scout, analyze, brief, send]
+      backfill:
+        description: Hent 16 måneder Search Console-historikk (første kjøring)
+        required: false
+        default: false
+        type: boolean
+      resend:
+        description: Send ukens brief på nytt
+        required: false
+        default: false
+        type: boolean
+
+concurrency:
+  group: seo-weekly
+  cancel-in-progress: false
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    env:
+      JOB: ${{ github.event_name == 'workflow_dispatch' && inputs.job || 'all' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Install Chromium (only when ads run)
+        if: env.JOB == 'all' || env.JOB == 'ads'
+        run: npx playwright install --with-deps chromium
+
+      - name: Check required secrets
+        env:
+          DASH_DATABASE_URL: ${{ secrets.DASH_DATABASE_URL }}
+        run: |
+          if [ -z "${DASH_DATABASE_URL:-}" ]; then
+            echo "::error::DASH_DATABASE_URL er ikke satt som repo-secret — ingenting kan lagres. Se docs/seo-agent/SETUP-CHECKLIST.md trinn 4."
+            exit 1
+          fi
+
+      - name: Run SEO agent
+        env:
+          DASH_DATABASE_URL: ${{ secrets.DASH_DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DASH_AI_MODEL: ${{ vars.DASH_AI_MODEL }}
+          GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
+          GSC_SITE_URL: ${{ secrets.GSC_SITE_URL }}
+          GA4_PROPERTY_ID: ${{ secrets.GA4_PROPERTY_ID }}
+          PSI_API_KEY: ${{ secrets.PSI_API_KEY }}
+          SERPER_API_KEY: ${{ secrets.SERPER_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
+          SEO_BRIEF_EMAIL: ${{ secrets.SEO_BRIEF_EMAIL }}
+          ALERT_FROM: ${{ vars.ALERT_FROM }}
+          DASH_BASE_URL: ${{ vars.DASH_BASE_URL }}
+          SKIP_ADS: ${{ vars.SKIP_ADS }}
+        run: |
+          set -euo pipefail
+          ARGS=""
+          if [ "$JOB" != "all" ]; then ARGS="$ARGS --only $JOB"; fi
+          if [ "${{ inputs.backfill }}" = "true" ]; then ARGS="$ARGS --backfill"; fi
+          if [ "${{ inputs.resend }}" = "true" ]; then ARGS="$ARGS --resend"; fi
+          echo "node seo/run.mjs $ARGS"
+          node seo/run.mjs $ARGS
