@@ -125,3 +125,31 @@ DASH_DATABASE_URL=postgresql://... DASH_DB_NO_SSL=1 npm run dev
 - **Center 374-parseren** (hygienisering) er skrevet på nytt og er tolerant for
   CSV/TSV med dato+tid og opptil 4 temperaturkolonner — test med en ekte
   eksportfil.
+
+## SEO-agent
+
+Fanen **SEO** viser det den ukentlige SEO-agenten samler inn: ukesbrief,
+Pulse-strøm, Search Console-trender, konkurrenter, AI-synlighet, leads,
+årshjul og innholdsutkast. Selve innsamlingen kjører **ikke** i denne appen
+(Hobby-lambdaer tåler ikke 10–15 minutter), men som et Node-skript i GitHub
+Actions:
+
+| Jobb | Fil | Frekvens |
+|---|---|---|
+| SEO ukesjobb | `.github/workflows/seo-weekly.yml` → `node seo/run.mjs` | Mandag 03:30 UTC, eller «Run workflow» med valg av steg |
+
+Data ligger i skjemaet `seo` (migrasjon `dash-scripts/migrations/008_seo.sql`,
+anvendt 2026-09-04). Appen leser via `app/api/seo/*`; Brief får en «SEO-agenten
+· siste 7 dager»-blokk fra `/api/bootstrap` (utelates om skjemaet mangler).
+Helsen til hvert steg vises i helsebanneret som `seo:<steg>`.
+
+Secrets på GitHub (ikke Vercel): `DASH_DATABASE_URL`, `ANTHROPIC_API_KEY`,
+`RESEND_API_KEY`, `SEO_BRIEF_EMAIL`, `GOOGLE_SERVICE_ACCOUNT_JSON`,
+`GSC_SITE_URL`, og valgfritt `GA4_PROPERTY_ID`, `SERPER_API_KEY`,
+`OPENAI_API_KEY`, `GEMINI_API_KEY`, `PERPLEXITY_API_KEY`, `PSI_API_KEY`.
+Trinn for trinn i `docs/seo-agent/SETUP-CHECKLIST.md`; hvordan agenten virker
+i `seo/README.md`.
+
+Merk: `package.json` har nå `"type": "module"` slik at `seo/` kan importere
+`lib/ai.js`, `lib/db.js` og `lib/integrations.js` direkte. Next-bygget er
+uendret av det.

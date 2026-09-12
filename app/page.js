@@ -649,7 +649,7 @@ function SensorStrip({ sensorLatest }) {
   );
 }
 
-function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbox }) {
+function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbox, goToSeo }) {
   const inbox = data.inbox || [];
   const inboxCounts = data.inboxCounts || { total: 0, urgent: 0 };
   const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
@@ -824,6 +824,43 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
               </tbody>
             </table>
           </div>
+          <div className="rule" />
+        </div>
+      ) : null}
+      {/* The agent's three latest notices and the 7-day click count, so the
+          Monday brief is one tap away without opening the SEO tab. Absent
+          entirely when schema seo has nothing yet. */}
+      {data.seo ? (
+        <div>
+          <div className="sechead">
+            <span className="eyebrow gold">SEO-agenten · siste 7 dager</span>
+            <button className="lnk" onClick={() => goToSeo()} style={{ fontSize: 12 }}>
+              Åpne SEO{data.seo.unread ? " (" + data.seo.unread + " uleste)" : ""} →
+            </button>
+          </div>
+          <div className="herosub" style={{ marginBottom: 12 }}>
+            {data.seo.clicks7 || data.seo.clicksPrev
+              ? "Søk: " + data.seo.clicks7 + " klikk (" + pctDelta(data.seo.clicks7, data.seo.clicksPrev) + " mot uka før)"
+              : "Ingen søkedata ennå — se SEO-fanen for oppsett."}
+          </div>
+          {data.seo.latest.length ? (
+            <div className="tscroll">
+              <table className="htbl">
+                <tbody>
+                  {data.seo.latest.map((n, i) => (
+                    <tr key={n.id}>
+                      <td className="hn">{String(i + 1).padStart(2, "0")}</td>
+                      <td>
+                        <div className="ht">{n.title}</div>
+                        <div className="hs">{n.source} · {fmtReceived(n.at)}</div>
+                      </td>
+                      <td className="rt"><span className={"tag " + (n.severity === "viktig" ? "gold" : "")}>{n.severity}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           <div className="rule" />
         </div>
       ) : null}
@@ -3691,6 +3728,923 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* SEO — the weekly agent's tab.                                       */
+/*                                                                     */
+/* Everything here reads from /api/seo/*; the collection itself runs   */
+/* in GitHub Actions (seo/run.mjs) and writes to schema `seo`. The tab */
+/* is read mostly on a phone on Monday morning, so every table scrolls */
+/* inside its own container and the brief comes first.                 */
+/* ------------------------------------------------------------------ */
+
+const SEO_TABS = [
+  ["brief", "Ukesbrief"], ["pulse", "Pulse"], ["sok", "Søk"], ["konkurrenter", "Konkurrenter"],
+  ["ai", "AI-synlighet"], ["leads", "Leads"], ["arshjul", "Årshjul"], ["innhold", "Innhold"],
+];
+const SEO_ENGINE = { anthropic: "Claude", openai: "ChatGPT", gemini: "Gemini", perplexity: "Perplexity" };
+const SEO_MONTHS = ["Januar", "Februar", "Mars", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Desember"];
+const fmtInt = (n) => (n == null ? "—" : Number(n).toLocaleString("nb-NO"));
+const fmtDay = (iso) => {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0");
+};
+const pctDelta = (now, prev) => {
+  if (prev == null || !prev) return now ? "ny" : "—";
+  const p = Math.round(((now - prev) / prev) * 100);
+  return (p > 0 ? "+" : "") + p + " %";
+};
+const weekLabel = (w) => (w ? "uke " + Number(String(w).slice(-2)) : "—");
+const pathOf = (url) => (url ? String(url).replace(/^https?:\/\/[^/]+/, "") || "/" : "");
+
+// One loader for every sub-tab: error with retry, never a misleading empty
+// state (the same rule HygieneView documents).
+function useSeoLoad(path) {
+  const [state, setState] = useState({ data: null, error: null, loading: true });
+  const load = async () => {
+    setState((s) => ({ ...s, loading: true, error: null }));
+    const r = await api(path);
+    const body = await r.json().catch(() => null);
+    if (!r.ok || !body || body.error) setState({ data: null, error: (body && body.error) || "Kunne ikke hente data.", loading: false });
+    else setState({ data: body, error: null, loading: false });
+  };
+  useEffect(() => { load(); }, [path]); // eslint-disable-line react-hooks/exhaustive-deps
+  return { ...state, reload: load };
+}
+
+function SeoState({ loading, error, reload, empty, children }) {
+  if (error) return <div className="mut" style={{ padding: "18px 0" }}>{error} <button className="lnk" onClick={reload}>Prøv igjen</button></div>;
+  if (loading) return <div className="mut" style={{ padding: "18px 0" }}>Henter …</div>;
+  if (empty) return <div className="kempty">{empty}</div>;
+  return children;
+}
+
+async function seoWrite(path, method, body, showToast, fallback) {
+  const r = await api(path, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  if (!r.ok) {
+    if (showToast) showToast(await failMsg(r, fallback));
+    return null;
+  }
+  return r.json().catch(() => ({}));
+}
+
+// Just enough markdown for the brief and the blog drafts: headings, bold,
+// lists, tables, rules. Nothing else is emitted by seo/steps/12-brief.mjs.
+function mdInline(s) {
+  return String(s).split(/(\*\*[^*]+\*\*)/g).map((p, i) => (p.startsWith("**") && p.endsWith("**") ? <b key={i}>{p.slice(2, -2)}</b> : p));
+}
+function MdLite({ text }) {
+  const lines = String(text || "").split("\n");
+  const out = [];
+  let i = 0;
+  let key = 0;
+  const isBlock = (l) => /^(#|\||\s*[-*] |\s*\d+\. |---)/.test(l);
+  while (i < lines.length) {
+    const l = lines[i];
+    if (/^\s*$/.test(l)) { i++; continue; }
+    if (l.startsWith("# ")) { out.push(<div key={key++} className="ht" style={{ fontSize: 20, margin: "4px 0 10px" }}>{mdInline(l.slice(2))}</div>); i++; continue; }
+    if (l.startsWith("## ")) { out.push(<div key={key++} className="eyebrow" style={{ margin: "22px 0 8px" }}>{l.slice(3)}</div>); i++; continue; }
+    if (l.startsWith("### ")) { out.push(<div key={key++} className="ht" style={{ margin: "14px 0 6px" }}>{mdInline(l.slice(4))}</div>); i++; continue; }
+    if (l.startsWith("---")) { out.push(<div key={key++} className="rule tight" />); i++; continue; }
+    if (l.startsWith("|")) {
+      const rows = [];
+      while (i < lines.length && lines[i].startsWith("|")) { rows.push(lines[i]); i++; }
+      const cells = rows.filter((r) => !/^\|\s*-/.test(r)).map((r) => r.split("|").slice(1, -1).map((c) => c.trim()));
+      if (!cells.length) continue;
+      out.push(
+        <div key={key++} className="tscroll" style={{ marginBottom: 8 }}>
+          <table className="dtbl" style={{ minWidth: 0 }}>
+            <thead><tr>{cells[0].map((c, j) => <th key={j}>{c}</th>)}</tr></thead>
+            <tbody>{cells.slice(1).map((r, ri) => <tr key={ri}>{r.map((c, j) => <td key={j} className={j ? "num" : "sy"}>{mdInline(c)}</td>)}</tr>)}</tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+    if (/^\s*[-*] /.test(l) || /^\s*\d+\. /.test(l)) {
+      const ordered = /^\s*\d+\. /.test(l);
+      const re = ordered ? /^\s*\d+\. / : /^\s*[-*] /;
+      const items = [];
+      while (i < lines.length && re.test(lines[i])) { items.push(lines[i].replace(re, "")); i++; }
+      const Tag = ordered ? "ol" : "ul";
+      out.push(<Tag key={key++} style={{ margin: "4px 0 10px", paddingLeft: 20, fontSize: 13.5, lineHeight: 1.6 }}>{items.map((it, j) => <li key={j} style={{ marginBottom: 4 }}>{mdInline(it)}</li>)}</Tag>);
+      continue;
+    }
+    const para = [];
+    while (i < lines.length && !/^\s*$/.test(lines[i]) && !isBlock(lines[i])) { para.push(lines[i]); i++; }
+    out.push(<p key={key++} style={{ margin: "0 0 10px", fontSize: 13.5, lineHeight: 1.6 }}>{mdInline(para.join(" "))}</p>);
+  }
+  return <div>{out}</div>;
+}
+
+// Clicks per day. Same drawing conventions as Chart (grid, navy line, end
+// dot), one series, zero-based scale — a click count has a true zero.
+function SeoChart({ points, h = 220 }) {
+  if (!points || points.length < 2) return <div className="kempty">Ingen daglige tall ennå.</div>;
+  const vals = points.map((p) => p.clicks);
+  const hi = Math.max(5, ...vals);
+  const y = (v) => h - 26 - (v / hi) * (h - 16 - 26);
+  const x = (i) => 42 + (946 * i) / (points.length - 1);
+  const grid = [];
+  for (let i = 0; i <= 4; i++) {
+    const val = (hi * i) / 4;
+    grid.push(
+      <line key={"g" + i} x1={42} x2={988} y1={y(val)} y2={y(val)} stroke="rgba(28,58,92,0.10)" strokeWidth={1} vectorEffect="non-scaling-stroke" />,
+      <text key={"t" + i} x={34} y={y(val) + 3} textAnchor="end" fontSize={11} fill="#5A6270">{Math.round(val)}</text>
+    );
+  }
+  const pts = points.map((p, i) => x(i) + "," + y(p.clicks)).join(" ");
+  const mid = Math.floor((points.length - 1) / 2);
+  return (
+    <svg viewBox={"0 0 1000 " + h} width="100%" style={{ display: "block", height: "auto", overflow: "visible" }} preserveAspectRatio="none">
+      {grid}
+      <polyline points={pts} fill="none" stroke="#1c3a5c" strokeWidth={1.7} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={x(points.length - 1)} cy={y(vals[vals.length - 1])} r={2.6} fill="#1c3a5c" />
+      <text x={42} y={h - 6} fontSize={11} fill="#5A6270">{fmtDay(points[0].date)}</text>
+      <text x={500} y={h - 6} textAnchor="middle" fontSize={11} fill="#5A6270">{fmtDay(points[mid].date)}</text>
+      <text x={988} y={h - 6} textAnchor="end" fontSize={11} fill="#5A6270">{fmtDay(points[points.length - 1].date)}</text>
+    </svg>
+  );
+}
+
+function SeoBrief({ overview }) {
+  const [week, setWeek] = useState(null);
+  const [row, setRow] = useState(null);
+  const [err, setErr] = useState(null);
+  const current = overview?.brief || null;
+  useEffect(() => {
+    if (!week) { setRow(null); setErr(null); return; }
+    let alive = true;
+    api("/api/seo/briefs?week=" + encodeURIComponent(week)).then(async (r) => {
+      const b = await r.json().catch(() => null);
+      if (!alive) return;
+      if (r.ok && b && !b.error) setRow(b); else setErr((b && b.error) || "Kunne ikke hente brevet.");
+    });
+    return () => { alive = false; };
+  }, [week]);
+  if (!current) {
+    return <div className="kempty">Ingen ukesbrief ennå. Første brev kommer etter første kjøring av «SEO ukesjobb» (GitHub → Actions → Run workflow → all). Se docs/seo-agent/SETUP-CHECKLIST.md for nøklene.</div>;
+  }
+  const shown = week ? row : current;
+  return (
+    <div>
+      <div className="sechead">
+        <span className="eyebrow">Ukesbrief · {weekLabel(shown?.week || current.week)}</span>
+        <select className="select" style={{ width: "auto", padding: "8px 12px" }} value={week || current.week} onChange={(e) => setWeek(e.target.value === current.week ? null : e.target.value)}>
+          {(overview.weeks || []).map((w) => <option key={w.week} value={w.week}>{weekLabel(w.week)} · {w.sent_at ? "sendt" : "ikke sendt"}</option>)}
+        </select>
+      </div>
+      {err ? <div className="mut">{err}</div> : null}
+      {shown ? (
+        <div>
+          <div className="card" style={{ padding: "22px 26px" }}><MdLite text={shown.summary_md} /></div>
+          <div className="mut" style={{ marginTop: 10 }}>
+            Generert {fmtReceived(shown.generated_at)}{shown.model ? " · " + shown.model : ""}{shown.sent_at ? " · sendt " + fmtReceived(shown.sent_at) : " · ikke sendt på e-post"}
+          </div>
+        </div>
+      ) : <div className="mut">Henter …</div>}
+    </div>
+  );
+}
+
+function SeoPulse({ canEdit, showToast, onRead }) {
+  const [sev, setSev] = useState("");
+  const [source, setSource] = useState("");
+  const path = "/api/seo/pulse?limit=150" + (sev ? "&severity=" + sev : "") + (source ? "&source=" + encodeURIComponent(source) : "");
+  const { data, error, loading, reload } = useSeoLoad(path);
+  const markAll = async () => {
+    if (await seoWrite("/api/seo/pulse", "PUT", { all: true }, showToast, "Kunne ikke markere som lest.")) { reload(); if (onRead) onRead(); }
+  };
+  const rows = data?.rows || [];
+  return (
+    <div>
+      <div className="sechead">
+        <div className="chips" style={{ marginBottom: 0 }}>
+          {[["", "Alle"], ["viktig", "Viktig"], ["notis", "Notis"], ["info", "Info"]].map(([k, l]) => (
+            <button key={k} className={"chip " + (sev === k ? "on" : "")} onClick={() => setSev(k)}>{l}</button>
+          ))}
+        </div>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <select className="select" style={{ width: "auto", padding: "8px 12px" }} value={source} onChange={(e) => setSource(e.target.value)}>
+            <option value="">Alle kilder</option>
+            {(data?.sources || []).map((s) => <option key={s.source} value={s.source}>{s.source} ({s.n})</option>)}
+          </select>
+          {canEdit ? <button className="btn ghost sm" onClick={markAll}>Marker alt som lest</button> : null}
+        </div>
+      </div>
+      <SeoState loading={loading && !data} error={error} reload={reload} empty={!loading && !rows.length ? "Ingen notiser ennå. Pulse fylles når ukesjobben har kjørt." : null}>
+        <div>
+          {rows.map((r) => (
+            <div key={r.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 14, padding: "14px 0", borderBottom: "1px solid var(--line2)" }}>
+              <span className={"tag " + (r.severity === "viktig" ? "gold" : "")} style={{ alignSelf: "start", minWidth: 58, textAlign: "center", opacity: r.severity === "info" ? 0.6 : 1 }}>{r.severity}</span>
+              <div style={{ minWidth: 0 }}>
+                <div className="ht" style={{ fontWeight: r.read ? 500 : 600, wordBreak: "break-word" }}>{r.title}</div>
+                {r.body ? (
+                  <div className="hs" style={{ maxWidth: "none", whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+                    {/^https?:\/\/\S+$/.test(r.body) ? <a href={r.body} target="_blank" rel="noreferrer" style={{ color: "var(--navy)" }}>{r.body}</a> : r.body}
+                  </div>
+                ) : null}
+                <div className="mut" style={{ marginTop: 4, fontSize: 11 }}>{r.source} · {r.kind} · {weekLabel(r.week)} · {fmtReceived(r.at)}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </SeoState>
+    </div>
+  );
+}
+
+function SeoSearch({ canEdit, showToast }) {
+  const [range, setRange] = useState("28D");
+  const { data, error, loading, reload } = useSeoLoad("/api/seo/search?range=" + range);
+  const [kw, setKw] = useState("");
+  const [cluster, setCluster] = useState("produkt");
+  const addKw = async () => {
+    if (await seoWrite("/api/seo/keywords", "POST", { keyword: kw.trim(), cluster }, showToast, "Kunne ikke legge til søkeordet.")) { setKw(""); reload(); }
+  };
+  const toggleKw = async (k) => {
+    if (await seoWrite("/api/seo/keywords", "PUT", { keyword: k.keyword, active: !k.active }, showToast, "Kunne ikke endre søkeordet.")) reload();
+  };
+  const daily = data?.daily || [];
+  const totals = daily.reduce((a, p) => ({ clicks: a.clicks + p.clicks, impressions: a.impressions + p.impressions }), { clicks: 0, impressions: 0 });
+  const weeks = (data?.weeks || []).slice(-8);
+  return (
+    <div>
+      <div className="sechead">
+        <span className="eyebrow">Search Console · klikk per dag</span>
+        <div className="toggle">
+          {["7D", "28D", "90D", "ALL"].map((r) => <button key={r} className={"tbtn " + (range === r ? "on" : "")} onClick={() => setRange(r)}>{r}</button>)}
+        </div>
+      </div>
+      <SeoState loading={loading && !data} error={error} reload={reload}>
+        {data ? (
+          <div>
+            <SeoChart points={daily} />
+            <div className="legend">
+              <span className="lgmeta">
+                <span>Klikk <b>{fmtInt(totals.clicks)}</b></span>
+                <span>Visninger <b>{fmtInt(totals.impressions)}</b></span>
+                <span>CTR <b>{totals.impressions ? ((100 * totals.clicks) / totals.impressions).toFixed(1) + " %" : "—"}</b></span>
+              </span>
+            </div>
+            <div className="rule" />
+            <div className="sechead">
+              <span className="eyebrow gold">Muligheter · like utenfor topp 10</span>
+              <span className="mut">{data.analysisWeek ? "fra analysen " + weekLabel(data.analysisWeek) : ""}</span>
+            </div>
+            {data.opportunities.length ? (
+              <div className="tscroll">
+                <table className="dtbl">
+                  <thead><tr><th>Søkeord</th><th>Posisjon</th><th>Visninger 28 d</th><th>Side</th><th>Score</th></tr></thead>
+                  <tbody>
+                    {data.opportunities.map((o) => (
+                      <tr key={o.query}>
+                        <td className="sy">{o.query}</td>
+                        <td className="num"><b>{o.position}</b></td>
+                        <td className="num">{fmtInt(o.impressions28)}</td>
+                        <td style={{ fontSize: 12 }}>{o.page ? pathOf(o.page) : <span className="mut">ny side</span>}</td>
+                        <td className="num">{o.score}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className="kempty">Ingen søkeord i posisjon 8–20 med nok visninger ennå.</div>}
+            <div className="rule" />
+            <div className="sechead"><span className="eyebrow gold">Innholdsforfall</span><span className="mut">sider under 70 % av 8-ukers snitt</span></div>
+            {data.decay.length ? (
+              <div className="tscroll">
+                <table className="dtbl">
+                  <thead><tr><th>Side</th><th>Klikk denne uka</th><th>Snitt 8 uker</th><th>Fall</th></tr></thead>
+                  <tbody>{data.decay.map((d) => <tr key={d.page}><td className="sy" style={{ fontSize: 12 }}>{pathOf(d.page)}</td><td className="num"><b>{d.clicks}</b></td><td className="num">{d.avg8}</td><td className="num" style={{ color: "var(--gold)" }}>−{d.drop_pct} %</td></tr>)}</tbody>
+                </table>
+              </div>
+            ) : <div className="kempty">Ingen sider forfaller.</div>}
+            <div className="rule" />
+            <div className="sechead">
+              <span className="eyebrow">Sporede søkeord</span>
+              <span className="mut">{data.keywords.length} ord · posisjon per uke i Google Norge</span>
+            </div>
+            <div className="tscroll">
+              <table className="dtbl">
+                <thead>
+                  <tr><th>Søkeord</th><th>Klynge</th>{weeks.map((w) => <th key={w}>u{Number(w.slice(-2))}</th>)}<th>GSC 31 d</th>{canEdit ? <th></th> : null}</tr>
+                </thead>
+                <tbody>
+                  {data.keywords.map((k) => (
+                    <tr key={k.keyword} style={{ opacity: k.active ? 1 : 0.45 }}>
+                      <td className="sy">{k.keyword}</td>
+                      <td><span className="tag">{k.cluster}</span></td>
+                      {k.ranks.slice(-8).map((r, i) => <td key={i} className="num">{r == null ? "–" : <b>{r}</b>}</td>)}
+                      <td className="num">{k.gsc ? <span>{fmtInt(k.gsc.clicks)} klikk · pos {k.gsc.position}</span> : "–"}</td>
+                      {canEdit ? <td className="rt"><button className="lnk" onClick={() => toggleKw(k)}>{k.active ? "Skjul" : "Aktiver"}</button></td> : null}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            {canEdit ? (
+              <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+                <input className="input" style={{ maxWidth: 280 }} placeholder="Nytt søkeord" value={kw} onChange={(e) => setKw(e.target.value)} />
+                <select className="select" style={{ width: "auto" }} value={cluster} onChange={(e) => setCluster(e.target.value)}>
+                  {["merke", "produkt", "bruk", "kunnskap", "lokal"].map((c) => <option key={c}>{c}</option>)}
+                </select>
+                <button className="btn sm" onClick={addKw} disabled={!kw.trim()}>Legg til</button>
+              </div>
+            ) : null}
+            <div className="rule" />
+            <div className="sechead"><span className="eyebrow">Toppsider · {range}</span></div>
+            {data.topPages.length ? (
+              <div className="tscroll">
+                <table className="dtbl">
+                  <thead><tr><th>Side</th><th>Klikk</th><th>Visninger</th></tr></thead>
+                  <tbody>{data.topPages.map((p) => <tr key={p.page}><td className="sy" style={{ fontSize: 12 }}>{pathOf(p.page)}</td><td className="num"><b>{fmtInt(p.clicks)}</b></td><td className="num">{fmtInt(p.impressions)}</td></tr>)}</tbody>
+                </table>
+              </div>
+            ) : <div className="kempty">Ingen sidedata ennå.</div>}
+          </div>
+        ) : null}
+      </SeoState>
+    </div>
+  );
+}
+
+const EMPTY_COMP = { name: "", domain: "", kind: "forhandler", product_urls: "", blog_urls: "", sitemap_url: "", org_nr: "", meta_page_id: "", notes: "" };
+
+function SeoCompetitors({ canEdit, showToast }) {
+  const { data, error, loading, reload } = useSeoLoad("/api/seo/competitors");
+  const [open, setOpen] = useState(null);
+  const [edit, setEdit] = useState(null);
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState(EMPTY_COMP);
+  const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    setBusy(true);
+    const ok = edit && edit.id
+      ? await seoWrite("/api/seo/competitors", "PUT", edit, showToast, "Kunne ikke lagre.")
+      : await seoWrite("/api/seo/competitors", "POST", form, showToast, "Kunne ikke legge til.");
+    setBusy(false);
+    if (ok) { setEdit(null); setAdding(false); setForm(EMPTY_COMP); reload(); }
+  };
+  const deactivate = async (c) => {
+    if (await seoWrite("/api/seo/competitors", "DELETE", { id: c.id }, showToast, "Kunne ikke deaktivere.")) reload();
+  };
+  const startEdit = (c) => setEdit({
+    id: c.id, name: c.name, kind: c.kind, product_urls: (c.product_urls || []).join("\n"), blog_urls: (c.blog_urls || []).join("\n"),
+    sitemap_url: c.sitemap_url || "", org_nr: c.org_nr || "", meta_page_id: c.meta_page_id || "", notes: c.notes || "",
+  });
+
+  const fields = (v, set) => (
+    <div className="card" style={{ padding: 18, marginTop: 12 }}>
+      <div className="f2">
+        <div className="field"><label>Navn</label><input className="input" value={v.name} onChange={(e) => set({ ...v, name: e.target.value })} /></div>
+        {v.id ? null : <div className="field"><label>Domene</label><input className="input" placeholder="eksempel.no" value={v.domain} onChange={(e) => set({ ...v, domain: e.target.value })} /></div>}
+        <div className="field"><label>Type</label>
+          <select className="select" value={v.kind} onChange={(e) => set({ ...v, kind: e.target.value })}>
+            {["produsent", "merke", "forhandler", "serp", "kunnskap"].map((k) => <option key={k}>{k}</option>)}
+          </select>
+        </div>
+        <div className="field"><label>Org.nr</label><input className="input" value={v.org_nr} onChange={(e) => set({ ...v, org_nr: e.target.value })} /></div>
+      </div>
+      <div className="field"><label>Produktsider (én URL per linje)</label><textarea className="ta" value={v.product_urls} onChange={(e) => set({ ...v, product_urls: e.target.value })} /></div>
+      <div className="f2">
+        <div className="field"><label>Blogg / nyheter (URL-er)</label><textarea className="ta" style={{ minHeight: 56 }} value={v.blog_urls} onChange={(e) => set({ ...v, blog_urls: e.target.value })} /></div>
+        <div className="field"><label>Sitemap</label><input className="input" value={v.sitemap_url} onChange={(e) => set({ ...v, sitemap_url: e.target.value })} /></div>
+        <div className="field"><label>Meta-side-id (Ad Library)</label><input className="input" value={v.meta_page_id} onChange={(e) => set({ ...v, meta_page_id: e.target.value })} /></div>
+        <div className="field"><label>Notat</label><input className="input" value={v.notes} onChange={(e) => set({ ...v, notes: e.target.value })} /></div>
+      </div>
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+        <button className="btn sm" onClick={save} disabled={busy}>{busy ? "Lagrer …" : "Lagre"}</button>
+        <button className="btn ghost sm" onClick={() => { setEdit(null); setAdding(false); }}>Avbryt</button>
+      </div>
+    </div>
+  );
+
+  const serp = data?.serp;
+  const serpDomains = (() => {
+    if (!serp?.rows?.length) return [];
+    const count = {};
+    for (const r of serp.rows) for (const d of Object.keys(r.others || {})) count[d] = (count[d] || 0) + 1;
+    return Object.entries(count).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([d]) => d);
+  })();
+  const nameOf = (d) => { for (const r of serp?.rows || []) if (r.others?.[d]) return r.others[d].name; return d; };
+
+  return (
+    <div>
+      <div className="sechead">
+        <span className="eyebrow">SERP side om side · Google Norge</span>
+        <span className="mut">{data?.serpWeek ? weekLabel(data.serpWeek) + " (forrige uke i parentes)" : ""}</span>
+      </div>
+      <SeoState loading={loading && !data} error={error} reload={reload}>
+        {data ? (
+          <div>
+            {serp?.rows?.length ? (
+              <div className="tscroll">
+                <table className="dtbl">
+                  <thead><tr><th>Søkeord</th><th>Verminord</th>{serpDomains.map((d) => <th key={d}>{nameOf(d)}</th>)}</tr></thead>
+                  <tbody>
+                    {serp.rows.map((r) => (
+                      <tr key={r.keyword}>
+                        <td className="sy">{r.keyword}</td>
+                        <td className="num" style={{ color: r.own.now ? "var(--navy)" : "var(--gold)" }}><b>{r.own.now ?? "–"}</b>{r.own.prev != null ? <span className="mut"> ({r.own.prev})</span> : null}</td>
+                        {serpDomains.map((d) => {
+                          const o = r.others?.[d];
+                          return <td key={d} className="num">{o ? <span><b>{o.now}</b>{o.prev != null ? <span className="mut"> ({o.prev})</span> : null}</span> : "–"}</td>;
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className="kempty">Ingen SERP-data ennå (krever SERPER_API_KEY og en kjøring).</div>}
+            {serp?.beaten_by?.length ? (
+              <div className="mut" style={{ marginTop: 10 }}>Foran Verminord på flest kjerneord: {serp.beaten_by.slice(0, 4).map((b) => b.name + " (" + b.keywords_ahead + ")").join(" · ")}</div>
+            ) : null}
+            <div className="rule" />
+            <div className="sechead">
+              <span className="eyebrow">Konkurrenter</span>
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <span className="mut">{data.competitors.filter((c) => c.active).length} aktive</span>
+                {canEdit && !adding ? <button className="btn ghost sm" onClick={() => { setAdding(true); setEdit(null); }}>Legg til</button> : null}
+              </div>
+            </div>
+            {adding ? fields(form, setForm) : null}
+            <div className="syslist">
+              {data.competitors.map((c) => {
+                const isOpen = open === c.id;
+                const snaps = c.snapshots || [];
+                const stock = snaps.filter((s) => s.in_stock === false).length;
+                const activeAds = (c.ads || []).filter((a) => a.active).length;
+                return (
+                  <div key={c.id} style={{ opacity: c.active ? 1 : 0.5 }}>
+                    <button className={"sysrow " + (isOpen ? "on" : "")} onClick={() => setOpen(isOpen ? null : c.id)}>
+                      <div>
+                        <div className="nm" style={{ fontSize: 14 }}>{c.name} <span className="tag" style={{ marginLeft: 8, verticalAlign: "middle" }}>{c.kind}</span></div>
+                        <div className="mt">
+                          {c.domain}
+                          {snaps.length ? " · " + snaps.length + " produktside" + (snaps.length > 1 ? "r" : "") + (stock ? " · " + stock + " utsolgt" : "") : ""}
+                          {c.tech?.platform && c.tech.platform !== "ukjent" ? " · " + c.tech.platform : ""}
+                          {c.facts?.revenue_nok ? " · " + Math.round(Number(c.facts.revenue_nok) / 1e6) + " MNOK" + (c.facts.fiscal_year ? " (" + c.facts.fiscal_year + ")" : "") : ""}
+                          {activeAds ? " · " + activeAds + " annonser" : ""}
+                        </div>
+                      </div>
+                      <span className="mut">{isOpen ? "–" : "+"}</span>
+                    </button>
+                    {isOpen ? (
+                      <div style={{ padding: "12px 4px 20px" }}>
+                        {c.notes ? <div className="hs" style={{ maxWidth: "none", marginBottom: 12 }}>{c.notes}</div> : null}
+                        {snaps.length ? (
+                          <div className="tscroll">
+                            <table className="dtbl">
+                              <thead><tr><th>Produkt</th><th>Pris</th><th>Lager</th><th>Sist lest</th></tr></thead>
+                              <tbody>
+                                {snaps.map((s) => (
+                                  <tr key={s.url}>
+                                    <td className="sy" style={{ fontSize: 12.5 }}><a href={s.url} target="_blank" rel="noreferrer" style={{ color: "inherit" }}>{s.title || pathOf(s.url)}</a></td>
+                                    <td className="num"><b>{s.price_nok != null ? fmtInt(Math.round(Number(s.price_nok))) + " kr" : "–"}</b></td>
+                                    <td><span className={"pill " + (s.in_stock === false ? "warn" : "")}>{s.in_stock == null ? "ukjent" : s.in_stock ? "på lager" : "utsolgt"}</span></td>
+                                    <td className="num">{weekLabel(s.week)}{s.changed ? <span className="tag gold" style={{ marginLeft: 8 }}>endret</span> : null}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        ) : <div className="mut">Ingen produktsider registrert{canEdit ? " — legg inn URL-er under Rediger." : "."}</div>}
+                        {c.posts?.length ? (
+                          <div style={{ marginTop: 14 }}>
+                            <div className="eyebrow" style={{ marginBottom: 6 }}>Siste innlegg</div>
+                            {c.posts.map((p) => <div key={p.url} style={{ fontSize: 12.5, padding: "4px 0" }}><a href={p.url} target="_blank" rel="noreferrer" style={{ color: "var(--navy)" }}>{p.title || pathOf(p.url)}</a> <span className="mut">{p.published_at ? fmtDay(p.published_at) : "sett " + fmtDay(p.first_seen)}</span></div>)}
+                          </div>
+                        ) : null}
+                        {c.ads?.filter((a) => a.active).length ? (
+                          <div style={{ marginTop: 14 }}>
+                            <div className="eyebrow" style={{ marginBottom: 6 }}>Aktive annonser</div>
+                            {c.ads.filter((a) => a.active).slice(0, 6).map((a) => <div key={a.platform + a.ad_key} style={{ fontSize: 12.5, padding: "4px 0" }}><span className="tag" style={{ marginRight: 8 }}>{a.platform}</span>{a.headline || "(uten tekst)"} <span className="mut">siden {fmtDay(a.first_seen)}</span></div>)}
+                          </div>
+                        ) : null}
+                        {c.facts ? (
+                          <div className="mut" style={{ marginTop: 14 }}>
+                            Brønnøysund: {c.facts.name} · {c.facts.nace_code} {c.facts.nace_text} · {c.facts.employees ?? "?"} ansatte
+                            {c.facts.revenue_nok ? " · omsetning " + fmtInt(Math.round(Number(c.facts.revenue_nok) / 1e6 * 10) / 10) + " MNOK" : ""}
+                            {c.facts.result_nok != null ? " · resultat " + fmtInt(Math.round(Number(c.facts.result_nok) / 1e6 * 10) / 10) + " MNOK" : ""}
+                            {c.facts.founded ? " · stiftet " + String(c.facts.founded).slice(0, 4) : ""}
+                          </div>
+                        ) : null}
+                        {c.tech ? <div className="mut" style={{ marginTop: 6 }}>Plattform: {c.tech.platform} · {Object.entries(c.tech.signals || {}).filter(([, v]) => v).map(([k]) => k).join(", ") || "ingen sporing funnet"}</div> : null}
+                        {canEdit ? (
+                          <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+                            <button className="btn ghost sm" onClick={() => { setEdit(edit?.id === c.id ? null : null); startEdit(c); setAdding(false); }}>Rediger</button>
+                            {c.active ? <button className="lnk" onClick={() => deactivate(c)}>Deaktiver</button> : null}
+                          </div>
+                        ) : null}
+                        {edit?.id === c.id ? fields(edit, setEdit) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : null}
+      </SeoState>
+    </div>
+  );
+}
+
+function SeoAi({ canEdit, showToast }) {
+  const { data, error, loading, reload } = useSeoLoad("/api/seo/ai?weeks=12");
+  const [openPrompt, setOpenPrompt] = useState(null);
+  const [newPrompt, setNewPrompt] = useState("");
+  const addPrompt = async () => {
+    if (await seoWrite("/api/seo/ai", "POST", { prompt: newPrompt.trim() }, showToast, "Kunne ikke legge til spørsmålet.")) { setNewPrompt(""); reload(); }
+  };
+  const togglePrompt = async (p) => {
+    if (await seoWrite("/api/seo/ai", "PUT", { id: p.id, active: !p.active }, showToast, "Kunne ikke endre spørsmålet.")) reload();
+  };
+  const rates = data?.rates || [];
+  const engines = [...new Set(rates.map((r) => r.engine))];
+  const weeks = [...new Set(rates.map((r) => r.week))].sort().slice(-8);
+  const cell = (e, w) => rates.find((r) => r.engine === e && r.week === w);
+  const answers = data?.answers || [];
+  const byPrompt = {};
+  for (const a of answers) (byPrompt[a.prompt_id] ||= { prompt: a.prompt, rows: [] }).rows.push(a);
+  return (
+    <div>
+      <div className="sechead">
+        <span className="eyebrow">AI-synlighet · andel svar som nevner Verminord</span>
+        <span className="mut">{data?.latestWeek ? "sist målt " + weekLabel(data.latestWeek) : ""}</span>
+      </div>
+      <SeoState loading={loading && !data} error={error} reload={reload}>
+        {data ? (
+          <div>
+            {engines.length ? (
+              <div className="tscroll">
+                <table className="dtbl">
+                  <thead><tr><th>Motor</th>{weeks.map((w) => <th key={w}>u{Number(w.slice(-2))}</th>)}</tr></thead>
+                  <tbody>
+                    {engines.map((e) => (
+                      <tr key={e}>
+                        <td className="sy">{SEO_ENGINE[e] || e}</td>
+                        {weeks.map((w) => { const c = cell(e, w); return <td key={w} className="num">{c ? <span><b>{Math.round((100 * c.mentioned) / Math.max(1, c.asked))} %</b> <span className="mut">{c.mentioned}/{c.asked}</span></span> : "–"}</td>; })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <div className="kempty">Ingen målinger ennå. Krever minst én AI-nøkkel og en kjøring.</div>}
+            {data.cited?.length ? <div className="mut" style={{ marginTop: 10 }}>Mest siterte kilder sist uke: {data.cited.slice(0, 6).map((c) => c.domain + " (" + c.n + ")").join(" · ")}</div> : null}
+            <div className="rule" />
+            <div className="sechead"><span className="eyebrow">Spørsmålene · siste svar</span><span className="mut">{data.prompts.filter((p) => p.active).length} aktive</span></div>
+            <div className="syslist">
+              {data.prompts.map((p) => {
+                const g = byPrompt[p.id];
+                const isOpen = openPrompt === p.id;
+                return (
+                  <div key={p.id} style={{ opacity: p.active ? 1 : 0.45 }}>
+                    <button className={"sysrow " + (isOpen ? "on" : "")} onClick={() => setOpenPrompt(isOpen ? null : p.id)}>
+                      <div>
+                        <div className="nm" style={{ fontSize: 14 }}>{p.prompt}</div>
+                        <div className="mt">
+                          {g ? g.rows.map((r) => <span key={r.engine} style={{ marginRight: 12 }}>{SEO_ENGINE[r.engine] || r.engine}: <b style={{ color: r.mentioned ? "#4e7a52" : "var(--gold)" }}>{r.mentioned ? "nevnt #" + r.mention_rank : "ikke nevnt"}</b></span>) : "ikke spurt ennå"}
+                        </div>
+                      </div>
+                      <span className="mut">{isOpen ? "–" : "+"}</span>
+                    </button>
+                    {isOpen ? (
+                      <div style={{ padding: "10px 4px 18px" }}>
+                        {g ? g.rows.map((r) => (
+                          <div key={r.engine} style={{ marginBottom: 14 }}>
+                            <div className="eyebrow" style={{ marginBottom: 6 }}>{SEO_ENGINE[r.engine] || r.engine} · {r.model} · {fmtReceived(r.asked_at)}</div>
+                            <div style={{ fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap", wordBreak: "break-word", maxHeight: 320, overflowY: "auto", padding: "10px 14px", background: "#fff", border: "1px solid var(--line)", borderRadius: 2 }}>{r.answer}</div>
+                            {r.competitors_mentioned?.length ? <div className="mut" style={{ marginTop: 6 }}>Nevnt: {r.competitors_mentioned.join(", ")}</div> : null}
+                            {r.citations?.length ? <div className="mut" style={{ marginTop: 4 }}>Kilder: {r.citations.slice(0, 6).map((c, i) => <a key={i} href={c.url} target="_blank" rel="noreferrer" style={{ color: "var(--navy)", marginRight: 8 }}>{String(c.url).replace(/^https?:\/\/(www\.)?/, "").slice(0, 40)}</a>)}</div> : null}
+                          </div>
+                        )) : <div className="mut">Ingen svar lagret for dette spørsmålet ennå.</div>}
+                        {canEdit ? <button className="lnk" onClick={() => togglePrompt(p)}>{p.active ? "Deaktiver spørsmålet" : "Aktiver spørsmålet"}</button> : null}
+                      </div>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+            {canEdit ? (
+              <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+                <input className="input" style={{ maxWidth: 420 }} placeholder="Nytt spørsmål, slik en kunde ville stilt det" value={newPrompt} onChange={(e) => setNewPrompt(e.target.value)} />
+                <button className="btn sm" onClick={addPrompt} disabled={!newPrompt.trim()}>Legg til</button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </SeoState>
+    </div>
+  );
+}
+
+function SeoLeads({ canEdit, showToast }) {
+  const [status, setStatus] = useState("ny");
+  const { data, error, loading, reload } = useSeoLoad("/api/seo/leads" + (status ? "?status=" + encodeURIComponent(status) : ""));
+  const setLeadStatus = async (l, s) => {
+    if (await seoWrite("/api/seo/leads", "PUT", { id: l.id, status: s }, showToast, "Kunne ikke oppdatere leadet.")) reload();
+  };
+  const counts = data?.counts || {};
+  return (
+    <div>
+      <div className="sechead">
+        <div className="chips" style={{ marginBottom: 0 }}>
+          {[["ny", "Nye"], ["kontaktet", "Kontaktet"], ["kunde", "Kunder"], ["ikke aktuell", "Ikke aktuell"], ["", "Alle"]].map(([k, l]) => (
+            <button key={k} className={"chip " + (status === k ? "on" : "")} onClick={() => setStatus(k)}>{l}{k && counts[k] ? " · " + counts[k] : ""}</button>
+          ))}
+        </div>
+      </div>
+      <SeoState loading={loading && !data} error={error} reload={reload} empty={data && !data.leads.length ? "Ingen leads her. Scout finner nye hver mandag fra Brønnøysund og Google." : null}>
+        {data ? (
+          <div className="tscroll">
+            <table className="dtbl">
+              <thead><tr><th>Score</th><th>Navn</th><th>Type · region</th><th>Hvorfor</th>{canEdit ? <th>Status</th> : null}</tr></thead>
+              <tbody>
+                {data.leads.map((l) => (
+                  <tr key={l.id}>
+                    <td className="num"><b style={{ color: (l.icp_score ?? 0) >= 70 ? "var(--navy)" : "var(--muted)" }}>{l.icp_score ?? "–"}</b></td>
+                    <td className="sy">
+                      {l.url ? <a href={l.url} target="_blank" rel="noreferrer" style={{ color: "inherit" }}>{l.name}</a> : l.name}
+                      <div className="dt">{l.org_nr ? "org " + l.org_nr + " · " : ""}{l.source} · {fmtDay(l.first_seen)}</div>
+                    </td>
+                    <td style={{ fontSize: 12.5 }}>{[l.kind, l.region].filter(Boolean).join(" · ") || "–"}</td>
+                    <td style={{ fontSize: 12.5, maxWidth: 360 }}>{l.reason}</td>
+                    {canEdit ? (
+                      <td>
+                        <select className="select" style={{ width: "auto", padding: "6px 10px", fontSize: 13 }} value={l.status} onChange={(e) => setLeadStatus(l, e.target.value)}>
+                          {["ny", "kontaktet", "kunde", "ikke aktuell"].map((s) => <option key={s}>{s}</option>)}
+                        </select>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </SeoState>
+    </div>
+  );
+}
+
+const EMPTY_CAL = { title: "", kind: "sesong", starts_on: "", ends_on: "", note: "", recurring_yearly: true };
+
+// Rows are stored with one concrete year; recurring rows are shown in every
+// year the view asks for, same rule as seo/steps/11-analyze.mjs.
+function calShift(item, year) {
+  const s = new Date(item.starts_on);
+  const e = item.ends_on ? new Date(item.ends_on) : new Date(item.starts_on);
+  if (!item.recurring_yearly) return { s, e };
+  const offset = year - s.getFullYear();
+  const ss = new Date(s); ss.setFullYear(s.getFullYear() + offset);
+  const ee = new Date(e); ee.setFullYear(e.getFullYear() + offset);
+  return { s: ss, e: ee };
+}
+function calInMonth(items, year, month) {
+  const mStart = new Date(year, month, 1);
+  const mEnd = new Date(year, month + 1, 0, 23, 59, 59);
+  return items.filter((it) => { const { s, e } = calShift(it, year); return e >= mStart && s <= mEnd; })
+    .map((it) => ({ ...it, ...calShift(it, year) }))
+    .sort((a, b) => a.s - b.s);
+}
+
+function SeoCalendar({ canEdit, showToast }) {
+  const { data, error, loading, reload } = useSeoLoad("/api/seo/calendar");
+  const now = new Date();
+  const [mode, setMode] = useState("ar");
+  const [year, setYear] = useState(now.getFullYear());
+  const [month, setMonth] = useState(now.getMonth());
+  const [form, setForm] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const items = data?.items || [];
+
+  const save = async () => {
+    setBusy(true);
+    const ok = form.id
+      ? await seoWrite("/api/seo/calendar", "PUT", form, showToast, "Kunne ikke lagre.")
+      : await seoWrite("/api/seo/calendar", "POST", form, showToast, "Kunne ikke legge til.");
+    setBusy(false);
+    if (ok) { setForm(null); reload(); }
+  };
+  const remove = async () => {
+    if (await seoWrite("/api/seo/calendar", "DELETE", { id: form.id }, showToast, "Kunne ikke slette.")) { setForm(null); reload(); }
+  };
+  const openItem = (it) => canEdit && setForm({ id: it.id, title: it.title, kind: it.kind, starts_on: String(it.starts_on).slice(0, 10), ends_on: it.ends_on ? String(it.ends_on).slice(0, 10) : "", note: it.note || "", recurring_yearly: it.recurring_yearly });
+  const kindCls = (k) => (k === "kampanje" ? "tag gold" : k === "sesong" ? "tag navy" : "tag");
+  const range = (it) => fmtDay(it.s) + (it.e && it.e.getTime() !== it.s.getTime() ? "–" + fmtDay(it.e) : "");
+
+  const monthBlock = (m, dense) => {
+    const list = calInMonth(items, year, m);
+    return (
+      <div key={m} style={{ display: "grid", gridTemplateColumns: dense ? "1fr" : "110px 1fr", gap: dense ? 6 : 12, padding: "12px 0", borderBottom: "1px solid var(--line2)", alignItems: "start" }}>
+        <div className="ht" style={{ fontSize: 13, color: m === now.getMonth() && year === now.getFullYear() ? "var(--gold)" : "var(--navy)" }}>{SEO_MONTHS[m]}</div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {list.length ? list.map((it) => (
+            <button key={it.id + "-" + m} className={kindCls(it.kind)} onClick={() => openItem(it)} style={{ cursor: canEdit ? "pointer" : "default", background: it.kind === "sesong" ? "var(--navy)" : "#fff", textTransform: "none", letterSpacing: 0, fontSize: 11.5, padding: "5px 9px" }}>
+              {it.kind === "frist" ? "Frist: " : ""}{it.title} <span style={{ opacity: 0.7 }}>{range(it)}</span>
+            </button>
+          )) : <span className="mut">—</span>}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div>
+      <div className="sechead">
+        <span className="eyebrow">Årshjul · {mode === "mnd" ? SEO_MONTHS[month] + " " + year : mode === "kv" ? "Q" + (Math.floor(month / 3) + 1) + " " + year : year}</span>
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          <div className="toggle">
+            {[["ar", "År"], ["kv", "Kvartal"], ["mnd", "Måned"]].map(([k, l]) => <button key={k} className={"tbtn " + (mode === k ? "on" : "")} onClick={() => setMode(k)}>{l}</button>)}
+          </div>
+          <div className="toggle">
+            <button className="tbtn" onClick={() => { if (mode === "ar") setYear(year - 1); else if (mode === "kv") { const m = month - 3; if (m < 0) { setYear(year - 1); setMonth(m + 12); } else setMonth(m); } else { if (month === 0) { setYear(year - 1); setMonth(11); } else setMonth(month - 1); } }}>‹</button>
+            <button className="tbtn" onClick={() => { setYear(now.getFullYear()); setMonth(now.getMonth()); }}>I dag</button>
+            <button className="tbtn" onClick={() => { if (mode === "ar") setYear(year + 1); else if (mode === "kv") { const m = month + 3; if (m > 11) { setYear(year + 1); setMonth(m - 12); } else setMonth(m); } else { if (month === 11) { setYear(year + 1); setMonth(0); } else setMonth(month + 1); } }}>›</button>
+          </div>
+          {canEdit && !form ? <button className="btn ghost sm" onClick={() => setForm({ ...EMPTY_CAL, starts_on: year + "-" + String(month + 1).padStart(2, "0") + "-01" })}>Legg til</button> : null}
+        </div>
+      </div>
+      {form ? (
+        <div className="card" style={{ padding: 18, marginBottom: 16 }}>
+          <div className="f2">
+            <div className="field"><label>Tittel</label><input className="input" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
+            <div className="field"><label>Type</label>
+              <select className="select" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
+                {["sesong", "kampanje", "frist", "hendelse"].map((k) => <option key={k}>{k}</option>)}
+              </select>
+            </div>
+            <div className="field"><label>Fra (ÅÅÅÅ-MM-DD)</label><input className="input" value={form.starts_on} onChange={(e) => setForm({ ...form, starts_on: e.target.value })} /></div>
+            <div className="field"><label>Til (valgfritt)</label><input className="input" value={form.ends_on} onChange={(e) => setForm({ ...form, ends_on: e.target.value })} /></div>
+          </div>
+          <div className="field"><label>Notat</label><input className="input" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} /></div>
+          <label style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, marginBottom: 14 }}>
+            <input type="checkbox" checked={!!form.recurring_yearly} onChange={(e) => setForm({ ...form, recurring_yearly: e.target.checked })} /> Gjentas hvert år
+          </label>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button className="btn sm" onClick={save} disabled={busy || !form.title.trim()}>{busy ? "Lagrer …" : "Lagre"}</button>
+            <button className="btn ghost sm" onClick={() => setForm(null)}>Avbryt</button>
+            {form.id ? <button className="lnk" onClick={remove}>Slett</button> : null}
+          </div>
+        </div>
+      ) : null}
+      <SeoState loading={loading && !data} error={error} reload={reload}>
+        {data ? (
+          <div>
+            {mode === "ar" ? Array.from({ length: 12 }, (_, m) => monthBlock(m, false)) : null}
+            {mode === "kv" ? Array.from({ length: 3 }, (_, i) => monthBlock(Math.floor(month / 3) * 3 + i, false)) : null}
+            {mode === "mnd" ? (
+              <div>
+                {calInMonth(items, year, month).map((it) => (
+                  <div key={it.id} style={{ display: "grid", gridTemplateColumns: "auto 1fr", gap: 12, padding: "12px 0", borderBottom: "1px solid var(--line2)", alignItems: "start" }}>
+                    <span className={kindCls(it.kind)} style={{ minWidth: 76, textAlign: "center" }}>{it.kind}</span>
+                    <div>
+                      <div className="ht" style={{ fontSize: 14 }}>{it.title} <span className="mut" style={{ fontWeight: 400 }}>{range(it)}</span></div>
+                      {it.note ? <div className="hs" style={{ maxWidth: "none" }}>{it.note}</div> : null}
+                      {canEdit ? <button className="lnk" style={{ paddingLeft: 0 }} onClick={() => openItem(it)}>Rediger</button> : null}
+                    </div>
+                  </div>
+                ))}
+                {!calInMonth(items, year, month).length ? <div className="kempty">Ingenting i {SEO_MONTHS[month]}.</div> : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </SeoState>
+    </div>
+  );
+}
+
+function SeoContent({ canEdit, showToast }) {
+  const { data, error, loading, reload } = useSeoLoad("/api/seo/content");
+  const [open, setOpen] = useState(null);
+  const [text, setText] = useState("");
+  const [title, setTitle] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const drafts = data?.drafts || [];
+  const update = async (d, patch) => {
+    setBusy(true);
+    const ok = await seoWrite("/api/seo/content", "PUT", { id: d.id, ...patch }, showToast, "Kunne ikke lagre.");
+    setBusy(false);
+    if (ok) { setEditing(false); reload(); if (showToast && patch.status) showToast("Status: " + patch.status + "."); }
+  };
+  const copy = async (d) => {
+    try { await navigator.clipboard.writeText("# " + d.title + "\n\n" + d.body_md); if (showToast) showToast("Kopiert som markdown."); }
+    catch { if (showToast) showToast("Kunne ikke kopiere — marker teksten manuelt."); }
+  };
+  return (
+    <div>
+      <div className="sechead">
+        <span className="eyebrow">Innhold · utkast fra agenten</span>
+        <span className="mut">Godkjent tekst limes inn i Wix. Ingenting publiseres herfra.</span>
+      </div>
+      <SeoState loading={loading && !data} error={error} reload={reload} empty={data && !drafts.length ? "Ingen utkast ennå. Hver mandag legger agenten ett blogg-utkast her." : null}>
+        <div className="syslist">
+          {drafts.map((d) => {
+            const isOpen = open === d.id;
+            return (
+              <div key={d.id}>
+                <button className={"sysrow " + (isOpen ? "on" : "")} onClick={() => { setOpen(isOpen ? null : d.id); setEditing(false); setText(d.body_md); setTitle(d.title); }}>
+                  <div>
+                    <div className="nm" style={{ fontSize: 14 }}>{d.title}</div>
+                    <div className="mt"><span className={"tag " + (d.status === "godkjent" ? "gold" : d.status === "publisert" ? "navy" : "")} style={{ marginRight: 8 }}>{d.status}</span>{d.kind} · {d.keyword || "uten søkeord"} · {weekLabel(d.week)} · {Math.round(String(d.body_md).split(/\s+/).length)} ord</div>
+                  </div>
+                  <span className="mut">{isOpen ? "–" : "+"}</span>
+                </button>
+                {isOpen ? (
+                  <div style={{ padding: "12px 4px 22px" }}>
+                    {editing ? (
+                      <div>
+                        <div className="field"><label>Tittel</label><input className="input" value={title} onChange={(e) => setTitle(e.target.value)} /></div>
+                        <div className="field"><label>Tekst (markdown)</label><textarea className="ta" style={{ minHeight: 320 }} value={text} onChange={(e) => setText(e.target.value)} /></div>
+                      </div>
+                    ) : (
+                      <div className="card" style={{ padding: "18px 22px" }}><MdLite text={d.body_md} /></div>
+                    )}
+                    <div style={{ display: "flex", gap: 10, marginTop: 14, flexWrap: "wrap" }}>
+                      <button className="btn ghost sm" onClick={() => copy(d)}>Kopier markdown</button>
+                      {canEdit ? (editing
+                        ? <button className="btn sm" disabled={busy} onClick={() => update(d, { title, body_md: text })}>Lagre tekst</button>
+                        : <button className="btn ghost sm" onClick={() => setEditing(true)}>Rediger</button>) : null}
+                      {canEdit && d.status !== "godkjent" ? <button className="btn sm" disabled={busy} onClick={() => update(d, { status: "godkjent" })}>Godkjenn</button> : null}
+                      {canEdit && d.status === "godkjent" ? <button className="btn sm" disabled={busy} onClick={() => update(d, { status: "publisert" })}>Merk som publisert</button> : null}
+                      {canEdit && d.status !== "forkastet" ? <button className="lnk" disabled={busy} onClick={() => update(d, { status: "forkastet" })}>Forkast</button> : null}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
+      </SeoState>
+    </div>
+  );
+}
+
+function SeoView({ canEdit, showToast }) {
+  const [tab, setTab] = useState("brief");
+  const overview = useSeoLoad("/api/seo/overview");
+  const o = overview.data;
+  const a = o?.analysis || null;
+  const t = a?.totals || null;
+  const asked = a?.ai?.engines ? a.ai.engines.reduce((s, e) => s + e.asked, 0) : 0;
+  const aiRate = asked ? Math.round((100 * a.ai.engines.reduce((s, e) => s + e.mentioned, 0)) / asked) : null;
+  const kpis = [
+    { label: "Klikk · 7 dager", value: t ? fmtInt(t.this.clicks) : "—", cls: "", caption: t ? pctDelta(t.this.clicks, t.prev.clicks) + " mot uka før" : "ingen søkedata ennå" },
+    { label: "Visninger", value: t ? fmtInt(t.this.impressions) : "—", cls: "", caption: t && t.this.position != null ? "snittposisjon " + t.this.position : "—" },
+    { label: "AI nevner Verminord", value: aiRate != null ? aiRate + " %" : "—", cls: aiRate != null && aiRate < 30 ? "gold" : "", caption: asked ? "av " + asked + " svar denne uka" : "ikke målt ennå" },
+    { label: "Uleste notiser", value: o ? String(o.unread) : "—", cls: o?.unread ? "gold" : "", caption: o?.counts ? o.counts.leads_new + " nye leads · " + o.counts.drafts + " utkast" : "" },
+  ];
+  const latestRuns = (o?.runs || []).filter((r) => r.week === (o?.runs || []).reduce((m, r) => (r.week > m ? r.week : m), ""));
+  return (
+    <div>
+      <span className="eyebrow">Arbeid · SEO-agent</span>
+      {o ? <HelseBanner integrations={o.integrations} /> : null}
+      <div className="hero" style={{ fontSize: 28, lineHeight: 1.2 }}>
+        {o?.brief?.content?.headline || (overview.loading ? "Henter …" : "Ingen ukesbrief ennå.")}
+      </div>
+      <div className="herosub">
+        {o?.brief
+          ? "Ukesbrief " + weekLabel(o.brief.week) + " · generert " + fmtReceived(o.brief.generated_at) + (o.brief.sent_at ? " · sendt " + fmtReceived(o.brief.sent_at) : " · ikke sendt på e-post")
+          : "Første brev kommer etter første kjøring av «SEO ukesjobb» (GitHub → Actions)."}
+      </div>
+      <div className="rule" />
+      <div className="kpirow">
+        {kpis.map((k) => (
+          <div className="kpi" key={k.label}>
+            <div className="k">{k.label}</div>
+            <div className={"v " + k.cls}>{k.value}</div>
+            <div className="c">{k.caption}</div>
+          </div>
+        ))}
+      </div>
+      <div className="chips" style={{ marginTop: 22 }}>
+        {SEO_TABS.map(([k, l]) => (
+          <button key={k} className={"chip " + (tab === k ? "on" : "")} onClick={() => setTab(k)}>{l}{k === "pulse" && o?.unread ? " · " + o.unread : ""}</button>
+        ))}
+      </div>
+      {overview.error && !o ? <div className="mut" style={{ marginBottom: 12 }}>{overview.error} <button className="lnk" onClick={overview.reload}>Prøv igjen</button></div> : null}
+      {tab === "brief" ? <SeoBrief overview={o} /> : null}
+      {tab === "pulse" ? <SeoPulse canEdit={canEdit} showToast={showToast} onRead={overview.reload} /> : null}
+      {tab === "sok" ? <SeoSearch canEdit={canEdit} showToast={showToast} /> : null}
+      {tab === "konkurrenter" ? <SeoCompetitors canEdit={canEdit} showToast={showToast} /> : null}
+      {tab === "ai" ? <SeoAi canEdit={canEdit} showToast={showToast} /> : null}
+      {tab === "leads" ? <SeoLeads canEdit={canEdit} showToast={showToast} /> : null}
+      {tab === "arshjul" ? <SeoCalendar canEdit={canEdit} showToast={showToast} /> : null}
+      {tab === "innhold" ? <SeoContent canEdit={canEdit} showToast={showToast} /> : null}
+      <div className="rule" />
+      <div className="mut" style={{ lineHeight: 1.7 }}>
+        Kjøres av «SEO ukesjobb» i GitHub Actions hver mandag 03:30 UTC, manuelt via Actions → Run workflow.
+        {latestRuns.length ? " Siste kjøring " + weekLabel(latestRuns[0].week) + ": " + latestRuns.map((r) => r.step + " " + r.status).join(" · ") + "." : " Ingen kjøringer ennå."}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* App shell                                                           */
 /* ------------------------------------------------------------------ */
 
@@ -3706,6 +4660,7 @@ const NAV_ARBEID = [
   ["oppgaver", "Oppgaver"],
   ["prosjekter", "Prosjekter"],
   ["sop", "SOP / filer"],
+  ["seo", "SEO"],
   ["innstillinger", "Innstillinger"],
 ];
 
@@ -3767,6 +4722,11 @@ export default function App() {
 
   useEffect(() => {
     boot();
+    // The Monday e-mail links straight to /?view=seo.
+    try {
+      const wanted = new URLSearchParams(window.location.search).get("view");
+      if (wanted && [...NAV_DRIFT, ...NAV_ARBEID].some(([k]) => k === wanted)) setView(wanted);
+    } catch {}
     setClock(todayLine());
     const timer = setInterval(() => setClock(todayLine()), 30000);
     return () => clearInterval(timer);
@@ -4190,7 +5150,7 @@ export default function App() {
             </span>
           </div>
           {view === "brief" && (
-            <BriefView data={data} range={briefRange} setRange={setBriefRange} metric={briefMetric} setMetric={setBriefMetric} canEdit={editable} goToInbox={() => setView("innboks")} />
+            <BriefView data={data} range={briefRange} setRange={setBriefRange} metric={briefMetric} setMetric={setBriefMetric} canEdit={editable} goToInbox={() => setView("innboks")} goToSeo={() => setView("seo")} />
           )}
           {view === "innboks" && (
             <InboxView data={data} canEdit={editable} addTask={addTask} setView={setView} showToast={showToast} />
@@ -4217,6 +5177,7 @@ export default function App() {
           {view === "systemer" && <SystemsView data={data} activeSystem={activeSystem} setActiveSystem={setActiveSystem} />}
           {view === "foring" && <FeedingBatchesView data={data} canEdit={editable} showToast={showToast} />}
           {view === "hygienisering" && <HygieneView canEdit={editable} />}
+          {view === "seo" && <SeoView canEdit={editable} showToast={showToast} />}
           {view === "sop" && <FilesView data={data} uploadFiles={uploadFiles} removeFile={removeFile} updateFile={updateFile} canEdit={editable} />}
           {view === "oppgaver" && <TasksView data={data} addTask={addTask} updateTask={updateTask} deleteTask={deleteTask} canEdit={editable} showToast={showToast} refreshAll={boot} />}
           {view === "prosjekter" && (
