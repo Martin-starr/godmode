@@ -150,7 +150,7 @@ export async function run(ctx) {
     const schema = {
       type: "object", additionalProperties: false, required: ["items"],
       properties: { items: { type: "array", items: { type: "object", additionalProperties: false, required: ["key", "icp_score", "kind", "region", "reason"],
-        properties: { key: { type: "string" }, icp_score: { type: "integer", minimum: 0, maximum: 100 }, kind: { type: "string" }, region: { type: "string" }, reason: { type: "string" } } } } },
+        properties: { key: { type: "string" }, icp_score: { type: "integer" }, kind: { type: "string" }, region: { type: "string" }, reason: { type: "string" } } } } },
     };
     for (let i = 0; i < candidates.length; i += 20) {
       const batch = candidates.slice(i, i + 20);
