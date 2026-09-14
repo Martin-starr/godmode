@@ -45,7 +45,9 @@ export async function run(ctx) {
 
   const urls = new Set();
   for (const site of sites) {
-    urls.add("https://" + site + "/");
+    // site_url may already carry a scheme (and a trailing slash) — a bare
+    // concatenation produced https://https://www.verminord.no//, which 400s.
+    urls.add(/^https?:\/\//i.test(site) ? site.replace(/\/+$/, "") + "/" : "https://" + site + "/");
     if (db) {
       const top = await db`select page, sum(clicks)::int as clicks from seo.gsc_daily
         where site_url = ${site} and query = '*' and page <> '*'

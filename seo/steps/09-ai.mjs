@@ -85,6 +85,12 @@ export function engines() {
   return list;
 }
 
+// Each prompt is a billed model call plus a web search, so only the intents a
+// buyer actually types are tracked: "merke" (Hva er Verminord?) is answered by
+// knowing the name already, "kunnskap" and "bruk" are reading, not buying, and
+// English prompts are noise for a Jæren producer. Widen this to spend more.
+const TRACKED_INTENTS = ["kjøp", "produsent", "anbefaling", "lokal", "pris"];
+
 export function vendorNames(rows) {
   const out = new Set();
   for (const r of rows) {
@@ -99,7 +105,8 @@ export async function run(ctx) {
   if (!list.length) return { skipped: "Ingen AI-nøkler (ANTHROPIC_API_KEY, OPENAI_API_KEY, GEMINI_API_KEY, PERPLEXITY_API_KEY)" };
   const db = ctx.dryRun ? null : sql();
   const prompts = db
-    ? await db`select id, prompt, lang from seo.ai_prompts where active order by id`
+    ? await db`select id, prompt, lang from seo.ai_prompts
+        where active and lang = 'no' and intent = any(${TRACKED_INTENTS}) order by id`
     : [{ id: 1, prompt: "Hvor kan jeg kjøpe vermikompost i Norge?", lang: "no" }];
   const vendors = vendorNames(db ? await db`select name from seo.competitors where active and kind in ('produsent','merke','forhandler')` : [{ name: "Grønn Vekst AS" }, { name: "Nelson Garden" }]);
 
