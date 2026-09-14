@@ -147,7 +147,7 @@ export async function run(ctx) {
           required: ["url", "relevance", "tags", "summary"],
           properties: {
             url: { type: "string" },
-            relevance: { type: "integer", minimum: 0, maximum: 5 },
+            relevance: { type: "integer" },
             tags: { type: "array", items: { type: "string" } },
             summary: { type: "string" },
           },
