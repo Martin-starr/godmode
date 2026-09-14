@@ -261,7 +261,7 @@ export async function run(ctx) {
   const flips = await db`select n.engine, p.prompt, n.mentioned as now, o.mentioned as prev from seo.ai_visibility n
     join seo.ai_visibility o on o.engine = n.engine and o.prompt_id = n.prompt_id and o.week = ${ctx.prevWeek}
     join seo.ai_prompts p on p.id = n.prompt_id where n.week = ${ctx.week} and n.mentioned <> o.mentioned`;
-  const cited = await db`select c->>'url' as url from seo.ai_visibility, jsonb_array_elements(coalesce(citations, '[]'::jsonb)) c where week = ${ctx.week}`;
+  const cited = await db`select c->>'url' as url from seo.ai_visibility, jsonb_array_elements(case when jsonb_typeof(coalesce(citations, '[]'::jsonb)) = 'array' then coalesce(citations, '[]'::jsonb) else '[]'::jsonb end) c where week = ${ctx.week}`;
   const citedCount = new Map();
   for (const r of cited) { const d = domainOf(r.url); if (d) citedCount.set(d, (citedCount.get(d) || 0) + 1); }
   const mentionedComp = await db`select unnest(competitors_mentioned) as name, count(*)::int as count from seo.ai_visibility where week = ${ctx.week} group by 1 order by 2 desc limit 8`;
