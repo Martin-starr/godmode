@@ -42,7 +42,7 @@ concurrency:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 90
     env:
       JOB: ${{ github.event_name == 'workflow_dispatch' && inputs.job || 'all' }}
     steps:
