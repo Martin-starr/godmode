@@ -17,7 +17,7 @@ export function webSearchTool(model = activeModel()) {
   return {
     type: modernModel(model) ? "web_search_20260209" : "web_search_20250305",
     name: "web_search",
-    max_uses: 3,
+    max_uses: 1,
     user_location: { type: "approximate", country: "NO", timezone: "Europe/Oslo" },
   };
 }
@@ -25,16 +25,18 @@ export function webSearchTool(model = activeModel()) {
 // One structured call. On a parse failure or a rejected thinking parameter
 // the call is retried once without thinking — a brief with plain reasoning
 // beats no brief.
-export async function claudeJson({ system, user, schema, maxTokens = 4000, timeoutMs = 120000, thinking = false, effort = null }) {
+export async function claudeJson({ system, user, schema, maxTokens = 4000, timeoutMs = 120000, thinking = false, effort = null, model = null }) {
+  const modern = modernModel(model || activeModel());
   const attempt = async (withThinking) => {
     const text = await claude({
       system,
       messages: [{ role: "user", content: user }],
       maxTokens,
       timeoutMs,
+      model,
       outputFormat: { type: "json_schema", schema },
-      thinking: withThinking && modernModel() ? { type: "adaptive" } : null,
-      effort: effort && modernModel() ? effort : null,
+      thinking: withThinking && modern ? { type: "adaptive" } : null,
+      effort: effort && modern ? effort : null,
     });
     return JSON.parse(text);
   };

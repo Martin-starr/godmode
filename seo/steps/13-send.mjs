@@ -34,7 +34,7 @@ export function renderHtml(week, b, dashUrl) {
   ${h2("Tre innholdsgrep")}<ol style="padding-left:18px;margin:0">${(b.content_moves || []).map((m) => `<li style="margin:0 0 10px"><b>${esc(m.title)}</b> <span style="color:${MUTED}">(${esc(m.keyword)})</span><br>${esc(m.angle)}<br><span style="color:${MUTED}">Side: ${esc(m.page)} · Hvorfor nå: ${esc(m.why_now)}</span></li>`).join("")}</ol>
   ${h2("Neste fire uker")}${li(b.next_weeks || [], esc)}
   <div style="margin:28px 0 0"><a href="${esc(dashUrl)}" style="display:inline-block;background:${NAVY};color:${CREAM};text-decoration:none;padding:12px 18px;border-radius:4px;font-weight:600">Åpne i dashbordet</a></div>
-  <p style="color:${MUTED};font-size:13px;margin:18px 0 0">Blogg-utkastet «${esc(b.blog_draft?.title || "")}» ligger under SEO → Innhold. Alt dette er generert automatisk mandag natt; tallene kommer fra Search Console, GA4, Serper, Brønnøysund og AI-motorene, teksten fra Claude.</p>
+  <p style="color:${MUTED};font-size:13px;margin:18px 0 0">${b.blog_draft?.title ? `Blogg-utkastet «${esc(b.blog_draft.title)}» ligger under SEO → Innhold. ` : ""}Alt dette er generert automatisk mandag natt; tallene kommer fra Search Console, GA4, Serper, Brønnøysund og AI-motorene, teksten fra Claude.</p>
 </div></body></html>`;
 }
 

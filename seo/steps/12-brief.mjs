@@ -16,11 +16,21 @@ import { weekNumber } from "../lib/dates.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 
+// The Monday brief is the one thing that gets read, so it is the one call
+// worth a frontier model; the scoring steps stay on whatever DASH_AI_MODEL is.
+// Set SEO_BRIEF_MODEL to "" to put the brief back on the cheap model too.
+const BRIEF_MODEL = process.env.SEO_BRIEF_MODEL ?? "claude-opus-5";
+
+// A full post every week was more than Martin publishes. Every other week is
+// roughly twice a month; the brief still proposes three angles every Monday.
+const BLOG_EVERY_N_WEEKS = 2;
+export const blogWeek = (week) => weekNumber(week) % BLOG_EVERY_N_WEEKS === 1;
+
 const str = { type: "string" };
 export const BRIEF_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["headline", "numbers", "movements", "opportunities", "competitors", "ai_visibility", "news", "leads", "technical", "content_moves", "next_weeks", "blog_draft"],
+  required: ["headline", "numbers", "movements", "opportunities", "competitors", "ai_visibility", "news", "leads", "technical", "content_moves", "next_weeks"],
   properties: {
     headline: str,
     numbers: { type: "array", items: { type: "object", additionalProperties: false, required: ["label", "now", "prev", "base"], properties: { label: str, now: str, prev: str, base: str } } },
@@ -33,8 +43,15 @@ export const BRIEF_SCHEMA = {
     technical: { type: "array", items: str },
     content_moves: { type: "array", items: { type: "object", additionalProperties: false, required: ["title", "keyword", "angle", "page", "why_now"], properties: { title: str, keyword: str, angle: str, page: str, why_now: str } } },
     next_weeks: { type: "array", items: str },
-    blog_draft: { type: "object", additionalProperties: false, required: ["title", "keyword", "body_md"], properties: { title: str, keyword: str, body_md: str } },
   },
+};
+
+// The blog draft is its own call on its own cadence — see BLOG_EVERY_N_WEEKS.
+export const BLOG_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["title", "keyword", "body_md"],
+  properties: { title: str, keyword: str, body_md: str },
 };
 
 // Trims the analysis to what the model needs: no raw answers, no long lists.
@@ -78,7 +95,7 @@ export function renderMarkdown(week, b) {
   (b.content_moves || []).forEach((m, i) => L.push(`${i + 1}. **${m.title}** (${m.keyword}) — ${m.angle} Side: ${m.page}. Hvorfor nå: ${m.why_now}`));
   L.push("", "## Neste fire uker", "");
   for (const n of b.next_weeks || []) L.push(`- ${n}`);
-  L.push("", "---", "", `Blogg-utkast «${b.blog_draft?.title || ""}» ligger under SEO → Innhold på dash.verminord.app.`);
+  if (b.blog_draft?.title) L.push("", "---", "", `Blogg-utkast «${b.blog_draft.title}» ligger under SEO → Innhold på dash.verminord.app.`);
   return L.join("\n");
 }
 
@@ -96,15 +113,36 @@ export async function run(ctx) {
     system: voice + "\n\n" + brief,
     user: `Uke ${ctx.week}. Analysen:\n\n\`\`\`json\n${JSON.stringify(compact)}\n\`\`\``,
     schema: BRIEF_SCHEMA,
-    maxTokens: 9000,
+    maxTokens: 6000,
     timeoutMs: 300000,
     thinking: true,
+    model: BRIEF_MODEL,
   });
   if (!Array.isArray(out.content_moves) || out.content_moves.length !== 3) {
     out.content_moves = (out.content_moves || []).slice(0, 3);
   }
+
+  // Every week's brief proposes three content moves; the full post is only
+  // written on the blog weeks, from the first of them.
+  if (blogWeek(ctx.week) && out.content_moves?.length && (!db || !(await db`select 1 from seo.content_drafts where week = ${ctx.week} and kind = 'blogg' limit 1`).length)) {
+    const m = out.content_moves[0];
+    try {
+      out.blog_draft = await claudeJson({
+        system: voice + "\n\n" + brief,
+        user: `Skriv blogginnlegget for uke ${ctx.week} etter reglene for blog_draft.\n\nTittel: ${m.title}\nSøkeord: ${m.keyword}\nVinkling: ${m.angle}\nHvorfor nå: ${m.why_now}`,
+        schema: BLOG_SCHEMA,
+        maxTokens: 6000,
+        timeoutMs: 300000,
+        thinking: true,
+        model: BRIEF_MODEL,
+      });
+    } catch (e) {
+      ctx.log("brief", "bloggutkast feilet: " + e.message);
+    }
+  }
+
   const md = renderMarkdown(ctx.week, out);
-  const model = activeModel();
+  const model = BRIEF_MODEL || activeModel();
 
   if (db) {
     await db`insert into seo.briefs (week, generated_at, model, summary_md, brief)
