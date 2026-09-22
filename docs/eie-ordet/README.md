@@ -176,11 +176,10 @@ Gjort:
 
 Gjenstår (må gjøres i en nettleser):
 
-1. **verminord.com peker fortsatt på Wix.** Vercel er allerede satt opp til å sende verminord.com videre til www.verminord.no, men domenets DNS ligger hos Wix. Bytt navneservere i Wix: Domener → verminord.com → Avansert → Navneservere → endre til `ns1.vercel-dns.com` og `ns2.vercel-dns.com`. Bruker du e-post på @verminord.com, si fra først, så flytter vi MX-postene.
-2. **Gjør omdirigeringen permanent.** Vercel → prosjekt verminord-site-final → Settings → Domains → verminord.com og www.verminord.com → Edit → velg 308 (Permanent) i stedet for 307.
-3. **Sjekk kildene** i lista over, og si fra. Da settes `draft: false` og guiden går live.
-4. **Send e-postene** fra Gmail-kladdene når guiden er live. Legg inn mottaker der det mangler.
-5. Stavemåten på sekker, Google-profil og sosiale medier (sjekklista under grep 1).
+1. **Gjør omdirigeringen permanent.** Første kjøring av steget `site` (2026-09-22) viste at verminord.com allerede sender videre til www.verminord.no, men med 307 (midlertidig). Rett det slik: Vercel → prosjekt verminord-site-final → Settings → Domains → verminord.com og www.verminord.com → Edit → velg 308 (Permanent) i stedet for 307.
+2. **Sjekk kildene** i lista over, og si fra. Da settes `draft: false` og guiden går live.
+3. **Send e-postene** fra Gmail-kladdene når guiden er live. Legg inn mottaker der det mangler.
+4. Stavemåten på sekker, Google-profil og sosiale medier (sjekklista under grep 1).
 
 ## Ikke bekreftet
 
