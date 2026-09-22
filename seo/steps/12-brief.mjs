@@ -1,4 +1,4 @@
-// Step 12 — Claude writes the Monday brief and one blog draft.
+// Step 12 — Claude writes the Monday brief and, every other week, one blog draft.
 //
 // The model gets the analysis JSON and the two prompt files, and returns a
 // JSON object with fixed fields. The markdown that goes into the e-mail is
@@ -6,6 +6,11 @@
 // Monday and a missing section is an empty heading, never a missing e-mail.
 // The blog draft is inserted once per week; if Martin has already touched
 // this week's draft it is left alone.
+//
+// The blog draft answers one real question from Search Console (analysis.
+// questions) that no earlier draft has answered, and links back to the
+// pillar page. Only when Search Console has no unanswered question does it
+// fall back to the first of the week's three content moves.
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -30,7 +35,7 @@ const str = { type: "string" };
 export const BRIEF_SCHEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["headline", "numbers", "movements", "opportunities", "competitors", "ai_visibility", "news", "leads", "technical", "content_moves", "next_weeks"],
+  required: ["headline", "numbers", "movements", "opportunities", "competitors", "ai_visibility", "news", "leads", "technical", "content_moves", "next_weeks", "term_review"],
   properties: {
     headline: str,
     numbers: { type: "array", items: { type: "object", additionalProperties: false, required: ["label", "now", "prev", "base"], properties: { label: str, now: str, prev: str, base: str } } },
@@ -43,6 +48,7 @@ export const BRIEF_SCHEMA = {
     technical: { type: "array", items: str },
     content_moves: { type: "array", items: { type: "object", additionalProperties: false, required: ["title", "keyword", "angle", "page", "why_now"], properties: { title: str, keyword: str, angle: str, page: str, why_now: str } } },
     next_weeks: { type: "array", items: str },
+    term_review: str,
   },
 };
 
@@ -64,7 +70,23 @@ export function compactAnalysis(a) {
   }
   if (c.top_queries) c.top_queries = c.top_queries.slice(0, 12);
   if (c.top_pages) c.top_pages = c.top_pages.slice(0, 8);
+  if (c.questions) c.questions = c.questions.slice(0, 10);
   return c;
+}
+
+// The first Search Console question no earlier draft has used as its keyword.
+export function pickQuestion(questions, usedKeywords) {
+  const norm = (q) => String(q || "").toLowerCase().replace(/[?!.]+$/, "").replace(/\s+/g, " ").trim();
+  const used = new Set([...usedKeywords].map(norm));
+  return (questions || []).find((q) => !used.has(norm(q.query))) || null;
+}
+
+// Every draft links back to the pillar page. The prompt asks for it; this
+// makes sure of it, so a draft that forgot still points the right way.
+export function ensurePillarLink(md, url) {
+  const body = String(md || "");
+  if (!url || body.includes(url)) return body;
+  return body.replace(/\s+$/, "") + `\n\nLes mer i [Vermikompost i Norge — den komplette guiden](${url}).\n`;
 }
 
 export function renderMarkdown(week, b) {
@@ -84,6 +106,7 @@ export function renderMarkdown(week, b) {
   for (const c of b.competitors || []) L.push(`- ${c}`);
   if (!(b.competitors || []).length) L.push("- Ingen endringer registrert.");
   L.push("", "## AI-synlighet", "", b.ai_visibility || "Ingen data.");
+  if (b.term_review) L.push("", "## Eier vi ordet? (månedlig)", "", b.term_review);
   L.push("", "## Nyheter og regelverk", "");
   for (const n of b.news || []) L.push(`- **${n.title}** — ${n.why}`);
   if (!(b.news || []).length) L.push("- Ingenting som betyr noe denne uka.");
@@ -108,6 +131,7 @@ export async function run(ctx) {
 
   const voice = await readFile(join(here, "..", "prompts", "voice.md"), "utf8");
   const brief = await readFile(join(here, "..", "prompts", "brief.md"), "utf8");
+  const sources = await readFile(join(here, "..", "prompts", "sources.md"), "utf8");
   const compact = compactAnalysis(analysis);
   const out = await claudeJson({
     system: voice + "\n\n" + brief,
@@ -123,21 +147,32 @@ export async function run(ctx) {
   }
 
   // Every week's brief proposes three content moves; the full post is only
-  // written on the blog weeks, from the first of them.
-  if (blogWeek(ctx.week) && out.content_moves?.length && (!db || !(await db`select 1 from seo.content_drafts where week = ${ctx.week} and kind = 'blogg' limit 1`).length)) {
-    const m = out.content_moves[0];
-    try {
-      out.blog_draft = await claudeJson({
-        system: voice + "\n\n" + brief,
-        user: `Skriv blogginnlegget for uke ${ctx.week} etter reglene for blog_draft.\n\nTittel: ${m.title}\nSøkeord: ${m.keyword}\nVinkling: ${m.angle}\nHvorfor nå: ${m.why_now}`,
-        schema: BLOG_SCHEMA,
-        maxTokens: 6000,
-        timeoutMs: 300000,
-        thinking: true,
-        model: BRIEF_MODEL,
-      });
-    } catch (e) {
-      ctx.log("brief", "bloggutkast feilet: " + e.message);
+  // written on the blog weeks, answering a real Search Console question.
+  const pillar = ctx.site?.pillar;
+  if (blogWeek(ctx.week) && (!db || !(await db`select 1 from seo.content_drafts where week = ${ctx.week} and kind = 'blogg' limit 1`).length)) {
+    const used = db ? (await db`select keyword from seo.content_drafts where kind = 'blogg' and keyword is not null`).map((r) => r.keyword) : [];
+    const q = pickQuestion(analysis.questions, used);
+    const m = out.content_moves?.[0];
+    const task = q
+      ? `Spørsmålet fra Search Console: «${q.query}» (${q.impressions} visninger siste 90 dager${q.position != null ? ", snittposisjon " + q.position : ""}${q.page ? ", rangerer i dag med " + q.page : ""}).\nSøkeord: ${q.query}`
+      : m ? `Ingen ubesvarte spørsmål i Search Console denne gangen. Bruk ukens beste innholdsgrep.\nTittel: ${m.title}\nSøkeord: ${m.keyword}\nVinkling: ${m.angle}\nHvorfor nå: ${m.why_now}` : null;
+    if (task) {
+      try {
+        out.blog_draft = await claudeJson({
+          system: voice + "\n\n" + brief + "\n\n" + sources,
+          user: `Skriv blogginnlegget for uke ${ctx.week} etter reglene for blog_draft.\n\n${task}\nPilarside å lenke til: ${pillar}`,
+          schema: BLOG_SCHEMA,
+          maxTokens: 6000,
+          timeoutMs: 300000,
+          thinking: true,
+          model: BRIEF_MODEL,
+        });
+        if (q) out.blog_draft.keyword = q.query;
+        out.blog_draft.body_md = ensurePillarLink(out.blog_draft.body_md, pillar);
+        out.blog_draft.question = q ? q.query : null;
+      } catch (e) {
+        ctx.log("brief", "bloggutkast feilet: " + e.message);
+      }
     }
   }
 

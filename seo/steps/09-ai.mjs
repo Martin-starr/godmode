@@ -89,7 +89,15 @@ export function engines() {
 // buyer actually types are tracked: "merke" (Hva er Verminord?) is answered by
 // knowing the name already, "kunnskap" and "bruk" are reading, not buying, and
 // English prompts are noise for a Jæren producer. Widen this to spend more.
-const TRACKED_INTENTS = ["kjøp", "produsent", "anbefaling", "lokal", "pris"];
+//
+// "begrep" is the exception to "reading, not buying": the three words
+// Norwegians use for the product (vermikompost, meitemarkkompost,
+// markkompost). Whoever the engines cite for «Hva er …?» owns the word, and
+// the pillar page exists to be that source. Reviewed monthly in the brief.
+//
+// A prompt with no intent was typed into the dashboard by Martin; that is an
+// explicit choice to track it, so it is asked too.
+const TRACKED_INTENTS = ["kjøp", "produsent", "anbefaling", "lokal", "pris", "begrep"];
 
 export function vendorNames(rows) {
   const out = new Set();
@@ -106,7 +114,7 @@ export async function run(ctx) {
   const db = ctx.dryRun ? null : sql();
   const prompts = db
     ? await db`select id, prompt, lang from seo.ai_prompts
-        where active and lang = 'no' and intent = any(${TRACKED_INTENTS}) order by id`
+        where active and lang = 'no' and (intent is null or intent = any(${TRACKED_INTENTS})) order by id`
     : [{ id: 1, prompt: "Hvor kan jeg kjøpe vermikompost i Norge?", lang: "no" }];
   const vendors = vendorNames(db ? await db`select name from seo.competitors where active and kind in ('produsent','merke','forhandler')` : [{ name: "Grønn Vekst AS" }, { name: "Nelson Garden" }]);
 

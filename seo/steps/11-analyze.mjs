@@ -102,6 +102,57 @@ export function upcomingCalendar(rows, from, days = 42) {
   return out.filter((x) => (seen.has(x.title + x.starts_on) ? false : (seen.add(x.title + x.starts_on), true))).sort((a, b) => a.starts_on.localeCompare(b.starts_on));
 }
 
+// A search typed as a question. These are what the blog drafts answer: a
+// real question from Search Console, answered in the first paragraph, is the
+// passage an AI engine lifts and cites.
+const QUESTION_RX = /^(hva|hvordan|hvorfor|hvor|hvilken|hvilket|hvilke|hvem|når|kan|er|skal|bør|må|trenger|finnes|funker|virker|lønner|går|what|how|why|where|which|can|is|does|do|should)\s/i;
+export function isQuestion(query) {
+  const q = String(query || "").trim();
+  return q.includes("?") || QUESTION_RX.test(q);
+}
+
+// rows: [{query, impressions, clicks, position, page}] over the lookback window.
+export function questionQueries(rows, { limit = 15 } = {}) {
+  return rows
+    .filter((r) => isQuestion(r.query) && r.impressions > 0)
+    .map((r) => ({ query: r.query, impressions: r.impressions, clicks: r.clicks, position: r.position != null ? Math.round(r.position * 10) / 10 : null, page: r.page || null }))
+    .sort((a, b) => b.impressions - a.impressions || b.clicks - a.clicks)
+    .slice(0, limit);
+}
+
+// The monthly "do we own the word" review runs on the first Monday brief of
+// each month; the numbers behind it are computed every week regardless.
+export function monthlyReviewDue(runDate) {
+  return runDate.getUTCDate() <= 7;
+}
+
+// rows: [{prompt, engine, mentioned, citations: [{url}]}] for the "begrep"
+// prompts over the last four weeks. For each word: how often Verminord is
+// named, how often one of our own pages is cited, and who is cited instead.
+export function termReview(rows, ownDomains) {
+  const own = new Set([...ownDomains].map((d) => String(d).replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "").toLowerCase()));
+  const byPrompt = new Map();
+  for (const r of rows) {
+    const t = byPrompt.get(r.prompt) || { prompt: r.prompt, asked: 0, mentioned: 0, own_cited: 0, engines: {}, cited: new Map() };
+    const e = (t.engines[r.engine] ||= { asked: 0, mentioned: 0, own_cited: 0 });
+    // Some rows hold the citations as a JSON string rather than an array
+    // (the scalar case #44 guards against in SQL); read both.
+    let cites = r.citations;
+    if (typeof cites === "string") { try { cites = JSON.parse(cites); } catch { cites = []; } }
+    const domains = new Set((Array.isArray(cites) ? cites : []).map((c) => domainOf(c?.url)).filter(Boolean));
+    const ownHit = [...domains].some((d) => own.has(d));
+    t.asked += 1; e.asked += 1;
+    if (r.mentioned) { t.mentioned += 1; e.mentioned += 1; }
+    if (ownHit) { t.own_cited += 1; e.own_cited += 1; }
+    for (const d of domains) if (!own.has(d)) t.cited.set(d, (t.cited.get(d) || 0) + 1);
+    byPrompt.set(r.prompt, t);
+  }
+  return [...byPrompt.values()].map((t) => ({
+    prompt: t.prompt, asked: t.asked, mentioned: t.mentioned, own_cited: t.own_cited, engines: t.engines,
+    top_cited: [...t.cited.entries()].map(([domain, count]) => ({ domain, count })).sort((a, b) => b.count - a.count || a.domain.localeCompare(b.domain)).slice(0, 6),
+  }));
+}
+
 const num = (v) => (v == null ? null : Number(v));
 const pct = (a, b) => (b ? Math.round(((a - b) / b) * 1000) / 10 : null);
 
@@ -174,6 +225,15 @@ export async function run(ctx) {
         and coalesce(sum(clicks) filter (where date between ${W.this.start} and ${W.this.end}), 0) = 0`).map((r) => ({ page: r.page, prev_clicks: r.prev_clicks }));
     analysis.top_pages = (await db`select page, sum(clicks)::int as clicks, sum(impressions)::int as impressions from seo.gsc_daily
       where query = '*' and page <> '*' and date between ${W.this.start} and ${W.this.end} group by page order by clicks desc limit 10`);
+    // Questions people actually typed, over 90 days: a small site has too
+    // few in one week to choose from. Step 12 answers one per blog draft.
+    const last90 = { start: ymd(addDays(new Date(W.this.end + "T00:00:00Z"), -89)), end: W.this.end };
+    const q90 = (await byQuery(db, last90)).filter((r) => isQuestion(r.query));
+    const qPage = q90.length ? await db`select distinct on (query) query, page from seo.gsc_daily
+      where page <> '*' and query = any(${q90.map((r) => r.query)}) and date between ${last90.start} and ${last90.end}
+      group by query, page order by query, sum(impressions) desc` : [];
+    const qPageOf = new Map(qPage.map((r) => [r.query, r.page]));
+    analysis.questions = questionQueries(q90.map((r) => ({ ...r, page: qPageOf.get(r.query) || null })));
     analysis.top_queries = thisQ.sort((a, b) => b.clicks - a.clicks || b.impressions - a.impressions).slice(0, 15).map((r) => ({ ...r, position: r.position != null ? Math.round(r.position * 10) / 10 : null }));
   } else {
     analysis.data_gaps.push("Search Console-data mangler (steg gsc har ikke kjørt eller er ikke konfigurert)");
@@ -272,6 +332,13 @@ export async function run(ctx) {
   } : null;
   if (!analysis.ai) analysis.data_gaps.push("AI-synlighet mangler");
 
+  // --- Own the word: vermikompost, meitemarkkompost, markkompost ----------
+  const termRows = await db`select p.prompt, v.engine, v.mentioned, v.citations from seo.ai_visibility v
+    join seo.ai_prompts p on p.id = v.prompt_id
+    where p.intent = 'begrep' and v.asked_at >= ${ymd(addDays(ctx.runDate, -28))}`;
+  analysis.terms = termReview(termRows, own);
+  analysis.monthly_review = monthlyReviewDue(ctx.runDate) && analysis.terms.length > 0;
+
   // --- News, leads, technical, calendar, health ---------------------------
   analysis.news = (await db`select title, url, source, summary, relevance, published_at from seo.news where relevance >= 3 and first_seen >= ${weekAgo} order by relevance desc, published_at desc nulls last limit 8`)
     .map((n) => ({ ...n, published_at: n.published_at ? String(n.published_at).slice(0, 10) : null }));
@@ -279,7 +346,11 @@ export async function run(ctx) {
   const psi = await db`select a.url, a.strategy, a.perf_score, a.lcp_ms, a.cls, a.tbt_ms, a.inp_ms,
       (select perf_score from seo.psi_audits p where p.url = a.url and p.strategy = a.strategy and p.week <> a.week order by run_at desc limit 1) as prev
     from seo.psi_audits a where a.week = ${ctx.week} order by a.url, a.strategy`;
-  analysis.technical = { psi: psi.map((r) => ({ ...r, cls: num(r.cls) })), zeroed_pages: analysis.zeroed_pages || [] };
+  const site = (await db`select stats from seo.runs where week = ${ctx.week} and step = 'site' and status = 'ok' order by started_at desc limit 1`)[0]?.stats || null;
+  analysis.technical = {
+    psi: psi.map((r) => ({ ...r, cls: num(r.cls) })), zeroed_pages: analysis.zeroed_pages || [],
+    site: site ? { redirects: (site.redirects || []).map((r) => ({ host: r.host, verdict: r.verdict })), home: site.home ? { variants: site.home.variants, org: site.home.org } : null, pillar: site.pillar || null } : null,
+  };
   const cal = await db`select title, kind, starts_on, ends_on, note, recurring_yearly from seo.calendar order by sort, starts_on`;
   analysis.calendar = upcomingCalendar(cal.map((r) => ({ ...r, starts_on: ymd(new Date(r.starts_on)), ends_on: r.ends_on ? ymd(new Date(r.ends_on)) : null })), today, 42);
   const health = await db`select key, label, expected_interval_min, last_ok_at, last_error, last_error_at, consecutive_failures, muted_until from dash.integrations where key like 'seo:%' order by key`;
@@ -300,6 +371,14 @@ export async function run(ctx) {
   }
   if (analysis.opportunities?.length) {
     await pulse(ctx, { source: "analyze", kind: "mulighet", severity: "notis", title: `Muligheter: ${analysis.opportunities.slice(0, 3).map((o) => `«${o.query}» (pos ${o.position})`).join(", ")}`, body: "Søkeord i posisjon 8–20 med visninger, rangert på gevinst ved å nå topp 5.", data: analysis.opportunities.slice(0, 5) });
+  }
+  if (analysis.monthly_review) {
+    await pulse(ctx, {
+      source: "analyze", kind: "ai", severity: "notis",
+      title: "Månedlig ordgjennomgang: " + analysis.terms.map((t) => `«${t.prompt.replace(/^hva er\s+/i, "").replace(/\?$/, "")}» nevnt ${t.mentioned}/${t.asked}, sitert ${t.own_cited}/${t.asked}`).join(" · "),
+      body: "Siste fire uker, alle motorer. Hvem som siteres i stedet står i ukesbrevet.",
+      data: analysis.terms,
+    });
   }
   await pulse(ctx, { source: "analyze", kind: "tall", severity: "info", title: `Ukeanalyse klar for ${ctx.week}`, body: analysis.data_gaps.length ? "Mangler: " + analysis.data_gaps.join("; ") : "Alle datakilder til stede.", data: { gaps: analysis.data_gaps } });
   return { movers: (analysis.movers || []).length, decay: (analysis.decay || []).length, opportunities: (analysis.opportunities || []).length, gaps: analysis.data_gaps.length };

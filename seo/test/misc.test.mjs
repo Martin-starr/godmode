@@ -5,7 +5,7 @@ import { parseSerperDate, pickDiscoveries } from "../steps/04-serp.mjs";
 import { pickAccounts } from "../steps/06-brreg.mjs";
 import { vendorNames } from "../steps/09-ai.mjs";
 import { rotate } from "../steps/10-scout.mjs";
-import { compactAnalysis, renderMarkdown } from "../steps/12-brief.mjs";
+import { compactAnalysis, ensurePillarLink, pickQuestion, renderMarkdown } from "../steps/12-brief.mjs";
 import { renderHtml } from "../steps/13-send.mjs";
 
 test("ISO weeks around new year", () => {
@@ -85,4 +85,28 @@ test("compactAnalysis drops the daily series and trims lists", () => {
   assert.equal(c.daily, undefined);
   assert.equal(c.top_queries.length, 12);
   assert.equal(c.competitor_changes.facts[0].org_nr, undefined);
+});
+
+test("renderMarkdown shows the monthly term review only when it has text", () => {
+  assert.doesNotMatch(renderMarkdown("2026-W37", { ...sample, term_review: "" }), /Eier vi ordet/);
+  const md = renderMarkdown("2026-W41", { ...sample, term_review: "vermikompost: nevnt 2/12." });
+  assert.match(md, /## Eier vi ordet\? \(månedlig\)\n\nvermikompost: nevnt 2\/12\./);
+  assert.match(renderHtml("2026-W41", { ...sample, term_review: "x" }, "u"), /Eier vi ordet/);
+});
+
+test("pickQuestion skips questions an earlier draft already answered", () => {
+  const qs = [{ query: "hva er vermikompost" }, { query: "hvordan bruke vermikompost" }];
+  assert.equal(pickQuestion(qs, ["Hva er vermikompost?"]).query, "hvordan bruke vermikompost");
+  assert.equal(pickQuestion(qs, []).query, "hva er vermikompost");
+  assert.equal(pickQuestion(qs, ["hva er vermikompost", "hvordan  bruke vermikompost"]), null);
+  assert.equal(pickQuestion(undefined, []), null);
+});
+
+test("ensurePillarLink appends the pillar link once, only when missing", () => {
+  const url = "https://www.verminord.no/blogg/vermikompost-i-norge";
+  const withLink = `Tekst med [guiden](${url}).`;
+  assert.equal(ensurePillarLink(withLink, url), withLink);
+  const added = ensurePillarLink("Tekst uten lenke.\n\n", url);
+  assert.match(added, /^Tekst uten lenke\.\n\nLes mer i \[Vermikompost i Norge — den komplette guiden\]\(https:\/\/www\.verminord\.no\/blogg\/vermikompost-i-norge\)\.\n$/);
+  assert.equal(ensurePillarLink("x", ""), "x");
 });

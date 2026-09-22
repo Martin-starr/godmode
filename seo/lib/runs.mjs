@@ -15,6 +15,7 @@ export const LABELS = {
   gsc: "Search Console",
   ga4: "GA4",
   psi: "PageSpeed",
+  site: "Egen side",
   serp: "SERP (Serper)",
   competitors: "Konkurrentsider",
   brreg: "Brønnøysund",

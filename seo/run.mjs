@@ -24,6 +24,7 @@ const STEPS = [
   ["gsc", "./steps/01-gsc.mjs"],
   ["ga4", "./steps/02-ga4.mjs"],
   ["psi", "./steps/03-psi.mjs"],
+  ["site", "./steps/03b-site.mjs"],
   ["serp", "./steps/04-serp.mjs"],
   ["competitors", "./steps/05-competitors.mjs"],
   ["brreg", "./steps/06-brreg.mjs"],

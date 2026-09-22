@@ -4,6 +4,17 @@ import { isoWeek, osloToday, previousWeekKey, weekMonday, windows } from "./date
 import { hasDbConfig } from "./db.mjs";
 import { googleConfigured } from "./google-auth.mjs";
 
+// Our own addresses. The home host is where verminord.com must redirect to;
+// the pillar page is the guide every blog draft links back to (step 12) and
+// that step site checks is live. Env overrides so a move needs no deploy.
+export function siteConfig(env = process.env) {
+  return {
+    home: env.SEO_HOME_URL || "https://www.verminord.no/",
+    pillar: env.SEO_PILLAR_URL || "https://www.verminord.no/blogg/vermikompost-i-norge",
+    oldHosts: (env.SEO_OLD_HOSTS || "verminord.com,www.verminord.com").split(",").map((s) => s.trim()).filter(Boolean),
+  };
+}
+
 export function buildContext({ only = null, week = null, backfill = false, dryRun = false, resend = false } = {}) {
   const runDate = week ? weekMonday(week) : osloToday();
   const wk = week || isoWeek(runDate).key;
@@ -16,6 +27,7 @@ export function buildContext({ only = null, week = null, backfill = false, dryRu
     backfill,
     dryRun,
     resend,
+    site: siteConfig(),
     summary: [],
     startedAt: new Date(),
     keys: {
