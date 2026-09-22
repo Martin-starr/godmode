@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jordnær — organisk startside</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..700&family=Work+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --loam:#241C15;
+  --cream:#F3ECDE;
+  --moss:#5E6B44;
+  --terra:#B5622F;
+  --bark:#4A3B2C;
+  --soft:#E4DAC6;
+  --muted:#6B6153;
+  --display:'Fraunces',Georgia,serif;
+  --sans:'Work Sans',Helvetica,sans-serif;
+  --round:26px;
+  --grain:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.3'/%3E%3C/svg%3E");
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--cream);color:var(--loam);font-family:var(--sans);font-size:16px;
+  line-height:1.62;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1140px;margin:0 auto;padding:0 26px}
+.lab{font-family:var(--sans);font-weight:600;font-size:10px;letter-spacing:.2em;
+  text-transform:uppercase;color:var(--moss)}
+h1,h2,h3{font-family:var(--display);font-optical-sizing:auto;font-weight:600}
+
+/* ── HERO: dark, grainy, one soft shape behind the words ── */
+header{background:var(--loam);color:var(--cream);position:relative;overflow:hidden;
+  border-radius:0 0 var(--round) var(--round)}
+header:before{content:'';position:absolute;inset:0;background:var(--grain);
+  opacity:.5;pointer-events:none}
+header:after{content:'';position:absolute;right:-16%;top:-34%;width:66%;height:150%;
+  background:radial-gradient(closest-side,rgba(94,107,68,.62),rgba(94,107,68,0));
+  border-radius:50%;pointer-events:none}
+header .inner{position:relative;padding:34px 0 92px}
+header .nav{display:flex;justify-content:space-between;align-items:center;gap:18px;
+  flex-wrap:wrap;padding-bottom:78px}
+header .nav .lab{color:var(--soft)}
+header .nav ul{list-style:none;display:flex;gap:24px}
+header .nav a{color:rgba(243,236,222,.72);text-decoration:none;font-size:14px}
+header .nav a:hover{color:var(--cream)}
+header h1{font-size:clamp(42px,7.6vw,90px);line-height:1.02;letter-spacing:-.028em;
+  max-width:20ch;margin-bottom:24px;font-weight:500}
+header h1 em{font-style:italic;color:#C9D3A8;font-weight:400}
+header p{font-size:19px;line-height:1.6;color:rgba(243,236,222,.78);max-width:44ch;
+  margin-bottom:34px}
+header .cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+header .cta a{display:inline-block;text-decoration:none;padding:15px 27px;
+  border-radius:999px;font-size:14px;font-weight:500}
+header .cta .go{background:var(--terra);color:#fff}
+header .cta .alt{border:1px solid rgba(243,236,222,.34);color:var(--cream)}
+
+/* ── PRODUKT ── */
+#produkt{padding:82px 0 20px}
+#produkt .head{display:flex;justify-content:space-between;align-items:end;gap:22px;
+  flex-wrap:wrap;margin-bottom:34px}
+#produkt h2{font-size:clamp(28px,4.2vw,44px);line-height:1.08;letter-spacing:-.024em;
+  max-width:22ch;font-weight:500;text-wrap:balance}
+#produkt .cards{display:grid;gap:20px;grid-template-columns:repeat(auto-fit,minmax(266px,1fr))}
+#produkt .card{background:#fff;border-radius:var(--round);padding:28px;
+  border:1px solid rgba(36,28,21,.09);display:flex;flex-direction:column;gap:14px}
+#produkt .card.dark{background:var(--bark);color:var(--cream);border-color:transparent}
+#produkt .card.dark p{color:rgba(243,236,222,.74)}
+#produkt .card.dark .lab{color:#C9D3A8}
+#produkt .blob{width:56px;height:56px;border-radius:42% 58% 54% 46%/48% 44% 56% 52%;
+  background:linear-gradient(150deg,var(--moss),#7C8A58)}
+#produkt .card.dark .blob{background:linear-gradient(150deg,var(--terra),#D0834E)}
+#produkt .card h3{font-size:22px;letter-spacing:-.014em;font-weight:600}
+#produkt .card p{font-size:15px;color:var(--muted);line-height:1.6;flex:1}
+#produkt .card .pr{font-family:var(--display);font-size:19px;font-weight:500}
+
+/* ── SLIK: numbered steps over a soil speckle ── */
+#slik{margin:78px 0;padding:64px 0;background:var(--soft);border-radius:var(--round);
+  position:relative;overflow:hidden}
+#slik:before{content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:radial-gradient(circle,rgba(74,59,44,.2) 1px,transparent 1.4px);
+  background-size:17px 17px;opacity:.6}
+#slik .inner{position:relative}
+#slik h2{font-size:clamp(26px,3.8vw,38px);line-height:1.1;letter-spacing:-.022em;
+  margin:14px 0 40px;max-width:22ch;font-weight:500;text-wrap:balance}
+#slik ol{list-style:none;counter-reset:s;display:grid;gap:26px;
+  grid-template-columns:repeat(auto-fit,minmax(224px,1fr))}
+#slik li{counter-increment:s;padding-top:19px;border-top:2px solid rgba(74,59,44,.24)}
+#slik li:before{content:counter(s);font-family:var(--display);font-size:32px;font-weight:600;
+  color:var(--terra);display:block;line-height:1;margin-bottom:11px}
+#slik h3{font-size:18px;margin-bottom:7px;font-weight:600}
+#slik p{font-size:15px;color:var(--bark);line-height:1.6}
+
+/* ── TALL ── */
+#tall{padding:0 0 78px}
+#tall .row{display:grid;gap:22px;grid-template-columns:repeat(auto-fit,minmax(158px,1fr))}
+#tall .stat{border-top:2px solid var(--moss);padding-top:16px}
+#tall .n{font-family:var(--display);font-size:clamp(34px,4.6vw,50px);line-height:1;
+  font-weight:600;letter-spacing:-.03em;margin-bottom:7px}
+#tall .d{font-size:14px;color:var(--muted);line-height:1.5}
+
+/* ── SEGL ── */
+#segl{background:var(--loam);color:var(--cream);border-radius:var(--round);
+  padding:56px 32px;text-align:center;position:relative;overflow:hidden;margin-bottom:78px}
+#segl:before{content:'';position:absolute;inset:0;background:var(--grain);opacity:.45}
+#segl .inner{position:relative;display:flex;flex-direction:column;align-items:center;gap:20px}
+#segl svg{width:96px;height:96px}
+#segl h2{font-size:clamp(24px,3.4vw,34px);line-height:1.14;letter-spacing:-.02em;
+  max-width:24ch;font-weight:500;text-wrap:balance}
+#segl p{color:rgba(243,236,222,.74);max-width:46ch;font-size:16px}
+
+footer{border-top:1px solid rgba(36,28,21,.13);padding:30px 0 64px}
+footer .row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+footer .lab{color:var(--muted)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap inner">
+    <div class="nav">
+      <span class="lab">Jordnær</span>
+      <ul>
+        <li><a href="#produkt">Produkter</a></li>
+        <li><a href="#slik">Slik gjør vi det</a></li>
+        <li><a href="#segl">Om gården</a></li>
+      </ul>
+    </div>
+    <h1>Vi selger <em>jord</em> som lukter av skogbunn</h1>
+    <p>Kompostert på Jæren, av kaffegrut, løvmold og sagflis fra tre naboer.
+      Ingen tilsetninger, ingen torv.</p>
+    <div class="cta">
+      <a class="go" href="#produkt">Se produktene</a>
+      <a class="alt" href="#slik">Slik lages den</a>
+    </div>
+  </div>
+</header>
+
+<section id="produkt">
+  <div class="wrap">
+    <div class="head">
+      <div>
+        <span class="lab">Produkter</span>
+        <h2>Tre poser, samme jord i ulik grovhet</h2>
+      </div>
+      <span class="lab">Fri frakt over 800 kr</span>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="blob"></div>
+        <span class="lab">Finsiktet — 4 mm</span>
+        <h3>Til potter og krukker</h3>
+        <p>Siktet to ganger. Blandes ett til fire med vanlig plantejord, eller strøs
+          som topplag på det du har inne.</p>
+        <div class="pr">149 kr — 6 liter</div>
+      </div>
+      <div class="card dark">
+        <div class="blob"></div>
+        <span class="lab">Grov — 10 mm</span>
+        <h3>Til kjøkkenhagen</h3>
+        <p>Med litt struktur igjen, så den holder vann i tørre uker. Ett spadetak per
+          plante ved utplanting.</p>
+        <div class="pr">239 kr — 20 liter</div>
+      </div>
+      <div class="card">
+        <div class="blob"></div>
+        <span class="lab">Konsentrat</span>
+        <h3>Til å brygge med</h3>
+        <p>For deg som lager kompostte. Én kilo gir tjue liter ferdig te etter et
+          døgn med lufting.</p>
+        <div class="pr">189 kr — 2 kilo</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="slik">
+  <div class="wrap inner">
+    <span class="lab">Prosessen</span>
+    <h2>Fire måneder fra kaffegrut til ferdig jord</h2>
+    <ol>
+      <li>
+        <h3>Vi henter</h3>
+        <p>Kaffegrut fra to kafeer, løvmold fra kommunen og sagflis fra et snekkerverksted.</p>
+      </li>
+      <li>
+        <h3>Vi forkomposterer</h3>
+        <p>Seks uker i haug. Den skal opp i 55 grader og holde seg der i tre døgn.</p>
+      </li>
+      <li>
+        <h3>Marken tar over</h3>
+        <p>Ti uker i seng. Den spiser omtrent halve vekten sin hver dag når den har det bra.</p>
+      </li>
+      <li>
+        <h3>Vi sikter og pakker</h3>
+        <p>Siktes i to grovheter, prøve til lab, og pakkes samme uke som den er ferdig.</p>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<section id="tall">
+  <div class="wrap">
+    <span class="lab" style="display:block;margin-bottom:26px">I fjor</span>
+    <div class="row">
+      <div class="stat"><div class="n">41 t</div><div class="d">avfall som ikke gikk til brenning</div></div>
+      <div class="stat"><div class="n">3</div><div class="d">naboer vi henter råvarer fra</div></div>
+      <div class="stat"><div class="n">0</div><div class="d">gram torv i noe vi selger</div></div>
+      <div class="stat"><div class="n">18 km</div><div class="d">lengste vei en råvare reiser</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="segl">
+  <div class="wrap inner">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Segl">
+      <circle cx="50" cy="50" r="46" stroke="#C9D3A8" stroke-width="1"/>
+      <circle cx="50" cy="50" r="39" stroke="#C9D3A8" stroke-width=".5" opacity=".55"/>
+      <path d="M50 68c0-13 7-24 18-29-3 15-8 24-18 29zM50 68c0-13-7-24-18-29 3 15 8 24 18 29z"
+            fill="#C9D3A8" opacity=".85"/>
+      <path d="M50 68V34" stroke="#C9D3A8" stroke-width="1"/>
+      <path d="M34 74h32" stroke="#B5622F" stroke-width="2"/>
+    </svg>
+    <span class="lab" style="color:#C9D3A8">Debio-godkjent — 2411</span>
+    <h2>Alt vi selger kan spores til uka det ble laget</h2>
+    <p>Hver pose har et batchnummer. Skriv det inn på nettsiden, og du får se
+      temperaturkurven, råvarene og laboratorieprøven for nettopp den jorda.</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <span class="lab">Jordnær — Jæren</span>
+      <span class="lab">post@jordnaer.no · 51 42 88 10</span>
+      <span class="lab">Gårdsbutikk lørdag 10–14</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

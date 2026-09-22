@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="4000" viewBox="0 0 600 4000">
+<rect width="600" height="4000" fill="#f2efe8"/>
+<rect x="40" y="40" width="520" height="140" fill="#c8412b"/><text x="60" y="120" font-size="34" font-family="Georgia">Blokk 1</text>
+<rect x="40" y="240" width="520" height="140" fill="#5e6b44"/><text x="60" y="320" font-size="34" font-family="Georgia">Blokk 2</text>
+<rect x="40" y="440" width="520" height="140" fill="#b5622f"/><text x="60" y="520" font-size="34" font-family="Georgia">Blokk 3</text>
+<rect x="40" y="640" width="520" height="140" fill="#3b322a"/><text x="60" y="720" font-size="34" font-family="Georgia">Blokk 4</text>
+<rect x="40" y="840" width="520" height="140" fill="#c8412b"/><text x="60" y="920" font-size="34" font-family="Georgia">Blokk 5</text>
+<rect x="40" y="1040" width="520" height="140" fill="#5e6b44"/><text x="60" y="1120" font-size="34" font-family="Georgia">Blokk 6</text>
+<rect x="40" y="1240" width="520" height="140" fill="#b5622f"/><text x="60" y="1320" font-size="34" font-family="Georgia">Blokk 7</text>
+<rect x="40" y="1440" width="520" height="140" fill="#3b322a"/><text x="60" y="1520" font-size="34" font-family="Georgia">Blokk 8</text>
+<rect x="40" y="1640" width="520" height="140" fill="#c8412b"/><text x="60" y="1720" font-size="34" font-family="Georgia">Blokk 9</text>
+<rect x="40" y="1840" width="520" height="140" fill="#5e6b44"/><text x="60" y="1920" font-size="34" font-family="Georgia">Blokk 10</text>
+<rect x="40" y="2040" width="520" height="140" fill="#b5622f"/><text x="60" y="2120" font-size="34" font-family="Georgia">Blokk 11</text>
+<rect x="40" y="2240" width="520" height="140" fill="#3b322a"/><text x="60" y="2320" font-size="34" font-family="Georgia">Blokk 12</text>
+<rect x="40" y="2440" width="520" height="140" fill="#c8412b"/><text x="60" y="2520" font-size="34" font-family="Georgia">Blokk 13</text>
+<rect x="40" y="2640" width="520" height="140" fill="#5e6b44"/><text x="60" y="2720" font-size="34" font-family="Georgia">Blokk 14</text>
+<rect x="40" y="2840" width="520" height="140" fill="#b5622f"/><text x="60" y="2920" font-size="34" font-family="Georgia">Blokk 15</text>
+<rect x="40" y="3040" width="520" height="140" fill="#3b322a"/><text x="60" y="3120" font-size="34" font-family="Georgia">Blokk 16</text>
+<rect x="40" y="3240" width="520" height="140" fill="#c8412b"/><text x="60" y="3320" font-size="34" font-family="Georgia">Blokk 17</text>
+<rect x="40" y="3440" width="520" height="140" fill="#5e6b44"/><text x="60" y="3520" font-size="34" font-family="Georgia">Blokk 18</text>
+<rect x="40" y="3640" width="520" height="140" fill="#b5622f"/><text x="60" y="3720" font-size="34" font-family="Georgia">Blokk 19</text>
+</svg>
