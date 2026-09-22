@@ -28,6 +28,7 @@ export function renderHtml(week, b, dashUrl) {
   ${h2("Muligheter")}${li(b.opportunities || [], (o) => `<b>${esc(o.query)}</b> — ${esc(o.page)}: ${esc(o.action)}`)}
   ${h2("Konkurrenter")}${li(b.competitors || [], esc)}
   ${h2("AI-synlighet")}<p style="margin:0">${esc(b.ai_visibility)}</p>
+  ${b.term_review ? h2("Eier vi ordet? (månedlig)") + `<p style="margin:0">${esc(b.term_review)}</p>` : ""}
   ${h2("Nyheter og regelverk")}${li(b.news || [], (n) => `<b>${esc(n.title)}</b> — ${esc(n.why)}`)}
   ${h2("Leads")}${li(b.leads || [], (l) => `<b>${esc(l.name)}</b> — ${esc(l.why)}`)}
   ${(b.technical || []).length ? h2("Teknisk") + li(b.technical, esc) : ""}

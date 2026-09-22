@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ctrAt, findDecay, findMovers, scoreOpportunities, upcomingCalendar } from "../steps/11-analyze.mjs";
+import { ctrAt, findDecay, findMovers, isQuestion, monthlyReviewDue, questionQueries, scoreOpportunities, termReview, upcomingCalendar } from "../steps/11-analyze.mjs";
 
 test("ctrAt is monotone and blunt", () => {
   assert.ok(ctrAt(1) > ctrAt(3));
@@ -66,4 +66,54 @@ test("upcomingCalendar shifts recurring rows into the horizon and drops the rest
   const out = upcomingCalendar(rows, "2027-09-07", 42);
   assert.deepEqual(out.map((o) => o.title), ["Høst-tilbakeføring", "Dyrsku'n"]);
   assert.equal(out[1].starts_on, "2027-09-11", "shifted to the horizon's year");
+});
+
+test("isQuestion catches Norwegian and English question queries", () => {
+  assert.ok(isQuestion("hva er vermikompost"));
+  assert.ok(isQuestion("Hvordan bruke vermikompost i drivhus"));
+  assert.ok(isQuestion("kan man bruke meitemarkkompost på plen"));
+  assert.ok(isQuestion("vermikompost til chili?"));
+  assert.ok(isQuestion("how to use worm castings"));
+  assert.ok(!isQuestion("vermikompost"));
+  assert.ok(!isQuestion("vermikompost kjøp"));
+  assert.ok(!isQuestion("hvaler kompost"));          // «hva» must be a whole word
+  assert.ok(!isQuestion("erter i drivhus"));
+});
+
+test("questionQueries keeps questions with impressions, most seen first", () => {
+  const out = questionQueries([
+    { query: "vermikompost", impressions: 900, clicks: 20, position: 11.24 },
+    { query: "hva er markkompost", impressions: 40, clicks: 1, position: 14.26, page: "/" },
+    { query: "hvordan bruke vermikompost", impressions: 120, clicks: 3, position: 9 },
+    { query: "hva er meitemarkkompost", impressions: 0, clicks: 0, position: null },
+  ]);
+  assert.deepEqual(out.map((q) => q.query), ["hvordan bruke vermikompost", "hva er markkompost"]);
+  assert.equal(out[1].position, 14.3);
+  assert.equal(out[1].page, "/");
+});
+
+test("monthlyReviewDue is true only in the first seven days of a month", () => {
+  assert.equal(monthlyReviewDue(new Date("2026-10-05T00:00:00Z")), true);
+  assert.equal(monthlyReviewDue(new Date("2026-10-07T00:00:00Z")), true);
+  assert.equal(monthlyReviewDue(new Date("2026-10-12T00:00:00Z")), false);
+});
+
+test("termReview counts mentions, own citations and who is cited instead", () => {
+  const rows = [
+    { prompt: "Hva er vermikompost?", engine: "openai", mentioned: false, citations: [{ url: "https://www.nibio.no/tema/jord/kompost" }, { url: "https://snl.no/kompost" }] },
+    { prompt: "Hva er vermikompost?", engine: "gemini", mentioned: true, citations: [{ url: "https://www.verminord.no/vermikompost" }, { url: "https://www.nibio.no/x" }] },
+    { prompt: "Hva er markkompost?", engine: "openai", mentioned: false, citations: JSON.stringify([{ url: "https://permakultur.no/a" }]) },
+    { prompt: "Hva er markkompost?", engine: "openai", mentioned: false, citations: null },
+  ];
+  const out = termReview(rows, new Set(["https://www.verminord.no", "verminord.com"]));
+  const v = out.find((t) => t.prompt === "Hva er vermikompost?");
+  assert.equal(v.asked, 2);
+  assert.equal(v.mentioned, 1);
+  assert.equal(v.own_cited, 1);
+  assert.deepEqual(v.engines.gemini, { asked: 1, mentioned: 1, own_cited: 1 });
+  assert.deepEqual(v.top_cited, [{ domain: "nibio.no", count: 2 }, { domain: "snl.no", count: 1 }]);
+  const m = out.find((t) => t.prompt === "Hva er markkompost?");
+  assert.equal(m.asked, 2);
+  assert.equal(m.own_cited, 0);
+  assert.deepEqual(m.top_cited, [{ domain: "permakultur.no", count: 1 }]);
 });

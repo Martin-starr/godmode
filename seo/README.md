@@ -9,7 +9,7 @@ ligger i `docs/seo-agent/SETUP-CHECKLIST.md`.
 ## Slik kjører den
 
 ```
-node seo/run.mjs                      alle 13 steg for inneværende uke
+node seo/run.mjs                      alle 14 steg for inneværende uke
 node seo/run.mjs --only gsc,serp      bare noen steg
 node seo/run.mjs --week 2026-W35      kjør en tidligere uke på nytt
 node seo/run.mjs --backfill           første kjøring: 16 måneder Search Console
@@ -27,15 +27,16 @@ Lokalt trengs `DASH_DATABASE_URL` og de nøklene steget bruker; se tabellen i
 | gsc | `steps/01-gsc.mjs` | Search Console per dag × side × søkeord × land × enhet, pluss tre aggregater | `seo.gsc_daily` |
 | ga4 | `steps/02-ga4.mjs` | Økter, brukere, engasjerte økter, nøkkelhendelser per kanal og landingsside | `seo.ga4_daily` |
 | psi | `steps/03-psi.mjs` | PageSpeed for forsiden og topp 5 sider, mobil og desktop | `seo.psi_audits` |
+| site | `steps/03b-site.mjs` | Egen side: at verminord.com 301-omdirigerer til verminord.no, at navnet staves «Verminord» på forsiden og pilarsiden, Organization-schema, og at pilarsiden er publisert, bruker alle tre ordene og lenker til kilder | `seo.runs.stats` (leses av analyze) |
 | serp | `steps/04-serp.mjs` | Google Norge topp 20 per søkeord, «Folk spør også», Google Nyheter. Nye domener i topp 10 → konkurrent av type `serp` | `seo.serp_snapshots`, `seo.competitors`, `seo.news` |
 | competitors | `steps/05-competitors.mjs` | Pris og lager på produktsider, nye innlegg fra sitemap, plattform-fingeravtrykk | `seo.competitor_snapshots`, `seo.competitor_posts`, `seo.competitor_tech` |
 | brreg | `steps/06-brreg.mjs` | Enhetsregisteret og Regnskapsregisteret per org.nr (oppdateres hver 30. dag) | `seo.company_facts` |
 | ads | `steps/07-ads.mjs` | Meta Ad Library og Google Ads Transparency Center via Playwright (best effort) | `seo.ads` |
 | news | `steps/08-news.mjs` | Mattilsynet, Landbruksdirektoratet, Debio, NIBIO, NLR, høringer + Google Nyheter; Claude gir relevans 0–5 | `seo.news` |
-| ai | `steps/09-ai.mjs` | Spørsmålene i `seo.ai_prompts` til Claude, ChatGPT, Gemini og Perplexity med websøk | `seo.ai_visibility` |
+| ai | `steps/09-ai.mjs` | Spørsmålene i `seo.ai_prompts` med kjøpsintensjon eller intent `begrep` (pluss alt som er lagt til i dashbordet) til Claude, ChatGPT, Gemini og Perplexity med websøk | `seo.ai_visibility` |
 | scout | `steps/10-scout.mjs` | Nyregistrerte selskaper (Brønnøysund) i relevante NACE-koder + Google-søk per region; Claude scorer mot kundeprofilen | `seo.leads` |
-| analyze | `steps/11-analyze.mjs` | Ren regning: deltaer, forfall, muligheter, SERP side om side, konkurrentendringer, AI-rate | `seo.briefs.brief->analysis`, `seo.pulse` |
-| brief | `steps/12-brief.mjs` | Claude skriver brevet som JSON; markdown rendres i kode | `seo.briefs`, `seo.content_drafts` |
+| analyze | `steps/11-analyze.mjs` | Ren regning: deltaer, forfall, muligheter, SERP side om side, konkurrentendringer, AI-rate, spørsmål fra Search Console (90 dager), ordgjennomgang for de tre ordene | `seo.briefs.brief->analysis`, `seo.pulse` |
+| brief | `steps/12-brief.mjs` | Claude skriver brevet som JSON; markdown rendres i kode. Annenhver uke et bloggutkast som svarer på ett ubesvart spørsmål fra Search Console og lenker til pilarsiden | `seo.briefs`, `seo.content_drafts` |
 | send | `steps/13-send.mjs` | Resend, HTML + tekst, til `SEO_BRIEF_EMAIL` | `seo.briefs.sent_at` |
 
 Hvert steg registreres i `seo.runs` og i `dash.integrations` som `seo:<steg>`,
@@ -51,6 +52,15 @@ Alt agenten finner går til `seo.pulse` med en alvorlighet:
 
 Samme uke + kilde + tittel skrives aldri to ganger, så et steg kan kjøres om igjen.
 
+## Eie ordet
+
+Norske dyrkere søker med tre ord for det samme: vermikompost, meitemarkkompost
+og markkompost. Tre spørsmål med intent `begrep` («Hva er …?») stilles hver uke
+(migrasjon `009_eie_ordet.sql`). Første mandagsbrev hver måned har en egen
+seksjon, «Eier vi ordet?», med andel svar som nevner Verminord, andel som
+siterer en av Verminords sider, og hvem som siteres i stedet. Planen bak, og
+utkastet til pilarsiden, ligger i `docs/eie-ordet/`.
+
 ## Legge til noe
 
 Alt redigeres i dashbordet (SEO → Søk / Konkurrenter / AI-synlighet / Årshjul),
@@ -58,7 +68,8 @@ eller direkte i tabellene:
 
 - **Søkeord:** `seo.keywords` (klynge: merke, produkt, bruk, kunnskap, lokal; prioritet 1–3; de 10 første i prioritetsrekkefølge er «kjerneordene» i SERP-tabellen).
 - **Konkurrent:** `seo.competitors`. `product_urls` er sidene som leses for pris/lager, `blog_urls` og `sitemap_url` for nye innlegg, `meta_page_id` for Ad Library. Sett `active = false` i stedet for å slette, så historikken beholdes.
-- **AI-spørsmål:** `seo.ai_prompts`, slik en kunde ville stilt det.
+- **AI-spørsmål:** `seo.ai_prompts`, slik en kunde ville stilt det. Bare intentene i `TRACKED_INTENTS` i `steps/09-ai.mjs` spørres (hvert spørsmål er et betalt kall med websøk); spørsmål lagt til i dashbordet har ingen intent og spørres alltid.
+- **Kilder bloggutkastene kan sitere:** `prompts/sources.md`. Ingen andre kilder slipper inn i utkastene.
 - **Årshjul:** `seo.calendar`. Datoer lagres med ett år; `recurring_yearly` flytter dem til året som vises.
 
 ## Når noe leses feil

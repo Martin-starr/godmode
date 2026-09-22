@@ -10,7 +10,8 @@ Du skriver for Verminord AS. Alt du skriver er på norsk bokmål.
 - Næring (friskvekt, som på sekken): N 0,49 % · P 0,20 % · K 0,22 %. pH 7,1.
 - Dosering: 5–10 % i pottejord, 100–200 g/m² toppdressing i bed, 20 % i frøstartmiks, en neve i plantehullet.
 - Salget går via forhandlere. Ikke skriv pris eller «bestill her».
-- Nettsted: verminord.com.
+- Nettsted: verminord.no. (verminord.com er det gamle domenet og skal omdirigere dit.)
+- Navnet staves «Verminord», alltid. Aldri «VermiNord» eller «Vermi Nord». Produktet heter «VermiCast».
 
 ## Det du aldri skriver
 

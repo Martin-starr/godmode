@@ -23,7 +23,7 @@ on:
         required: true
         default: all
         type: choice
-        options: [all, gsc, ga4, psi, serp, competitors, brreg, ads, news, ai, scout, analyze, brief, send]
+        options: [all, gsc, ga4, psi, site, serp, competitors, brreg, ads, news, ai, scout, analyze, brief, send]
       backfill:
         description: Hent 16 måneder Search Console-historikk (første kjøring)
         required: false
@@ -88,6 +88,9 @@ jobs:
           ALERT_FROM: ${{ vars.ALERT_FROM }}
           DASH_BASE_URL: ${{ vars.DASH_BASE_URL }}
           SKIP_ADS: ${{ vars.SKIP_ADS }}
+          SEO_HOME_URL: ${{ vars.SEO_HOME_URL }}
+          SEO_PILLAR_URL: ${{ vars.SEO_PILLAR_URL }}
+          SEO_OLD_HOSTS: ${{ vars.SEO_OLD_HOSTS }}
         run: |
           set -euo pipefail
           ARGS=""
