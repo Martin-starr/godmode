@@ -101,7 +101,7 @@ test("monthlyReviewDue is true only in the first seven days of a month", () => {
 test("termReview counts mentions, own citations and who is cited instead", () => {
   const rows = [
     { prompt: "Hva er vermikompost?", engine: "openai", mentioned: false, citations: [{ url: "https://www.nibio.no/tema/jord/kompost" }, { url: "https://snl.no/kompost" }] },
-    { prompt: "Hva er vermikompost?", engine: "gemini", mentioned: true, citations: [{ url: "https://www.verminord.no/vermikompost" }, { url: "https://www.nibio.no/x" }] },
+    { prompt: "Hva er vermikompost?", engine: "gemini", mentioned: true, citations: [{ url: "https://www.verminord.no/blogg/vermikompost-i-norge" }, { url: "https://www.nibio.no/x" }] },
     { prompt: "Hva er markkompost?", engine: "openai", mentioned: false, citations: JSON.stringify([{ url: "https://permakultur.no/a" }]) },
     { prompt: "Hva er markkompost?", engine: "openai", mentioned: false, citations: null },
   ];

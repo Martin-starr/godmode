@@ -103,10 +103,10 @@ test("pickQuestion skips questions an earlier draft already answered", () => {
 });
 
 test("ensurePillarLink appends the pillar link once, only when missing", () => {
-  const url = "https://www.verminord.no/vermikompost";
+  const url = "https://www.verminord.no/blogg/vermikompost-i-norge";
   const withLink = `Tekst med [guiden](${url}).`;
   assert.equal(ensurePillarLink(withLink, url), withLink);
   const added = ensurePillarLink("Tekst uten lenke.\n\n", url);
-  assert.match(added, /^Tekst uten lenke\.\n\nLes mer i \[Vermikompost i Norge — den komplette guiden\]\(https:\/\/www\.verminord\.no\/vermikompost\)\.\n$/);
+  assert.match(added, /^Tekst uten lenke\.\n\nLes mer i \[Vermikompost i Norge — den komplette guiden\]\(https:\/\/www\.verminord\.no\/blogg\/vermikompost-i-norge\)\.\n$/);
   assert.equal(ensurePillarLink("x", ""), "x");
 });

@@ -1,5 +1,5 @@
 <!--
-UTKAST til pilarsiden. Skal publiseres på https://www.verminord.no/vermikompost
+UTKAST til pilarsiden. Skal publiseres på https://www.verminord.no/blogg/vermikompost-i-norge
 (eller sett SEO_PILLAR_URL i GitHub-variablene hvis adressen blir en annen).
 Før publisering: gå gjennom sjekklista i docs/eie-ordet/README.md, legg inn
 bildene der det står [Bilde: …], og sett inn datoen under «Sist oppdatert».
@@ -97,7 +97,7 @@ Effekten var størst når vermikompost utgjorde 30–50 % av vekstmediet, og den
 
 **Ma og kolleger (2022)** så på vermikompost i vekstmedier, som pottejord og såjord, i *Journal of Soil Science and Plant Nutrition* ([Ma mfl. 2022](https://doi.org/10.1007/s42729-022-00924-7)). De fant bedre fysiske og kjemiske egenskaper i mediet, bedre spiring og mer biomasse i snitt. Mest effekt var det når vermikompost utgjorde 40–60 % av blandingen.
 
-To ting er verdt å ta med seg. For det første: effekten varierer mye mellom forsøk. For det andre: forsøkene bruker ofte mye mer vermikompost enn det som gir mening i en vanlig hage. Doseringen jeg anbefaler lenger ned, er lavere, og den er basert på egen erfaring, ikke på forsøkene.
+To ting er verdt å ta med seg. For det første: effekten varierer mye mellom forsøk. For det andre: forsøkene brukte ofte mer vermikompost enn det som gir mening i en vanlig hage. Doseringen lenger ned starter lavere, på 10 %, og går opp mot 30 % bare i utarmet jord.
 
 ## Slik reguleres vermikompost i Norge
 
@@ -130,14 +130,14 @@ Vermikompost er ikke én ting. Kvaliteten avhenger av råvarene, markene, tiden 
 
 ## Slik bruker du vermikompost
 
-Dette er doseringene jeg bruker selv og anbefaler:
+Dette er doseringene fra bruksguiden for VermiCast:
 
 | Bruk | Mengde |
 |---|---|
-| Pottejord | 5–10 % innblandet |
-| Toppdressing i bed | 100–200 g per m² |
-| Frøstartmiks | 20 % innblandet |
-| Utplanting | en neve i plantehullet |
+| Innblanding i jord og potter | 10 % (fra 5 % i god jord til 30 % i utarmet jord) |
+| Ved omplanting | 20–30 % innblanding |
+| Toppdressing, vedlikehold | 100–200 g per m², hver fjerde til sjette uke |
+| Toppdressing, jordforbedring | 1–3 liter per m² |
 
 Vermikompost er en jordforbedring, ikke en kunstgjødsel. Næringsinnholdet er lavt og balansert; tallene for VermiCast står under.
 
@@ -180,7 +180,7 @@ Ja. En kasse, kompostmeitemark, fuktig strø og jevnlig påfyll av organisk mate
 Ja. Vermikompost står på EUs liste over gjødselvarer som kan brukes i økologisk produksjon, og Debio fører et register over driftsmidler i Norge.
 
 **Hvor mye vermikompost skal jeg bruke?**
-5–10 % i pottejord, 100–200 g per m² som toppdressing, 20 % i frøstartmiks og en neve i plantehullet ved utplanting.
+Omtrent 10 % innblandet i jord og potter, 20–30 % ved omplanting, og 100–200 g per m² som toppdressing.
 
 **Hva betyr rottegrad V?**
 Rottegrad er et mål på hvor moden en kompost er, fra I til V. V betyr fullt moden, altså at nedbrytingen er ferdig og komposten er stabil.

@@ -4,7 +4,7 @@ import { classifyRedirect, orgSchema, sourceLinks, spellingVariants, termCoverag
 import { siteConfig } from "../lib/context.mjs";
 
 test("spellingVariants flags wrong casing, ignores canonical, caps, URLs and e-mail", () => {
-  const text = "Verminord AS · VermiNord på Jæren · VERMINORD · Vermi Nord · Vermi-Nord · post@verminord.no · www.verminord.no · verminord.com · se verminord.no/vermikompost · VermiNord.";
+  const text = "Verminord AS · VermiNord på Jæren · VERMINORD · Vermi Nord · Vermi-Nord · post@verminord.no · www.verminord.no · verminord.com · se verminord.no/blogg/vermikompost-i-norge · VermiNord.";
   assert.deepEqual(spellingVariants(text), [
     { variant: "VermiNord", count: 2 },
     { variant: "Vermi Nord", count: 1 },
@@ -31,7 +31,7 @@ test("orgSchema finds the Organization node, also inside @graph", () => {
 
 test("sourceLinks counts links to trusted sources per domain", () => {
   const html = `<a href="https://www.nibio.no/tema/jord">NIBIO</a> <a href="https://norsok.no/a">NORSØK</a> <a href='https://doi.org/10.1007/s13593-019-0579-x'>Blouin</a> <a href="/intern">intern</a> <a href="https://www.nibio.no/b">igjen</a> <a href="https://example.com">x</a>`;
-  assert.deepEqual(sourceLinks(html, "https://www.verminord.no/vermikompost"), { "nibio.no": 2, "norsok.no": 1, "doi.org": 1 });
+  assert.deepEqual(sourceLinks(html, "https://www.verminord.no/blogg/vermikompost-i-norge"), { "nibio.no": 2, "norsok.no": 1, "doi.org": 1 });
 });
 
 test("classifyRedirect: permanent, temporary, none, broken", () => {
@@ -51,7 +51,7 @@ test("classifyRedirect: permanent, temporary, none, broken", () => {
 test("siteConfig defaults to verminord.no and reads overrides", () => {
   const d = siteConfig({});
   assert.equal(d.home, "https://www.verminord.no/");
-  assert.equal(d.pillar, "https://www.verminord.no/vermikompost");
+  assert.equal(d.pillar, "https://www.verminord.no/blogg/vermikompost-i-norge");
   assert.deepEqual(d.oldHosts, ["verminord.com", "www.verminord.com"]);
   const o = siteConfig({ SEO_PILLAR_URL: "https://www.verminord.no/guide", SEO_OLD_HOSTS: "a.no, b.no", SEO_HOME_URL: "" });
   assert.equal(o.pillar, "https://www.verminord.no/guide");

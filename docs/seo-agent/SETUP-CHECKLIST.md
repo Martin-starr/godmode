@@ -109,5 +109,5 @@ med samme navn:
 | `DASH_BASE_URL` | Lenken i brevet (standard `https://dash.verminord.app`). |
 | `SKIP_ADS` | Sett til `1` for å hoppe over annonsesteget helt. |
 | `SEO_HOME_URL` | Forsiden som gamle domener skal omdirigere til (standard `https://www.verminord.no/`). |
-| `SEO_PILLAR_URL` | Pilarsiden bloggutkastene lenker til og steget `site` sjekker (standard `https://www.verminord.no/vermikompost`). Se `docs/eie-ordet/`. |
+| `SEO_PILLAR_URL` | Pilarsiden bloggutkastene lenker til og steget `site` sjekker (standard `https://www.verminord.no/blogg/vermikompost-i-norge`). Se `docs/eie-ordet/`. |
 | `SEO_OLD_HOSTS` | Gamle domener som skal 301-omdirigere, kommaseparert (standard `verminord.com,www.verminord.com`). |

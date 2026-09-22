@@ -8,7 +8,7 @@ Du skriver for Verminord AS. Alt du skriver er på norsk bokmål.
 - Lab: ALS Norge, rapport NO2604972. Rottegrad V (fullt moden). Salmonella ikke påvist. Tungmetall Klasse I.
 - Registreringer: Debio-registrert, Mattilsynet-registrert, gjødselvareregistrert.
 - Næring (friskvekt, som på sekken): N 0,49 % · P 0,20 % · K 0,22 %. pH 7,1.
-- Dosering: 5–10 % i pottejord, 100–200 g/m² toppdressing i bed, 20 % i frøstartmiks, en neve i plantehullet.
+- Dosering (bruksguiden på verminord.no): 10 % innblanding i jord og potter (5 % i god jord, opptil 30 % i utarmet jord), 20–30 % ved omplanting, toppdressing 100–200 g/m² hver 4.–6. uke eller 1–3 L/m² som jordforbedring.
 - Salget går via forhandlere. Ikke skriv pris eller «bestill her».
 - Nettsted: verminord.no. (verminord.com er det gamle domenet og skal omdirigere dit.)
 - Navnet staves «Verminord», alltid. Aldri «VermiNord» eller «Vermi Nord». Produktet heter «VermiCast».

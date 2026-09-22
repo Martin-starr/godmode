@@ -72,7 +72,7 @@ lages, hva metaanalysene fant, regelverket i Norge, økologisk bruk, hva du bør
 se etter når du kjøper, dosering, labtallene for VermiCast, vanlige spørsmål og
 en kildeliste med 14 kilder.
 
-Publiser den på **https://www.verminord.no/vermikompost**. Bloggutkastene lenker
+Publiser den på **https://www.verminord.no/blogg/vermikompost-i-norge**. Bloggutkastene lenker
 dit, og steget `site` sjekker den adressen. Blir adressen en annen, sett
 GitHub-variabelen `SEO_PILLAR_URL`.
 
@@ -112,7 +112,7 @@ også.
       "author": { "@type": "Person", "name": "Martin Folkestad" },
       "publisher": { "@type": "Organization", "name": "Verminord AS", "url": "https://www.verminord.no/" },
       "about": ["vermikompost", "meitemarkkompost", "markkompost"],
-      "mainEntityOfPage": "https://www.verminord.no/vermikompost"
+      "mainEntityOfPage": "https://www.verminord.no/blogg/vermikompost-i-norge"
     },
     {
       "@type": "FAQPage",
@@ -122,7 +122,7 @@ også.
         { "@type": "Question", "name": "Kan jeg bruke meitemark fra hagen?", "acceptedAnswer": { "@type": "Answer", "text": "Nei, ikke særlig godt. Den vanligste meitemarken i norsk åker og eng, grå meitemark, lever i jorda. Til vermikompost trenger du kompostmeitemark, som regel Eisenia fetida, som lever i øverste lag av gjødsel og kompost." } },
         { "@type": "Question", "name": "Kan jeg lage vermikompost selv?", "acceptedAnswer": { "@type": "Answer", "text": "Ja. En kasse, kompostmeitemark, fuktig strø og jevnlig påfyll av organisk materiale er nok. Til eget bruk trenger du ikke registrere deg hos Mattilsynet." } },
         { "@type": "Question", "name": "Er vermikompost tillatt i økologisk dyrking?", "acceptedAnswer": { "@type": "Answer", "text": "Ja. Vermikompost står på EUs liste over gjødselvarer som kan brukes i økologisk produksjon, og Debio fører et register over driftsmidler i Norge." } },
-        { "@type": "Question", "name": "Hvor mye vermikompost skal jeg bruke?", "acceptedAnswer": { "@type": "Answer", "text": "5–10 % i pottejord, 100–200 g per m² som toppdressing, 20 % i frøstartmiks og en neve i plantehullet ved utplanting." } },
+        { "@type": "Question", "name": "Hvor mye vermikompost skal jeg bruke?", "acceptedAnswer": { "@type": "Answer", "text": "Omtrent 10 % innblandet i jord og potter, 20–30 % ved omplanting, og 100–200 g per m² som toppdressing." } },
         { "@type": "Question", "name": "Hva betyr rottegrad V?", "acceptedAnswer": { "@type": "Answer", "text": "Rottegrad er et mål på hvor moden en kompost er, fra I til V. V betyr fullt moden, altså at nedbrytingen er ferdig og komposten er stabil." } }
       ]
     }
@@ -165,12 +165,22 @@ Merk: **Oikos heter nå Økologisk Norge** (okologisknorge.no), ifølge søket. 
 - AI-fanen i dashbordet viser svarene og kildene per spørsmål, som før.
 - Spørsmål lagt til i dashbordet ble aldri stilt fordi de manglet intent. Det er rettet: de stilles nå.
 
-## Det Martin må gjøre
+## Status 2026-09-23
 
-1. Kjøre migrasjon 009: `psql "$DASH_DATABASE_URL" -1 -f dash-scripts/migrations/009_eie_ordet.sql`, eller via Supabase MCP.
-2. Stavemåte og omdirigering: sjekklista under grep 1.
-3. Sjekke kildene, legge inn bilder og publisere pilarsiden på `/vermikompost`.
-4. Lese gjennom og sende henvendelsene.
+Gjort:
+
+- Migrasjon 009 er kjørt i Supabase (prosjekt ftjxpivxeavxdgcfpsba). De tre spørsmålene stilles fra neste mandag.
+- Guiden ligger som utkast (`draft: true`) i nettsiden, repoet `verminord-site`, fil `content/blogg/2026-09-23-vermikompost-i-norge.md`. Den vises i Vercel-forhåndsvisningen av grenen, ikke på verminord.no ennå. Adressen blir https://www.verminord.no/blogg/vermikompost-i-norge.
+- Dosering i guiden og i agentens stemme følger nå bruksguiden på verminord.no.
+- E-postutkastene ligger som kladder i Gmail.
+
+Gjenstår (må gjøres i en nettleser):
+
+1. **verminord.com peker fortsatt på Wix.** Vercel er allerede satt opp til å sende verminord.com videre til www.verminord.no, men domenets DNS ligger hos Wix. Bytt navneservere i Wix: Domener → verminord.com → Avansert → Navneservere → endre til `ns1.vercel-dns.com` og `ns2.vercel-dns.com`. Bruker du e-post på @verminord.com, si fra først, så flytter vi MX-postene.
+2. **Gjør omdirigeringen permanent.** Vercel → prosjekt verminord-site-final → Settings → Domains → verminord.com og www.verminord.com → Edit → velg 308 (Permanent) i stedet for 307.
+3. **Sjekk kildene** i lista over, og si fra. Da settes `draft: false` og guiden går live.
+4. **Send e-postene** fra Gmail-kladdene når guiden er live. Legg inn mottaker der det mangler.
+5. Stavemåten på sekker, Google-profil og sosiale medier (sjekklista under grep 1).
 
 ## Ikke bekreftet
 

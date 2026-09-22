@@ -10,7 +10,7 @@ import { googleConfigured } from "./google-auth.mjs";
 export function siteConfig(env = process.env) {
   return {
     home: env.SEO_HOME_URL || "https://www.verminord.no/",
-    pillar: env.SEO_PILLAR_URL || "https://www.verminord.no/vermikompost",
+    pillar: env.SEO_PILLAR_URL || "https://www.verminord.no/blogg/vermikompost-i-norge",
     oldHosts: (env.SEO_OLD_HOSTS || "verminord.com,www.verminord.com").split(",").map((s) => s.trim()).filter(Boolean),
   };
 }
