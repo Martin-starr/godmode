@@ -80,6 +80,14 @@ export async function runStep(ctx, step, fn) {
   return outcome;
 }
 
+// seo.runs.stats is written as JSON.stringify(...)::jsonb, which postgres.js
+// stores as a JSON *string* holding the object. Readers go through this so
+// both that and a real jsonb object work.
+export function readStats(stats) {
+  if (typeof stats !== "string") return stats || null;
+  try { return JSON.parse(stats); } catch { return null; }
+}
+
 function summarize(result) {
   try {
     const parts = Object.entries(result)

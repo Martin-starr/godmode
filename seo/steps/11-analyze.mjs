@@ -11,6 +11,7 @@ import { pulse } from "../lib/pulse.mjs";
 import { classify } from "../../lib/integrations.js";
 import { addDays, ymd } from "../lib/dates.mjs";
 import { domainOf } from "../lib/text.mjs";
+import { readStats } from "../lib/runs.mjs";
 
 // Expected click-through by position — a fixed curve, deliberately blunt.
 // The exact numbers matter less than the shape: the gain from 12 → 5 is
@@ -346,7 +347,7 @@ export async function run(ctx) {
   const psi = await db`select a.url, a.strategy, a.perf_score, a.lcp_ms, a.cls, a.tbt_ms, a.inp_ms,
       (select perf_score from seo.psi_audits p where p.url = a.url and p.strategy = a.strategy and p.week <> a.week order by run_at desc limit 1) as prev
     from seo.psi_audits a where a.week = ${ctx.week} order by a.url, a.strategy`;
-  const site = (await db`select stats from seo.runs where week = ${ctx.week} and step = 'site' and status = 'ok' order by started_at desc limit 1`)[0]?.stats || null;
+  const site = readStats((await db`select stats from seo.runs where week = ${ctx.week} and step = 'site' and status = 'ok' order by started_at desc limit 1`)[0]?.stats);
   analysis.technical = {
     psi: psi.map((r) => ({ ...r, cls: num(r.cls) })), zeroed_pages: analysis.zeroed_pages || [],
     site: site ? { redirects: (site.redirects || []).map((r) => ({ host: r.host, verdict: r.verdict })), home: site.home ? { variants: site.home.variants, org: site.home.org } : null, pillar: site.pillar || null } : null,

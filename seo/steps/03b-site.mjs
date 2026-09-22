@@ -18,6 +18,7 @@ import { request } from "../lib/fetch.mjs";
 import { sql } from "../lib/db.mjs";
 import { pulse } from "../lib/pulse.mjs";
 import { domainOf, stripHtml } from "../lib/text.mjs";
+import { readStats } from "../lib/runs.mjs";
 
 const bare = (host) => String(host || "").toLowerCase().replace(/^www\./, "");
 
@@ -136,7 +137,7 @@ export async function run(ctx) {
   const homeHost = domainOf(home);
   const db = ctx.dryRun ? null : sql();
   const prev = db
-    ? (await db`select stats from seo.runs where step = 'site' and status = 'ok' and week <> ${ctx.week} order by started_at desc limit 1`)[0]?.stats || null
+    ? readStats((await db`select stats from seo.runs where step = 'site' and status = 'ok' and week <> ${ctx.week} order by started_at desc limit 1`)[0]?.stats)
     : null;
 
   // --- 1. Old domain → home -------------------------------------------------

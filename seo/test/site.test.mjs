@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { classifyRedirect, orgSchema, sourceLinks, spellingVariants, termCoverage } from "../steps/03b-site.mjs";
 import { siteConfig } from "../lib/context.mjs";
+import { readStats } from "../lib/runs.mjs";
 
 test("spellingVariants flags wrong casing, ignores canonical, caps, URLs and e-mail", () => {
   const text = "Verminord AS · VermiNord på Jæren · VERMINORD · Vermi Nord · Vermi-Nord · post@verminord.no · www.verminord.no · verminord.com · se verminord.no/blogg/vermikompost-i-norge · VermiNord.";
@@ -57,4 +58,12 @@ test("siteConfig defaults to verminord.no and reads overrides", () => {
   assert.equal(o.pillar, "https://www.verminord.no/guide");
   assert.deepEqual(o.oldHosts, ["a.no", "b.no"]);
   assert.equal(o.home, "https://www.verminord.no/");
+});
+
+test("readStats reads both a jsonb object and the double-encoded string", () => {
+  const obj = { redirects: [{ host: "verminord.com", verdict: "midlertidig" }] };
+  assert.deepEqual(readStats(JSON.stringify(obj)), obj);
+  assert.deepEqual(readStats(obj), obj);
+  assert.equal(readStats(null), null);
+  assert.equal(readStats("{broken"), null);
 });
