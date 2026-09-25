@@ -360,8 +360,17 @@ export async function run(ctx) {
   for (const r of runs) if (!analysis.data_gaps.some((g) => g.includes(r.step))) analysis.data_gaps.push(`${r.step}: ${r.status}${r.error ? " — " + r.error.slice(0, 80) : ""}`);
 
   // --- persist + pulse -----------------------------------------------------
+  // The `||` merge below only merges two jsonb *objects*. If seo.briefs.brief
+  // was ever anything else — an array, a string, absent — merging into it
+  // would silently wrap or concatenate instead of failing loudly, and every
+  // reader downstream (the dashboard, the Monday e-mail) would get an object
+  // that no longer has `.analysis`/`.brief` on it. Guard the base value back
+  // to `{}` whenever it isn't already an object, so a bad row self-heals on
+  // the next write instead of staying bad forever.
   await db`insert into seo.briefs (week, brief) values (${ctx.week}, ${JSON.stringify({ analysis })}::jsonb)
-    on conflict (week) do update set brief = coalesce(seo.briefs.brief, '{}'::jsonb) || ${JSON.stringify({ analysis })}::jsonb`;
+    on conflict (week) do update set brief =
+      (case when jsonb_typeof(seo.briefs.brief) = 'object' then seo.briefs.brief else '{}'::jsonb end)
+      || ${JSON.stringify({ analysis })}::jsonb`;
   ctx.analysis = analysis;
 
   for (const m of (analysis.movers || []).slice(0, 4)) {
