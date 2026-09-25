@@ -180,10 +180,15 @@ export async function run(ctx) {
   const model = BRIEF_MODEL || activeModel();
 
   if (db) {
+    // Guard against a non-object base value the same way 11-analyze.mjs does
+    // — see the comment there. Without it, `||` against a stray array or
+    // string wraps/concatenates instead of merging, and the dashboard and
+    // the Monday e-mail both read an object with no `.brief` on it.
     await db`insert into seo.briefs (week, generated_at, model, summary_md, brief)
       values (${ctx.week}, now(), ${model}, ${md}, ${JSON.stringify({ brief: out })}::jsonb)
       on conflict (week) do update set generated_at = now(), model = ${model}, summary_md = ${md},
-        brief = coalesce(seo.briefs.brief, '{}'::jsonb) || ${JSON.stringify({ brief: out })}::jsonb`;
+        brief = (case when jsonb_typeof(seo.briefs.brief) = 'object' then seo.briefs.brief else '{}'::jsonb end)
+          || ${JSON.stringify({ brief: out })}::jsonb`;
     const existing = await db`select 1 from seo.content_drafts where week = ${ctx.week} and kind = 'blogg' limit 1`;
     if (!existing.length && out.blog_draft?.body_md) {
       await db`insert into seo.content_drafts (week, kind, keyword, title, body_md) values (${ctx.week}, 'blogg', ${out.blog_draft.keyword}, ${out.blog_draft.title}, ${out.blog_draft.body_md})`;
