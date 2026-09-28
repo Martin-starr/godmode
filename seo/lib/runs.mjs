@@ -8,7 +8,7 @@
 // neither ok() nor fail(): "not configured" is not a failure, and it must
 // not look like a success either — it stays "ukjent" until the key exists.
 import { ok, fail } from "../../lib/integrations.js";
-import { sql } from "./db.mjs";
+import { sql, jsonb } from "./db.mjs";
 import { pulse } from "./pulse.mjs";
 
 export const LABELS = {
@@ -44,7 +44,7 @@ async function finishRun(ctx, id, status, error, stats) {
   try {
     await sql()`update seo.runs set finished_at = now(), status = ${status},
       error = ${error ? String(error).slice(0, 1000) : null},
-      stats = ${stats ? JSON.stringify(stats) : null}::jsonb where id = ${id}`;
+      stats = ${jsonb(stats)}::jsonb where id = ${id}`;
   } catch (e) {
     ctx.log("runs", "kunne ikke avslutte kjøring: " + e.message);
   }
@@ -80,9 +80,9 @@ export async function runStep(ctx, step, fn) {
   return outcome;
 }
 
-// seo.runs.stats is written as JSON.stringify(...)::jsonb, which postgres.js
-// stores as a JSON *string* holding the object. Readers go through this so
-// both that and a real jsonb object work.
+// Rows written before the jsonb() helper in lib/db.mjs hold seo.runs.stats
+// as a JSON *string* (see the comment there). Readers go through this so both
+// that and a real jsonb object work.
 export function readStats(stats) {
   if (typeof stats !== "string") return stats || null;
   try { return JSON.parse(stats); } catch { return null; }

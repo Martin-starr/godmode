@@ -6,7 +6,7 @@
 // facts change once a year, so a row older than 30 days is refreshed and
 // everything younger is left alone.
 import { getJson, request } from "../lib/fetch.mjs";
-import { sql } from "../lib/db.mjs";
+import { sql, jsonb } from "../lib/db.mjs";
 import { pulse } from "../lib/pulse.mjs";
 
 const ENHETER = "https://data.brreg.no/enhetsregisteret/api/enheter";
@@ -103,7 +103,7 @@ export async function run(ctx) {
     if (db) {
       await db`insert into seo.company_facts (org_nr, fetched_at, name, nace_code, nace_text, employees, founded, fiscal_year, revenue_nok, result_nok, raw)
         values (${row.org_nr}, now(), ${row.name}, ${row.nace_code}, ${row.nace_text}, ${row.employees}, ${row.founded}, ${row.fiscal_year}, ${row.revenue_nok}, ${row.result_nok},
-                ${JSON.stringify({ enhet: { organisasjonsform: enhet.organisasjonsform?.kode, kommune: enhet.forretningsadresse?.kommune, poststed: enhet.forretningsadresse?.poststed }, accounts })}::jsonb)
+                ${jsonb({ enhet: { organisasjonsform: enhet.organisasjonsform?.kode, kommune: enhet.forretningsadresse?.kommune, poststed: enhet.forretningsadresse?.poststed }, accounts })}::jsonb)
         on conflict (org_nr) do update set fetched_at = now(), name = excluded.name, nace_code = excluded.nace_code, nace_text = excluded.nace_text,
           employees = excluded.employees, founded = excluded.founded, fiscal_year = excluded.fiscal_year, revenue_nok = excluded.revenue_nok, result_nok = excluded.result_nok, raw = excluded.raw`;
     }

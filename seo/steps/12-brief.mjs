@@ -14,7 +14,7 @@
 import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
-import { sql } from "../lib/db.mjs";
+import { sql, jsonb } from "../lib/db.mjs";
 import { pulse } from "../lib/pulse.mjs";
 import { aiEnabled, activeModel, claudeJson } from "../lib/ai.mjs";
 import { weekNumber } from "../lib/dates.mjs";
@@ -185,10 +185,10 @@ export async function run(ctx) {
     // string wraps/concatenates instead of merging, and the dashboard and
     // the Monday e-mail both read an object with no `.brief` on it.
     await db`insert into seo.briefs (week, generated_at, model, summary_md, brief)
-      values (${ctx.week}, now(), ${model}, ${md}, ${JSON.stringify({ brief: out })}::jsonb)
+      values (${ctx.week}, now(), ${model}, ${md}, ${jsonb({ brief: out })}::jsonb)
       on conflict (week) do update set generated_at = now(), model = ${model}, summary_md = ${md},
         brief = (case when jsonb_typeof(seo.briefs.brief) = 'object' then seo.briefs.brief else '{}'::jsonb end)
-          || ${JSON.stringify({ brief: out })}::jsonb`;
+          || ${jsonb({ brief: out })}::jsonb`;
     const existing = await db`select 1 from seo.content_drafts where week = ${ctx.week} and kind = 'blogg' limit 1`;
     if (!existing.length && out.blog_draft?.body_md) {
       await db`insert into seo.content_drafts (week, kind, keyword, title, body_md) values (${ctx.week}, 'blogg', ${out.blog_draft.keyword}, ${out.blog_draft.title}, ${out.blog_draft.body_md})`;
