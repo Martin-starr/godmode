@@ -35,7 +35,10 @@ function stamp() {
 }
 
 async function dump(file) {
-  const args = ["--schema=dash", "--schema=seo", "--no-owner", "--no-privileges", "--format=plain", "--dbname", databaseUrl()];
+  // --enable-row-security: the seo tables have RLS with a single policy that
+  // grants dash_app every row, so the dump is complete; without the flag
+  // pg_dump refuses to COPY them at all.
+  const args = ["--schema=dash", "--schema=seo", "--enable-row-security", "--no-owner", "--no-privileges", "--format=plain", "--dbname", databaseUrl()];
   await new Promise((resolve, reject) => {
     const child = spawn(process.env.PG_DUMP || "pg_dump", args, { stdio: ["ignore", "pipe", "inherit"] });
     const out = createWriteStream(file);
