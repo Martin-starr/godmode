@@ -153,3 +153,11 @@ i `seo/README.md`.
 Merk: `package.json` har nå `"type": "module"` slik at `seo/` kan importere
 `lib/ai.js`, `lib/db.js` og `lib/integrations.js` direkte. Next-bygget er
 uendret av det.
+
+## Skrive til appen fra en Claude-samtale
+
+Oppgaver, prosjekter, sjekkpunkter og partnere kan legges inn direkte fra en
+samtale med Claude via Supabase (`dash`-skjemaet). Kontrakten for kolonner og
+lovlige verdier ligger i `.claude/skills/dash-ops/SKILL.md`; den speiler det
+`app/api/tasks|projects|partners|checks` skriver, så radene ser like ut i appen.
+Ingen Notion-kobling er nødvendig for dette.
