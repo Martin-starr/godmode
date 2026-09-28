@@ -106,6 +106,7 @@ async function main() {
     console.log("Del backup-mappen i Drive (som redaktør) med:", serviceAccountEmail());
     return;
   }
+  console.log("service-konto:", serviceAccountEmail(), "→ mappe", folderId);
   const up = await upload(file, name, folderId);
   console.log(`lastet opp til Drive: ${up.name} (${up.id}) ${up.webViewLink || ""}`);
   const pruned = await prune(folderId);
