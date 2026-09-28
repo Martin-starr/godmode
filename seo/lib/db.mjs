@@ -68,3 +68,18 @@ export async function inChunks(rows, size, fn) {
     await fn(rows.slice(i, i + size));
   }
 }
+
+// Every jsonb parameter goes through here.
+//
+// postgres.js asks the server what type each parameter has and serialises
+// with that type. `${JSON.stringify(x)}::jsonb` therefore gets encoded twice:
+// the server says jsonb, the client runs JSON.stringify on the string that
+// is already JSON, and the column ends up holding a jsonb *string* instead
+// of an object or array. Every reader downstream (jsonb_typeof checks, ->
+// lookups, `||` merges) then silently sees the wrong shape — this is what
+// turned seo.briefs.brief into an array in W38–W40 and left seo.runs.stats
+// and seo.ai_visibility.citations as strings. sql.json() tags the value so
+// it is encoded exactly once. SQL null stays null.
+export function jsonb(x) {
+  return x == null ? null : sql().json(x);
+}

@@ -3,7 +3,7 @@
 // numbers (CrUX) when Google has enough traffic to publish them, which a
 // small site often does not — the brief says which it is looking at.
 import { getJson, sleep } from "../lib/fetch.mjs";
-import { sql } from "../lib/db.mjs";
+import { sql, jsonb } from "../lib/db.mjs";
 import { pulse } from "../lib/pulse.mjs";
 
 const API = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed";
@@ -76,7 +76,7 @@ export async function run(ctx) {
         await db`delete from seo.psi_audits where week = ${ctx.week} and url = ${url} and strategy = ${strategy}`;
         await db`insert into seo.psi_audits (week, url, strategy, perf_score, lcp_ms, cls, inp_ms, fcp_ms, tbt_ms, crux, opportunities)
           values (${ctx.week}, ${url}, ${strategy}, ${row.perf_score}, ${row.lcp_ms}, ${row.cls}, ${row.inp_ms}, ${row.fcp_ms}, ${row.tbt_ms},
-                  ${row.crux ? JSON.stringify(row.crux) : null}::jsonb, ${JSON.stringify(row.opportunities)}::jsonb)`;
+                  ${jsonb(row.crux)}::jsonb, ${jsonb(row.opportunities)}::jsonb)`;
       }
       stats.audits += 1;
       if (prev && row.perf_score != null && prev.perf_score != null && prev.perf_score - row.perf_score > 10) {

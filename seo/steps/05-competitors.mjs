@@ -8,7 +8,7 @@
 // can say "changed" rather than dump the whole list again.
 import * as cheerio from "cheerio";
 import { getText, request } from "../lib/fetch.mjs";
-import { sql } from "../lib/db.mjs";
+import { sql, jsonb } from "../lib/db.mjs";
 import { pulse } from "../lib/pulse.mjs";
 import { detectStock, domainOf, fingerprint, normalizeWs, parsePriceNok, sha1, stockText, stripHtml, truncate } from "../lib/text.mjs";
 import { previousWeekKey } from "../lib/dates.mjs";
@@ -253,7 +253,7 @@ export async function run(ctx) {
       const html = await getText("https://" + c.domain + "/", { timeoutMs: 20000, gapMs: 1500 });
       const fp = fingerprint(html);
       if (db) {
-        await db`insert into seo.competitor_tech (week, competitor_id, platform, signals) values (${ctx.week}, ${c.id}, ${fp.platform}, ${JSON.stringify(fp.signals)}::jsonb)
+        await db`insert into seo.competitor_tech (week, competitor_id, platform, signals) values (${ctx.week}, ${c.id}, ${fp.platform}, ${jsonb(fp.signals)}::jsonb)
           on conflict (week, competitor_id) do update set platform = excluded.platform, signals = excluded.signals`;
       }
       stats.tech += 1;

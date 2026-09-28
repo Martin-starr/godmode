@@ -6,7 +6,7 @@
 // stored with the week's brief (seo.briefs.brief->'analysis') and handed to
 // step 12; the dashboard reads the same object for its "Muligheter" and
 // "Forfall" lists so the e-mail and the screen never disagree.
-import { sql } from "../lib/db.mjs";
+import { sql, jsonb } from "../lib/db.mjs";
 import { pulse } from "../lib/pulse.mjs";
 import { classify } from "../../lib/integrations.js";
 import { addDays, ymd } from "../lib/dates.mjs";
@@ -367,10 +367,10 @@ export async function run(ctx) {
   // that no longer has `.analysis`/`.brief` on it. Guard the base value back
   // to `{}` whenever it isn't already an object, so a bad row self-heals on
   // the next write instead of staying bad forever.
-  await db`insert into seo.briefs (week, brief) values (${ctx.week}, ${JSON.stringify({ analysis })}::jsonb)
+  await db`insert into seo.briefs (week, brief) values (${ctx.week}, ${jsonb({ analysis })}::jsonb)
     on conflict (week) do update set brief =
       (case when jsonb_typeof(seo.briefs.brief) = 'object' then seo.briefs.brief else '{}'::jsonb end)
-      || ${JSON.stringify({ analysis })}::jsonb`;
+      || ${jsonb({ analysis })}::jsonb`;
   ctx.analysis = analysis;
 
   for (const m of (analysis.movers || []).slice(0, 4)) {

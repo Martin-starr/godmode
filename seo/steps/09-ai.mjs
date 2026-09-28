@@ -6,7 +6,7 @@
 // decided by code, not by another model (seo/lib/text.mjs detectMentions).
 // One week is noise; the dashboard shows the rate over 12 weeks.
 import { postJson, sleep } from "../lib/fetch.mjs";
-import { sql } from "../lib/db.mjs";
+import { sql, jsonb } from "../lib/db.mjs";
 import { pulse } from "../lib/pulse.mjs";
 import { aiEnabled, activeModel, claude, webSearchTool } from "../lib/ai.mjs";
 import { detectMentions, extractUrls, truncate } from "../lib/text.mjs";
@@ -142,7 +142,7 @@ export async function run(ctx) {
       if (db) {
         prev = (await db`select mentioned from seo.ai_visibility where week = ${ctx.prevWeek} and engine = ${eng.name} and prompt_id = ${p.id}`)[0] || null;
         await db`insert into seo.ai_visibility (week, engine, prompt_id, model, mentioned, mention_rank, competitors_mentioned, citations, answer, asked_at)
-          values (${ctx.week}, ${eng.name}, ${p.id}, ${res.model}, ${det.mentioned}, ${det.mention_rank}, ${det.competitors_mentioned}, ${JSON.stringify(citations)}::jsonb, ${truncate(res.answer, 12000)}, now())
+          values (${ctx.week}, ${eng.name}, ${p.id}, ${res.model}, ${det.mentioned}, ${det.mention_rank}, ${det.competitors_mentioned}, ${jsonb(citations)}::jsonb, ${truncate(res.answer, 12000)}, now())
           on conflict (week, engine, prompt_id) do update set model = excluded.model, mentioned = excluded.mentioned, mention_rank = excluded.mention_rank,
             competitors_mentioned = excluded.competitors_mentioned, citations = excluded.citations, answer = excluded.answer, asked_at = now()`;
       }

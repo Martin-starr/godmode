@@ -9,7 +9,7 @@
 //
 // Only producers and brands are checked by default (six pages). A retailer
 // is included when Martin has set its meta_page_id or google_advertiser.
-import { sql } from "../lib/db.mjs";
+import { sql, jsonb } from "../lib/db.mjs";
 import { pulse } from "../lib/pulse.mjs";
 import { sha1, normalizeWs } from "../lib/text.mjs";
 
@@ -117,7 +117,7 @@ export async function run(ctx) {
             const [existing] = await db`select ad_key from seo.ads where platform = ${platform} and ad_key = ${ad_key}`;
             isNew = !existing;
             await db`insert into seo.ads (platform, competitor_id, ad_key, first_seen, last_seen, active, headline, body, landing_url, media_kind, raw)
-              values (${platform}, ${c.id}, ${ad_key}, ${ad.started ? new Date(ad.started).toISOString().slice(0, 10) : today}, ${today}, true, ${headline}, ${normalizeWs(ad.body || ad.text || "") || null}, ${ad.landing || null}, ${ad.media || null}, ${JSON.stringify(ad)}::jsonb)
+              values (${platform}, ${c.id}, ${ad_key}, ${ad.started ? new Date(ad.started).toISOString().slice(0, 10) : today}, ${today}, true, ${headline}, ${normalizeWs(ad.body || ad.text || "") || null}, ${ad.landing || null}, ${ad.media || null}, ${jsonb(ad)}::jsonb)
               on conflict (platform, ad_key) do update set last_seen = ${today}, active = true, headline = coalesce(excluded.headline, seo.ads.headline), landing_url = coalesce(excluded.landing_url, seo.ads.landing_url), raw = excluded.raw`;
             if (platform === "google" && ad.advertiser && !c.google_advertiser) {
               await db`update seo.competitors set google_advertiser = ${ad.advertiser} where id = ${c.id} and google_advertiser is null`;
