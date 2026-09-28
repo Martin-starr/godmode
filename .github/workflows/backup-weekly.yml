@@ -1,14 +1,22 @@
 name: Ukentlig backup
 
 # Supabase tar ingen automatiske backups på Free-planen. Denne jobben dumper
-# dash- og seo-skjemaene hver søndag natt og legger kopien i Martins Google
-# Drive-mappe «Verminord dash-backup», delt med SEO-agentens service-konto.
-# Kopien lastes også opp som artefakt her (90 dager) som ekstra sikkerhet.
+# dash- og seo-skjemaene hver søndag natt og legger kopien som en GitHub
+# Release i dette repoet (Martins konto, utløper ikke). Kopier eldre enn 90
+# dager ryddes. Samme fil lastes også opp som artefakt (90 dager).
+#
+# Google Drive var førstevalget, men Google gir ikke service-kontoer lagrings-
+# kvote i «Min disk», og Workspace-planen har ikke Delte disker. Settes
+# repo-variabelen BACKUP_DRIVE_FOLDER_ID til en delt disk senere, laster
+# skriptet opp dit i tillegg.
 
 on:
   schedule:
     - cron: "10 2 * * 0"   # søndag 02:10 UTC
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 concurrency:
   group: backup-weekly
@@ -39,9 +47,27 @@ jobs:
         env:
           DASH_DATABASE_URL: ${{ secrets.DASH_DATABASE_URL }}
           GOOGLE_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_JSON }}
-          BACKUP_DRIVE_FOLDER_ID: ${{ vars.BACKUP_DRIVE_FOLDER_ID || '197VPNEsH9HB_r9WbBYNgQLWdWiZTsNI3' }}
+          BACKUP_DRIVE_FOLDER_ID: ${{ vars.BACKUP_DRIVE_FOLDER_ID }}
           PG_DUMP: /usr/lib/postgresql/17/bin/pg_dump
         run: node dash-scripts/backup.mjs
+
+      - name: Publish as GitHub Release (kept 90 days)
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          FILE=$(ls backup/*.sql.gz | head -1)
+          [ -f "$FILE" ] || { echo "::error::ingen dump å publisere"; exit 1; }
+          TAG="backup-$(date -u +%Y-%m-%d_%H%M)"
+          gh release create "$TAG" "$FILE" --title "Backup $TAG" \
+            --notes "Ukentlig dump av dash- og seo-skjemaene ($(du -h "$FILE" | cut -f1)). Gjenopprett med: gunzip -c FIL | psql <tilkoblingsstreng>"
+          echo "publisert: $TAG"
+          CUTOFF=$(date -u -d '90 days ago' +%Y-%m-%d)
+          gh release list --limit 200 --json tagName -q '.[].tagName' | grep '^backup-' | while read -r t; do
+            d=${t#backup-}; d=${d%%_*}
+            if [[ "$d" < "$CUTOFF" ]]; then gh release delete "$t" --cleanup-tag --yes && echo "slettet gammel: $t"; fi
+          done
 
       - uses: actions/upload-artifact@v4
         if: always()
