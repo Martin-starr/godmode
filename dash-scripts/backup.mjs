@@ -37,7 +37,7 @@ function stamp() {
 async function dump(file) {
   const args = ["--schema=dash", "--schema=seo", "--no-owner", "--no-privileges", "--format=plain", "--dbname", databaseUrl()];
   await new Promise((resolve, reject) => {
-    const child = spawn("pg_dump", args, { stdio: ["ignore", "pipe", "inherit"] });
+    const child = spawn(process.env.PG_DUMP || "pg_dump", args, { stdio: ["ignore", "pipe", "inherit"] });
     const out = createWriteStream(file);
     pipeline(child.stdout, createGzip({ level: 9 }), out).then(resolve, reject);
     child.on("error", reject);
