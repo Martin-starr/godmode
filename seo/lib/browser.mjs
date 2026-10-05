@@ -9,8 +9,10 @@ const UA = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Geck
 
 // Everything a page does is raced against a hard deadline (lib/fetch.mjs):
 // if Chromium dies, Playwright's promises can hang with no live handle left,
-// and the process exits mid-step instead of failing the one page.
-export async function withBrowser(fn, { deadlineMs = 90000 } = {}) {
+// and the process exits mid-step instead of failing the one page. The
+// default covers a single render; a caller that keeps one session open for
+// many pages (the ads step) passes its own budget.
+export async function withBrowser(fn, { deadlineMs = 10 * 60 * 1000 } = {}) {
   let pw;
   try {
     pw = await import("playwright");

@@ -94,6 +94,8 @@ export async function run(ctx) {
   const stats = { checked: 0, ads_new: 0, ads_active: 0, failed: 0 };
   const today = ctx.runDate.toISOString().slice(0, 10);
 
+  // One browser session for every competitor, so the hard deadline is the
+  // step's whole time budget plus room for the last page to finish.
   await withBrowser(async (page) => {
     for (const c of competitors) {
       if (Date.now() - started > TOTAL_MS) { ctx.log("ads", "tidsbudsjett brukt opp"); break; }
@@ -153,7 +155,7 @@ export async function run(ctx) {
         ctx.log("ads", `${c.name} ${platform}: ${ads.length} aktive`);
       }
     }
-  });
+  }, { deadlineMs: TOTAL_MS + 2 * PER_PAGE_MS + 30000 });
 
   if (stats.checked === 0) {
     await pulse(ctx, { source: "ads", kind: "konfig", severity: "notis", title: "Annonsedata mangler denne uka", body: "Verken Meta Ad Library eller Google Ads Transparency Center lot seg lese." });
