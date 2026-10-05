@@ -10,6 +10,15 @@
 import { ok, fail } from "../../lib/integrations.js";
 import { sql, jsonb } from "./db.mjs";
 import { pulse } from "./pulse.mjs";
+import { deadline } from "./fetch.mjs";
+
+// No single step may hold the Monday brief hostage. The whole job has 90
+// minutes on GitHub; the slowest honest step (the competitor crawl) takes
+// about 35. A step that is still running after this is treated as failed and
+// the pipeline moves on, so analyze/brief/send still happen. The timer is a
+// referenced one, so the process also cannot exit early while a step waits
+// on a promise that will never settle (Node exit code 13).
+export const STEP_TIMEOUT_MS = Math.max(1, Number(process.env.SEO_STEP_TIMEOUT_MIN) || 45) * 60 * 1000;
 
 export const LABELS = {
   gsc: "Search Console",
@@ -57,7 +66,7 @@ export async function runStep(ctx, step, fn) {
   const runId = await startRun(ctx, step);
   let outcome;
   try {
-    const result = (await fn(ctx)) || {};
+    const result = (await deadline(fn(ctx), STEP_TIMEOUT_MS, "steget " + step)) || {};
     if (result.skipped) {
       await finishRun(ctx, runId, "hoppet over", null, { reason: result.skipped });
       await pulse(ctx, { source: step, kind: "konfig", severity: "notis", title: label + " er ikke konfigurert", body: result.skipped });
