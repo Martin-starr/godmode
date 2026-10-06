@@ -159,7 +159,7 @@ export async function run(ctx) {
           system,
           user: "Vurder disse kandidatene. Returner én rad per nøkkel (key).\n\n" +
             batch.map((c) => `key: ${c.key}\n  navn: ${c.name}\n  bransje: ${c.kind_hint || "ukjent"}\n  region: ${c.region || "ukjent"}\n  nettsted: ${c.url || "ukjent"}\n  kilde: ${c.source}\n  kontekst: ${c.context || ""}`).join("\n\n"),
-          schema, maxTokens: 4000, timeoutMs: 120000,
+          schema, maxTokens: 4000, timeoutMs: 120000, purpose: "seo_scout",
         });
         for (const it of res.items || []) scored.set(it.key, it);
         stats.scored += (res.items || []).length;

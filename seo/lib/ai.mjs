@@ -25,7 +25,7 @@ export function webSearchTool(model = activeModel()) {
 // One structured call. On a parse failure or a rejected thinking parameter
 // the call is retried once without thinking — a brief with plain reasoning
 // beats no brief.
-export async function claudeJson({ system, user, schema, maxTokens = 4000, timeoutMs = 120000, thinking = false, effort = null, model = null }) {
+export async function claudeJson({ system, user, schema, maxTokens = 4000, timeoutMs = 120000, thinking = false, effort = null, model = null, purpose = "seo" }) {
   const modern = modernModel(model || activeModel());
   const attempt = async (withThinking) => {
     const text = await claude({
@@ -34,6 +34,7 @@ export async function claudeJson({ system, user, schema, maxTokens = 4000, timeo
       maxTokens,
       timeoutMs,
       model,
+      purpose,
       outputFormat: { type: "json_schema", schema },
       thinking: withThinking && modern ? { type: "adaptive" } : null,
       effort: effort && modern ? effort : null,

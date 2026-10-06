@@ -15,7 +15,7 @@ export function siteConfig(env = process.env) {
   };
 }
 
-export function buildContext({ only = null, week = null, backfill = false, dryRun = false, resend = false } = {}) {
+export function buildContext({ only = null, week = null, backfill = false, dryRun = false, resend = false, force = false } = {}) {
   const runDate = week ? weekMonday(week) : osloToday();
   const wk = week || isoWeek(runDate).key;
   const ctx = {
@@ -27,6 +27,7 @@ export function buildContext({ only = null, week = null, backfill = false, dryRu
     backfill,
     dryRun,
     resend,
+    force,
     site: siteConfig(),
     summary: [],
     startedAt: new Date(),

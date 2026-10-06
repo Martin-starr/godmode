@@ -96,6 +96,7 @@ export const POST = guarded(
       system: buildSystem(state),
       messages: [{ role: "user", content: text }],
       maxTokens: 2000,
+      purpose: "braindump",
       outputFormat: { type: "json_schema", schema: OPS_SCHEMA },
       // Explicit, not the 25s default in lib/ai.js — that default is sized for
       // small calls like the connectivity test. This one carries the full
