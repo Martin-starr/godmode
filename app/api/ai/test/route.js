@@ -13,6 +13,7 @@ export const POST = guarded(
     const svar = await claude({
       messages: [{ role: "user", content: "Svar med én kort setning som bekrefter at AI-koblingen til Verminord-dashbordet virker." }],
       maxTokens: 60,
+      purpose: "ai_test",
     });
     return json({ svar });
   },

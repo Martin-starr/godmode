@@ -34,6 +34,11 @@ on:
         required: false
         default: false
         type: boolean
+      force:
+        description: Skriv brief og AI-spørsmål på nytt selv om de finnes for uka (koster penger)
+        required: false
+        default: false
+        type: boolean
 
 concurrency:
   group: seo-weekly
@@ -97,5 +102,6 @@ jobs:
           if [ "$JOB" != "all" ]; then ARGS="$ARGS --only $JOB"; fi
           if [ "${{ inputs.backfill }}" = "true" ]; then ARGS="$ARGS --backfill"; fi
           if [ "${{ inputs.resend }}" = "true" ]; then ARGS="$ARGS --resend"; fi
+          if [ "${{ inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
           echo "node seo/run.mjs $ARGS"
           node seo/run.mjs $ARGS

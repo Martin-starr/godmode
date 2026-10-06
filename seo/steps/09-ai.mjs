@@ -16,7 +16,7 @@ const GEMINI_MODEL = () => process.env.GEMINI_MODEL || "gemini-2.5-flash";
 const PERPLEXITY_MODEL = () => process.env.PERPLEXITY_MODEL || "sonar";
 
 async function askAnthropic(prompt) {
-  const data = await claude({ messages: [{ role: "user", content: prompt }], tools: [webSearchTool()], maxTokens: 2000, timeoutMs: 120000, raw: true });
+  const data = await claude({ messages: [{ role: "user", content: prompt }], tools: [webSearchTool()], maxTokens: 2000, timeoutMs: 120000, raw: true, purpose: "seo_ai_synlighet" });
   const texts = [];
   const cites = [];
   for (const b of data.content || []) {
@@ -118,11 +118,22 @@ export async function run(ctx) {
     : [{ id: 1, prompt: "Hvor kan jeg kjøpe vermikompost i Norge?", lang: "no" }];
   const vendors = vendorNames(db ? await db`select name from seo.competitors where active and kind in ('produsent','merke','forhandler')` : [{ name: "Grønn Vekst AS" }, { name: "Nelson Garden" }]);
 
-  const stats = { asked: 0, mentioned: 0, failed: 0, flips: 0 };
+  // Every question is a billed model call plus a web search. A second run in the
+  // same week (a late cron after a manual start, a retry) must not buy the same
+  // answers again — they would only overwrite this week's row with a near copy.
+  const answered = new Set();
+  if (db && !ctx.force) {
+    for (const r of await db`select engine, prompt_id from seo.ai_visibility where week = ${ctx.week} and answer is not null`) {
+      answered.add(r.engine + ":" + r.prompt_id);
+    }
+  }
+
+  const stats = { asked: 0, mentioned: 0, failed: 0, flips: 0, reused: 0 };
   const perEngine = {};
   for (const eng of list) {
     perEngine[eng.name] = { asked: 0, mentioned: 0 };
     for (const p of prompts) {
+      if (answered.has(eng.name + ":" + p.id)) { stats.reused += 1; continue; }
       let res;
       try {
         res = await eng.ask(p.prompt);
@@ -161,6 +172,10 @@ export async function run(ctx) {
       }
       await sleep(400);
     }
+  }
+  if (!stats.asked) {
+    ctx.log("ai", `ingenting nytt å spørre om denne uka (${stats.reused} svar fantes fra før)`);
+    return stats;
   }
   const line = Object.entries(perEngine).map(([k, v]) => `${k} ${v.mentioned}/${v.asked}`).join(" · ");
   await pulse(ctx, {

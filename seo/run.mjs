@@ -44,6 +44,7 @@ const { values } = parseArgs({
     backfill: { type: "boolean", default: false },
     "dry-run": { type: "boolean", default: false },
     resend: { type: "boolean", default: false },
+    force: { type: "boolean", default: false },
     list: { type: "boolean", default: false },
   },
 });
@@ -71,7 +72,9 @@ const ctx = buildContext({
   backfill: values.backfill,
   dryRun: values["dry-run"],
   resend: values.resend,
+  force: values.force,
 });
+if (ctx.dryRun) process.env.AI_USAGE_LOG = "off"; // a dry run writes nothing, including the cost log
 
 if (!ctx.keys.db && !ctx.dryRun) {
   console.error("DASH_DATABASE_URL mangler — ingenting kan lagres. Bruk --dry-run for å teste innsamlerne uten database.");

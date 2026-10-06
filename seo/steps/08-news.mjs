@@ -164,7 +164,7 @@ export async function run(ctx) {
         system,
         user: "Vurder disse sakene. Returner én rad per URL, i samme rekkefølge.\n\n" +
           batch.map((b, n) => `${n + 1}. URL: ${b.url}\n   Kilde: ${b.source || "?"}\n   Tittel: ${b.title || "(mangler)"}\n   Utdrag: ${truncate(b.summary || "", 300) || "(mangler)"}\n   Dato: ${b.published_at ? String(b.published_at).slice(0, 10) : "?"}`).join("\n\n"),
-        schema, maxTokens: 4000, timeoutMs: 120000,
+        schema, maxTokens: 4000, timeoutMs: 120000, purpose: "seo_nyheter",
       });
     } catch (e) {
       ctx.log("news", `vurdering feilet: ${e.message}`);

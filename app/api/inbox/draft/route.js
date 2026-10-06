@@ -24,7 +24,7 @@ export const POST = guarded(
     if (!rows.length) return err("Fant ikke e-posten.", 404);
     const m = rows[0];
 
-    const text = await draftReply(m);
+    const text = await draftReply(m, { purpose: "inbox_utkast_manuell" });
 
     const updated = await withWatchdog(
       () => sql`update dash.inbox set draft_body = ${text} where id = ${id} returning ${sql.unsafe(COLS)}`

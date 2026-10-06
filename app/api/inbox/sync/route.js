@@ -60,6 +60,7 @@ export const POST = guarded(
           received_at = excluded.received_at,
           snippet     = excluded.snippet,
           link        = excluded.link,
+          ai_triaged_at = null,
           status      = case when dash.inbox.status = 'done'
                               and excluded.status = 'open'
                               and excluded.received_at > dash.inbox.received_at + interval '2 minutes'

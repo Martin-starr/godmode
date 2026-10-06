@@ -125,6 +125,18 @@ export function renderMarkdown(week, b) {
 export async function run(ctx) {
   if (!aiEnabled()) return { skipped: "ANTHROPIC_API_KEY mangler" };
   const db = ctx.dryRun ? null : sql();
+
+  // The brief and the blog draft are the two expensive calls of the week (the
+  // frontier model, with thinking). One per week is the product; a second run
+  // — a late cron after a manual start, a retry after a mail problem — must not
+  // pay for a second copy. --force (workflow input "force") overrides this.
+  if (db && !ctx.force) {
+    const [existing] = await db`select brief->'brief'->>'headline' as headline from seo.briefs where week = ${ctx.week} and summary_md is not null`;
+    if (existing) {
+      ctx.log("brief", "ukas brief finnes allerede — gjenbruker den (bruk --force for å skrive en ny)");
+      return { reused: true, headline: existing.headline };
+    }
+  }
   let analysis = ctx.analysis;
   if (!analysis && db) analysis = (await db`select brief->'analysis' as a from seo.briefs where week = ${ctx.week}`)[0]?.a || null;
   if (!analysis) throw new Error("Ingen analyse for uke " + ctx.week + " — kjør steget analyze først.");
@@ -141,6 +153,7 @@ export async function run(ctx) {
     timeoutMs: 300000,
     thinking: true,
     model: BRIEF_MODEL,
+    purpose: "seo_ukesbrief",
   });
   if (!Array.isArray(out.content_moves) || out.content_moves.length !== 3) {
     out.content_moves = (out.content_moves || []).slice(0, 3);
@@ -166,6 +179,7 @@ export async function run(ctx) {
           timeoutMs: 300000,
           thinking: true,
           model: BRIEF_MODEL,
+          purpose: "seo_bloggutkast",
         });
         if (q) out.blog_draft.keyword = q.query;
         out.blog_draft.body_md = ensurePillarLink(out.blog_draft.body_md, pillar);
