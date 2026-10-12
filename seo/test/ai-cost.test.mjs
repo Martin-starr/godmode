@@ -33,6 +33,10 @@ test("cache reads cost 10 %, cache writes 125 %, web searches a cent each", () =
   near(usageCost("claude-haiku-4-5", { server_tool_use: { web_search_requests: 3 } }), 0.03, "searches");
 });
 
+test("a dated model id is priced by its alias", () => {
+  near(usageCost("claude-haiku-4-5-20251001", { input_tokens: 1e6, output_tokens: 1e6 }), 6, "dated haiku");
+});
+
 test("an unknown model is priced like Opus so the log never under-states a surprise", () => {
   near(usageCost("claude-mystery-9", { input_tokens: 1e6, output_tokens: 1e6 }), 30, "unknown");
   near(usageCost("claude-haiku-4-5"), 0, "no usage object");
