@@ -1,0 +1,2 @@
+# Bygges av build-artefakt.mjs — ikke sjekk inn.
+*.artefakt.html
