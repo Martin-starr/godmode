@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Verminord — Norsk premium-vermikompost fra Jæren</title>
+<meta name="description" content="VermiCast er lab-dokumentert, Debio-registrert vermikompost produsert på Jæren i Rogaland. Rottegrad V, salmonella ikke påvist, tungmetallklasse 0. Foret med lokale råvarer.">
+<style>
+  :root{
+    --soil:#2b2119;         /* dark cast / soil */
+    --soil-2:#3a2d21;
+    --bark:#5b4636;
+    --clay:#8a6a4a;
+    --moss:#4a5d3a;         /* muted green */
+    --moss-2:#5e7449;
+    --sprout:#7c9a5a;
+    --paper:#f4efe6;        /* cream paper */
+    --paper-2:#ece4d6;
+    --line:#ddd2c0;
+    --ink:#2b2119;
+    --ink-soft:#5c5142;
+    --gold:#b08948;
+    --max:1120px;
+    --serif:Georgia,'Times New Roman',serif;
+    --sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    font-family:var(--sans);
+    color:var(--ink);
+    background:var(--paper);
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    font-size:17px;
+  }
+  h1,h2,h3{font-family:var(--serif);font-weight:600;line-height:1.15;letter-spacing:-.01em}
+  a{color:inherit;text-decoration:none}
+  img{max-width:100%}
+  .wrap{max-width:var(--max);margin:0 auto;padding:0 24px}
+  .eyebrow{
+    text-transform:uppercase;letter-spacing:.16em;font-size:12px;font-weight:600;
+    color:var(--moss);font-family:var(--sans)
+  }
+  .btn{
+    display:inline-flex;align-items:center;gap:.5em;
+    background:var(--soil);color:var(--paper);
+    padding:14px 26px;border-radius:2px;font-weight:600;font-size:15px;
+    border:1px solid var(--soil);transition:.18s;cursor:pointer
+  }
+  .btn:hover{background:#1d150f}
+  .btn.ghost{background:transparent;color:var(--soil);border-color:var(--line)}
+  .btn.ghost:hover{background:var(--paper-2);border-color:var(--clay)}
+
+  /* ---------- Header ---------- */
+  header{
+    position:sticky;top:0;z-index:50;
+    background:rgba(244,239,230,.9);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--line)
+  }
+  .nav{display:flex;align-items:center;justify-content:space-between;height:68px}
+  .brand{display:flex;align-items:center;gap:11px;font-family:var(--serif);font-size:22px;font-weight:600}
+  .brand svg{display:block}
+  .nav-links{display:flex;gap:30px;align-items:center;font-size:15px}
+  .nav-links a{color:var(--ink-soft);transition:.15s}
+  .nav-links a:hover{color:var(--soil)}
+  .nav .btn{padding:10px 20px}
+  .menu-btn{display:none;background:none;border:0;font-size:26px;cursor:pointer;color:var(--soil)}
+
+  /* ---------- Hero ---------- */
+  .hero{
+    position:relative;overflow:hidden;
+    background:
+      radial-gradient(120% 90% at 80% -10%, #40311f 0%, rgba(64,49,31,0) 55%),
+      linear-gradient(160deg,#2b2119 0%,#3a2d21 60%,#43341f 100%);
+    color:var(--paper)
+  }
+  .hero .wrap{padding-top:96px;padding-bottom:104px;position:relative;z-index:2}
+  .hero-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:60px;align-items:center}
+  .hero h1{font-size:60px;margin:.25em 0 .35em;color:#f7f2e8}
+  .hero .lead{font-size:20px;color:#d8ccb8;max-width:34ch;margin-bottom:34px}
+  .hero .eyebrow{color:var(--sprout)}
+  .hero-cta{display:flex;gap:14px;flex-wrap:wrap}
+  .hero .btn.ghost{color:#efe6d4;border-color:rgba(255,255,255,.25)}
+  .hero .btn.ghost:hover{background:rgba(255,255,255,.06)}
+  .hero-chips{display:flex;flex-wrap:wrap;gap:10px;margin-top:40px}
+  .chip{
+    font-size:13px;padding:7px 13px;border-radius:2px;
+    border:1px solid rgba(255,255,255,.16);color:#cdbfa8;
+    display:inline-flex;align-items:center;gap:7px
+  }
+  .chip b{color:#efe6d4;font-weight:600}
+  .hero-art{
+    aspect-ratio:1/1;border-radius:3px;position:relative;
+    background:
+      radial-gradient(circle at 30% 25%, rgba(124,154,90,.25), transparent 45%),
+      repeating-radial-gradient(circle at 50% 55%, #6b5030 0 3px, #5a4127 3px 7px),
+      #4a3721;
+    box-shadow:0 30px 60px -30px rgba(0,0,0,.6), inset 0 0 90px rgba(0,0,0,.4);
+    overflow:hidden;border:1px solid rgba(255,255,255,.08)
+  }
+  .hero-art .badge{
+    position:absolute;left:24px;bottom:24px;right:24px;
+    background:rgba(20,14,9,.62);backdrop-filter:blur(4px);
+    border:1px solid rgba(255,255,255,.12);border-radius:2px;
+    padding:16px 18px;font-size:13.5px;color:#e6dbc7;line-height:1.5
+  }
+  .hero-art .badge b{color:#fff;font-family:var(--serif)}
+  .soilline{position:absolute;left:0;right:0;bottom:-1px;height:120px;
+    background:linear-gradient(to top,var(--paper),transparent)}
+
+  /* ---------- Sections ---------- */
+  section{padding:86px 0}
+  .sec-head{max-width:640px;margin-bottom:48px}
+  .sec-head h2{font-size:40px;margin:.35em 0 .4em}
+  .sec-head p{color:var(--ink-soft);font-size:18px;margin:0}
+
+  /* Product */
+  #produkt{background:var(--paper)}
+  .product{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;align-items:center}
+  .pack{
+    aspect-ratio:4/5;border-radius:3px;position:relative;overflow:hidden;
+    background:linear-gradient(155deg,#3a2d21,#241a12);
+    box-shadow:0 24px 50px -28px rgba(43,33,25,.55);
+    display:flex;align-items:center;justify-content:center;text-align:center;color:var(--paper)
+  }
+  .pack .label{
+    width:74%;background:var(--paper);color:var(--soil);border-radius:2px;
+    padding:30px 24px;box-shadow:0 14px 30px -14px rgba(0,0,0,.5)
+  }
+  .pack .label .k{font-family:var(--serif);font-size:30px;letter-spacing:.02em}
+  .pack .label .s{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--moss);margin-top:4px}
+  .pack .label hr{border:0;border-top:1px solid var(--line);margin:16px 0}
+  .pack .label .m{font-size:13px;color:var(--ink-soft);line-height:1.5}
+  .price{display:flex;align-items:baseline;gap:12px;margin:6px 0 18px}
+  .price .amt{font-family:var(--serif);font-size:44px}
+  .price .unit{color:var(--ink-soft);font-size:15px}
+  .product ul{list-style:none;padding:0;margin:22px 0 28px}
+  .product li{padding:9px 0;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start;font-size:15.5px}
+  .product li::before{content:"";flex:0 0 8px;height:8px;margin-top:8px;border-radius:50%;background:var(--moss)}
+  .prod-cta{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  .note{font-size:13.5px;color:var(--ink-soft);margin-top:14px}
+
+  /* Lab / specs */
+  #dokumentasjon{background:var(--soil);color:var(--paper)}
+  #dokumentasjon .eyebrow{color:var(--sprout)}
+  #dokumentasjon .sec-head h2{color:#f6f1e7}
+  #dokumentasjon .sec-head p{color:#c9bca6}
+  .specs{display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start}
+  .spec-table{width:100%;border-collapse:collapse;font-size:15px}
+  .spec-table td{padding:13px 4px;border-bottom:1px solid rgba(255,255,255,.12)}
+  .spec-table td:first-child{color:#c9bca6}
+  .spec-table td:last-child{text-align:right;font-weight:600;font-variant-numeric:tabular-nums;color:#f4efe6;font-family:var(--serif)}
+  .cert-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .cert{
+    border:1px solid rgba(255,255,255,.14);border-radius:2px;padding:18px;
+    background:rgba(255,255,255,.02)
+  }
+  .cert .t{font-family:var(--serif);font-size:17px;margin-bottom:3px}
+  .cert .d{font-size:13px;color:#bdb097}
+  .lab-ref{margin-top:22px;font-size:13.5px;color:#a99d85}
+  .lab-ref code{background:rgba(255,255,255,.08);padding:2px 7px;border-radius:2px;color:#e6dbc7}
+
+  /* Process */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:26px}
+  .step{padding:26px;background:#fff;border:1px solid var(--line);border-radius:3px}
+  .step .n{font-family:var(--serif);font-size:14px;color:var(--gold);letter-spacing:.1em}
+  .step h3{font-size:20px;margin:10px 0 8px}
+  .step p{margin:0;color:var(--ink-soft);font-size:15px}
+  .feed{margin-top:34px;background:#fff;border:1px solid var(--line);border-radius:3px;padding:26px 28px}
+  .feed .eyebrow{margin-bottom:14px;display:block}
+  .feed-tags{display:flex;flex-wrap:wrap;gap:10px}
+  .feed-tags span{
+    font-size:14px;padding:7px 14px;background:var(--paper-2);
+    border:1px solid var(--line);border-radius:2px;color:var(--soil-2)
+  }
+
+  /* Dosing */
+  #bruk{background:var(--paper-2)}
+  .dose{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+  .dose .card{background:#fff;border:1px solid var(--line);border-radius:3px;padding:24px}
+  .dose h3{font-size:19px;margin:0 0 6px}
+  .dose .amt{font-family:var(--serif);color:var(--moss);font-size:15px;font-weight:600;margin-bottom:10px}
+  .dose p{margin:0;font-size:14.5px;color:var(--ink-soft)}
+
+  /* Founder */
+  #om{background:var(--paper)}
+  .founder{display:grid;grid-template-columns:.8fr 1.2fr;gap:56px;align-items:center}
+  .portrait{
+    aspect-ratio:4/5;border-radius:3px;
+    background:
+      radial-gradient(circle at 50% 30%, #6f8a52 0%, transparent 42%),
+      linear-gradient(160deg,#4a5d3a,#2f3b25);
+    position:relative;overflow:hidden;box-shadow:0 24px 50px -30px rgba(47,59,37,.6)
+  }
+  .portrait .cap{
+    position:absolute;left:20px;bottom:20px;color:#eef2e6;font-size:14px;
+    background:rgba(20,26,15,.5);padding:10px 14px;border-radius:2px;backdrop-filter:blur(3px)
+  }
+  .founder blockquote{
+    font-family:var(--serif);font-size:26px;line-height:1.35;margin:0 0 22px;color:var(--soil)
+  }
+  .founder p{color:var(--ink-soft);margin:0 0 16px}
+  .founder .sig{font-family:var(--serif);font-size:18px;color:var(--soil);margin-top:8px}
+  .founder .sig span{display:block;font-family:var(--sans);font-size:13px;color:var(--ink-soft);letter-spacing:.02em}
+
+  /* FAQ */
+  #faq{background:var(--paper-2)}
+  .faq details{background:#fff;border:1px solid var(--line);border-radius:3px;margin-bottom:12px;overflow:hidden}
+  .faq summary{
+    cursor:pointer;padding:20px 24px;font-family:var(--serif);font-size:19px;
+    list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px
+  }
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+";font-size:24px;color:var(--moss);font-family:var(--sans);transition:.2s}
+  .faq details[open] summary::after{transform:rotate(45deg)}
+  .faq .a{padding:0 24px 22px;color:var(--ink-soft);font-size:15.5px}
+  .faq .a p{margin:0}
+
+  /* Contact / CTA band */
+  .cta-band{background:var(--moss);color:#f4f6ee;text-align:center}
+  .cta-band .wrap{padding:72px 24px}
+  .cta-band h2{font-size:38px;margin:0 0 14px;color:#fff}
+  .cta-band p{color:#dde4d1;font-size:18px;max-width:46ch;margin:0 auto 30px}
+  .cta-band .btn{background:var(--soil);border-color:var(--soil)}
+  .cta-band .btn:hover{background:#1d150f}
+
+  /* Footer */
+  footer{background:var(--soil-2);color:#cdbfa8;font-size:14.5px}
+  .foot{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:40px;padding:64px 0 34px}
+  .foot .brand{color:#f4efe6;margin-bottom:14px}
+  .foot p{margin:0 0 8px;line-height:1.6;color:#b6a88f}
+  .foot h4{font-family:var(--sans);text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:#8f8168;margin:0 0 14px}
+  .foot a{display:block;color:#cdbfa8;padding:5px 0;transition:.15s}
+  .foot a:hover{color:#f4efe6}
+  .foot-bottom{border-top:1px solid rgba(255,255,255,.1);padding:22px 0;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;color:#8f8168;font-size:13px}
+
+  @media(max-width:900px){
+    .hero-grid,.product,.specs,.founder{grid-template-columns:1fr;gap:40px}
+    .hero-art{max-width:420px}
+    .steps,.dose{grid-template-columns:1fr}
+    .foot{grid-template-columns:1fr 1fr;gap:30px}
+    .hero h1{font-size:44px}
+    .sec-head h2{font-size:32px}
+    .nav-links{display:none}
+    .menu-btn{display:block}
+    .nav-links.open{display:flex;position:absolute;top:68px;left:0;right:0;flex-direction:column;
+      background:var(--paper);border-bottom:1px solid var(--line);padding:18px 24px;gap:16px}
+  }
+  @media(max-width:560px){
+    body{font-size:16px}
+    .hero .wrap{padding-top:64px;padding-bottom:72px}
+    .hero h1{font-size:36px}
+    section{padding:60px 0}
+    .cert-grid,.foot{grid-template-columns:1fr}
+    .price .amt{font-size:38px}
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ HEADER ============ -->
+<header>
+  <div class="wrap nav">
+    <a class="brand" href="#top" aria-label="Verminord">
+      <svg width="30" height="30" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+        <circle cx="20" cy="20" r="19" fill="#3a2d21"/>
+        <path d="M11 25c3-1 3-5 6-5s3 4 6 4 3-6 6-6" stroke="#7c9a5a" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+        <path d="M11 30c3-1 3-4 6-4s3 3 6 3 3-5 6-5" stroke="#b08948" stroke-width="2.2" stroke-linecap="round" fill="none" opacity=".8"/>
+        <circle cx="29" cy="12" r="2" fill="#7c9a5a"/>
+      </svg>
+      Verminord
+    </a>
+    <nav class="nav-links" id="navlinks">
+      <a href="#produkt">Produkt</a>
+      <a href="#dokumentasjon">Dokumentasjon</a>
+      <a href="#bruk">Bruk</a>
+      <a href="#om">Om oss</a>
+      <a href="#faq">Spørsmål</a>
+      <a class="btn" href="#produkt">Kjøp VermiCast</a>
+    </nav>
+    <button class="menu-btn" aria-label="Meny" onclick="document.getElementById('navlinks').classList.toggle('open')">≡</button>
+  </div>
+</header>
+
+<a id="top"></a>
+
+<!-- ============ HERO ============ -->
+<section class="hero" style="padding:0">
+  <div class="wrap">
+    <div class="hero-grid">
+      <div>
+        <span class="eyebrow">Vermikompost fra Jæren · Rogaland</span>
+        <h1>Dyrker,<br>ikke forretningsmann.</h1>
+        <p class="lead">VermiCast er norskprodusert vermikompost — lab-dokumentert, Debio-registrert, og foret med lokale råvarer fra Jæren.</p>
+        <div class="hero-cta">
+          <a class="btn" href="#produkt">Kjøp VermiCast — 389 kr</a>
+          <a class="btn ghost" href="#dokumentasjon">Se lab-analysen</a>
+        </div>
+        <div class="hero-chips">
+          <span class="chip"><b>Rottegrad V</b> — fullt moden</span>
+          <span class="chip">Salmonella <b>ikke påvist</b></span>
+          <span class="chip">Tungmetallklasse <b>0</b></span>
+        </div>
+      </div>
+      <div class="hero-art" role="img" aria-label="Nærbilde av moden, mørk vermikompost">
+        <div class="badge">
+          <b>Eisenia&nbsp;fetida</b> i klimakontrollerte Continuous&nbsp;Flow-Through-bed. Levende jord, ikke ferdigvare fra sekk.
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="soilline"></div>
+</section>
+
+<!-- ============ PRODUCT ============ -->
+<section id="produkt">
+  <div class="wrap product">
+    <div class="pack" role="img" aria-label="VermiCast 5 liter sekk">
+      <div class="label">
+        <div class="k">VermiCast</div>
+        <div class="s">Premium vermikompost</div>
+        <hr>
+        <div class="m">5 liter · PP-vevet sekk<br>Produsert på Jæren</div>
+      </div>
+    </div>
+    <div>
+      <span class="eyebrow">Produktet</span>
+      <h2 style="font-size:38px;margin:.3em 0 .2em">VermiCast — levende jordforbedring</h2>
+      <div class="price">
+        <span class="amt">389 kr</span>
+        <span class="unit">per 5&nbsp;liter · fri retur i 14 dager</span>
+      </div>
+      <p style="color:var(--ink-soft);margin:0">Vermikompost er kompost som har gått gjennom mark. Det gir høyere mikrobiologisk aktivitet, bedre jordstruktur, og mer plantetilgjengelig næring enn vanlig kompost — pluss naturlige planteveksthormoner som auxiner og cytokininer.</p>
+      <ul>
+        <li>Moden og trygg: rottegrad V, salmonella ikke påvist, tungmetallklasse 0</li>
+        <li>Til pottejord, drivhus, bed, plen og frøstart — inne som ute</li>
+        <li>Godkjent for økologisk dyrking (Debio-registrert)</li>
+        <li>Kan brukes rent uten å brenne røttene — men 5–10&nbsp;% er nok</li>
+      </ul>
+      <div class="prod-cta">
+        <a class="btn" href="mailto:post@verminord.com?subject=Bestilling%20VermiCast">Bestill nå</a>
+        <a class="btn ghost" href="#bruk">Hvor mye trenger jeg?</a>
+      </div>
+      <p class="note">Sendes med Posten/Bring fra Jæren. 2–4 dager til Sør-Norge, 4–6 dager nordover. Bestillinger før kl.&nbsp;13 på hverdager går samme dag.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ DOCUMENTATION / LAB ============ -->
+<section id="dokumentasjon">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Laboratoriedokumentert</span>
+      <h2>Tallene, ikke adjektivene</h2>
+      <p>Hver batch er analysert av ALS Norge. Vi legger fram dokumentasjonen framfor å be deg stole på oss.</p>
+    </div>
+    <div class="specs">
+      <div>
+        <table class="spec-table" aria-label="Næringsanalyse">
+          <tr><td>Nitrogen (N)</td><td>1,16&nbsp;% TS</td></tr>
+          <tr><td>Fosfor (P)</td><td>0,48&nbsp;% TS</td></tr>
+          <tr><td>Kalium (K)</td><td>0,51&nbsp;%</td></tr>
+          <tr><td>pH</td><td>7,1</td></tr>
+          <tr><td>Tørrstoff (TS)</td><td>41,3&nbsp;%</td></tr>
+          <tr><td>Organisk materiale</td><td>43,6&nbsp;%</td></tr>
+          <tr><td>Rottegrad (modenhet)</td><td>V — fullt moden</td></tr>
+          <tr><td>Salmonella</td><td>Ikke påvist</td></tr>
+          <tr><td>Tungmetallklasse</td><td>0 (laveste)</td></tr>
+        </table>
+        <p class="lab-ref">Analyse utført av ALS Norge · rapportreferanse <code>NO2604972</code>. Full PDF sendes gjerne på forespørsel.</p>
+      </div>
+      <div class="cert-grid">
+        <div class="cert"><div class="t">Debio-registrert</div><div class="d">Godkjent for bruk i økologisk dyrking i Norge.</div></div>
+        <div class="cert"><div class="t">Mattilsynet-registrert</div><div class="d">Registrert virksomhet og produkt.</div></div>
+        <div class="cert"><div class="t">Gjødselvareforskriften</div><div class="d">Produsert i tråd med gjeldende regelverk.</div></div>
+        <div class="cert"><div class="t">Sporbare råvarer</div><div class="d">Lokale feedstocks, dokumentert per batch.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROCESS ============ -->
+<section id="prosess">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Slik lages den</span>
+      <h2>Fra restråstoff til levende jord</h2>
+      <p>En kontrollert biologisk prosess på Jæren — ikke en fabrikk, men et bed fullt av mark som jobber døgnet rundt.</p>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="n">01</div>
+        <h3>Lokale råvarer</h3>
+        <p>Vi samler inn rene restråstoff fra nærområdet og forkomposterer dem til et jevnt, trygt utgangspunkt.</p>
+      </div>
+      <div class="step">
+        <div class="n">02</div>
+        <h3>Marken gjør jobben</h3>
+        <p>Eisenia fetida foredler massen i klimakontrollerte Continuous Flow-Through-bed. Stabil temperatur, stabil fuktighet, stabil kvalitet.</p>
+      </div>
+      <div class="step">
+        <div class="n">03</div>
+        <h3>Høsting og analyse</h3>
+        <p>Ferdig vermikompost siktes, pakkes i 5&nbsp;L sekk, og hver batch dokumenteres med labanalyse før den går ut.</p>
+      </div>
+    </div>
+    <div class="feed">
+      <span class="eyebrow">Foret med</span>
+      <div class="feed-tags">
+        <span>Lokal lamamøkk</span>
+        <span>Øl-mask fra rogalandsbryggerier</span>
+        <span>Brukt mykorrhiza-substrat</span>
+        <span>Papp</span>
+        <span>Lauvmuld</span>
+        <span>Sagflis</span>
+      </div>
+      <p class="note" style="margin-top:16px">Sirkulært i praksis, ikke i markedsføringen: råvarer som ellers ville vært avfall blir til jord.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ USAGE / DOSING ============ -->
+<section id="bruk">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Bruk</span>
+      <h2>Bland inn litt. Det er nok.</h2>
+      <p>Vermikompost er konsentrert. Du trenger mindre enn du tror — her er utgangspunktene Martin bruker selv.</p>
+    </div>
+    <div class="dose">
+      <div class="card">
+        <h3>Pottejord</h3>
+        <div class="amt">5–10&nbsp;% av volumet</div>
+        <p>10&nbsp;% til næringskrevende planter (chili, tomat, agurk), 5&nbsp;% til krydderurter og sukkulenter. Topp opp med 1–2 ss per potte hver 6.–8. uke i vekstsesong.</p>
+      </div>
+      <div class="card">
+        <h3>Drivhus &amp; bed</h3>
+        <div class="amt">100–200 g/m²</div>
+        <p>Én lett håndfull per kvadratmeter. Vannes inn eller moses ned i de øverste 2–3 cm. 2–3 ganger per sesong: ved planting, midtsommer og som høst-tilbakeføring.</p>
+      </div>
+      <div class="card">
+        <h3>Frøstart</h3>
+        <div class="amt">20&nbsp;% i frøstart-mix</div>
+        <p>Bland 20&nbsp;% VermiCast med 80&nbsp;% frøstart-mix. Skånsom, moden næring som ikke brenner spirer.</p>
+      </div>
+      <div class="card">
+        <h3>Plen</h3>
+        <div class="amt">100 g/m²</div>
+        <p>Strøs før eller etter lufting/vertikalkutting og vannes inn. Én gang om våren, eventuelt én gang om høsten.</p>
+      </div>
+      <div class="card">
+        <h3>Omplanting</h3>
+        <div class="amt">En neve i plantehullet</div>
+        <p>Rundt 30–50 g blandet lett med jorda før planten settes ned. Gir rota et levende utgangspunkt.</p>
+      </div>
+      <div class="card">
+        <h3>Potteplanter inne</h3>
+        <div class="amt">1 ss hver 4.–6. uke</div>
+        <p>Strø på toppen av jorda, eller bland inn 5&nbsp;% ved ompotting. Luktfritt og trygt innendørs.</p>
+      </div>
+    </div>
+    <p class="note" style="margin-top:18px">Tommelfingerregel: én 5&nbsp;L sekk rekker til ca. 10&nbsp;m² toppdressing i drivhus, eller mer enn nok til 20 potteplanter.</p>
+  </div>
+</section>
+
+<!-- ============ FOUNDER ============ -->
+<section id="om">
+  <div class="wrap founder">
+    <div class="portrait" role="img" aria-label="Martin Folkestad, grunnlegger av Verminord">
+      <div class="cap">Martin Folkestad · Jæren</div>
+    </div>
+    <div>
+      <span class="eyebrow">Om oss</span>
+      <blockquote>«Jeg har dyrket med vermikompost i snart 20 år — først chili, deretter tomater og krydderurter.»</blockquote>
+      <p>Verminord er et familieselskap på tre. Martin står for strategi og drift, broren for daglig produksjon, og faren er juridisk eier. Vi er bønder først — Verminord er bygget av folk som faktisk dyrker.</p>
+      <p>Vi startet produksjonen i 2024 med ett mål: å lage Norges eneste premium-vermikompost med full laboratoriedokumentasjon. Ingen løfter uten tall bak. Ingen «bærekraftig» uten en råvareliste å vise til.</p>
+      <div class="sig">Martin Folkestad
+        <span>Daglig leder, Verminord AS</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section id="faq">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow">Spørsmål og svar</span>
+      <h2>Det folk lurer på</h2>
+    </div>
+    <div class="faq">
+      <details open>
+        <summary>Kan den brenne eller svi planter?</summary>
+        <div class="a"><p>Nei. VermiCast er rottegrad V — fullt moden, ikke fersk gjødsel. Du kan plante direkte i 100&nbsp;% vermikompost uten å brenne røttene. I praksis blander man inn 5–10&nbsp;%, fordi det er mest kostnadseffektivt og holder lenger.</p></div>
+      </details>
+      <details>
+        <summary>Er den økologisk?</summary>
+        <div class="a"><p>Verminord er Debio-registrert, som betyr at produksjonen er kontrollert og godkjent for bruk i økologisk dyrking i Norge. Råvarene — lamamøkk, øl-mask, brukt mykorrhiza-substrat — er alle sporbare og lokale.</p></div>
+      </details>
+      <details>
+        <summary>Hva er forskjellen fra vanlig kompost?</summary>
+        <div class="a"><p>Vanlig kompost er nedbrutt plantemateriale. Vermikompost er kompost som har gått gjennom mark (Eisenia fetida) — det gir høyere mikrobiologisk aktivitet, bedre struktur, mer plantetilgjengelig næring, og naturlige planteveksthormoner. Kort sagt: vanlig kompost er mat, vermikompost er medisin.</p></div>
+      </details>
+      <details>
+        <summary>Hvor lenge holder den?</summary>
+        <div class="a"><p>12–18 måneder hvis den oppbevares kjølig, mørkt og litt fuktig i sekken. Den er levende — biologien sover, men det er liv der inne. Ikke la den tørke helt ut eller ligge i sterk sol. Blir sekken tørr, fukt den lett før bruk.</p></div>
+      </details>
+      <details>
+        <summary>Er den trygg for barn og kjæledyr?</summary>
+        <div class="a"><p>Helt trygg. Salmonella ikke påvist, tungmetallklasse 0 (laveste klasse). Den lukter jord. Spiser hunden litt, er det ingen fare — men den er ikke ment som snacks.</p></div>
+      </details>
+      <details>
+        <summary>Frakt og retur?</summary>
+        <div class="a"><p>Vi sender med Posten/Bring fra Jæren — 2–4 dager til Sør-Norge, 4–6 dager nordover. 14 dagers angrerett etter angrerettloven på uåpnet sekk. Er noe feil eller skadet, ta kontakt direkte, så ordner vi det.</p></div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<!-- ============ CTA BAND ============ -->
+<section class="cta-band">
+  <div class="wrap">
+    <h2>Prøv en sekk levende jord</h2>
+    <p>5 liter VermiCast, lab-dokumentert og klar til bruk. Nok til drivhuset, potteplantene eller frøstarten din.</p>
+    <a class="btn" href="mailto:post@verminord.com?subject=Bestilling%20VermiCast">Bestill VermiCast — 389 kr</a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap foot">
+    <div>
+      <div class="brand" style="font-size:22px">
+        <svg width="26" height="26" viewBox="0 0 40 40" fill="none" aria-hidden="true">
+          <circle cx="20" cy="20" r="19" fill="#5b4636"/>
+          <path d="M11 25c3-1 3-5 6-5s3 4 6 4 3-6 6-6" stroke="#7c9a5a" stroke-width="2.6" stroke-linecap="round" fill="none"/>
+          <circle cx="29" cy="12" r="2" fill="#7c9a5a"/>
+        </svg>
+        Verminord
+      </div>
+      <p>Norsk premium-vermikompost, produsert på Jæren i Rogaland. Lab-dokumentert, Debio-registrert, foret med lokale råvarer.</p>
+      <p><em>Dyrker, ikke forretningsmann.</em></p>
+    </div>
+    <div>
+      <h4>Utforsk</h4>
+      <a href="#produkt">Produkt</a>
+      <a href="#dokumentasjon">Dokumentasjon</a>
+      <a href="#bruk">Bruk &amp; dosering</a>
+      <a href="#om">Om oss</a>
+      <a href="#faq">Spørsmål</a>
+    </div>
+    <div>
+      <h4>Kontakt</h4>
+      <a href="mailto:post@verminord.com">post@verminord.com</a>
+      <a href="https://verminord.com">verminord.com</a>
+      <p style="margin-top:10px">Verminord AS<br>Jæren, Rogaland<br>Org.nr. 935&nbsp;948&nbsp;878</p>
+    </div>
+  </div>
+  <div class="wrap foot-bottom">
+    <span>© 2026 Verminord AS. Alle rettigheter forbeholdt.</span>
+    <span>Lab: ALS Norge · NO2604972 · Debio-registrert</span>
+  </div>
+</footer>
+
+</body>
+</html>
