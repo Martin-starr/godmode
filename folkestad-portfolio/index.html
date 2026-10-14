@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light">
+<title>Martin Folkestad — Founder &amp; builder · Jæren (NO)</title>
+<meta name="description" content="Martin Folkestad is a JÆREN (NO) based founder & builder crafting digital products & ventures from the ground up.">
+<meta property="og:title" content="Martin Folkestad — Founder &amp; builder">
+<meta property="og:description" content="JÆREN (NO) based founder & builder crafting digital products & ventures from the ground up.">
+<meta property="og:type" content="website">
+<meta property="og:image" content="/assets/og.png">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@1,6..96,400..900&family=Newsreader:ital,opsz,wght@0,6..72,300..600;1,6..72,300..600&family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script type="module" src="/src/main.js"></script>
+<noscript><style>.preloader{display:none}</style></noscript>
+</head>
+<body>
+
+<!-- 00 · preloader curtain -->
+<div class="preloader" id="preloader" aria-hidden="true">
+  <div class="pl-inner">
+    <div class="pl-mask"><span class="pl-word" id="pl-word"></span></div>
+    <div class="pl-meta" id="pl-meta"></div>
+  </div>
+</div>
+
+<!-- fixed chrome — classification strip + progress foot, self-inverting -->
+<div class="chrome" aria-hidden="true">
+  <div class="klass" id="klass"></div>
+  <div class="foot">
+    <span id="beat"></span>
+    <span id="foot-right"></span>
+  </div>
+  <div class="bar" id="bar"></div>
+</div>
+
+<main id="main">
+
+  <!-- 01 · landing (ink) -->
+  <section class="panel p-land" id="landing" data-beat="landing">
+    <h1 class="wordmark">
+      <span class="paren" id="wm-paren"></span><span class="name" id="wm-name"></span>
+    </h1>
+    <div class="cue">
+      <span class="s" id="cue-s"></span>
+      <span class="v" id="cue-v"></span>
+      <span class="arw" id="cue-arw"></span>
+    </div>
+  </section>
+
+  <!-- 02 · intro (ivory) -->
+  <section class="panel p-intro grain" id="intro" data-beat="intro">
+    <div class="idx" id="intro-idx"></div>
+    <p class="lede" id="intro-lede" data-reveal="words"></p>
+  </section>
+
+  <!-- 03 · the art piece — pinned horizontal scroll (~340vw) -->
+  <section class="p-art grain" id="art" data-beat="art">
+    <div class="art-track" id="art-track">
+
+      <div class="layer l-circles" data-v=".35">
+        <i class="circ c1"></i><i class="circ c2"></i><i class="circ c3"></i><i class="circ c4"></i>
+      </div>
+
+      <div class="layer l-collage" data-v=".55">
+        <i class="frag f1"></i><i class="frag f2"></i><i class="frag f3"></i>
+        <i class="frag f4"></i><i class="frag f5"></i>
+        <i class="collage-strip"></i>
+      </div>
+
+      <div class="layer l-plate" data-v=".75">
+        <figure class="plate">
+          <div class="hatch"></div>
+          <div class="photo"></div>
+          <div class="tag" id="plate-tag"></div>
+          <figcaption class="cap">
+            <span id="plate-cap-l"></span><span id="plate-cap-r"></span>
+          </figcaption>
+        </figure>
+      </div>
+
+      <div class="layer l-giant" data-v="1">
+        <div class="giant" id="giant"></div>
+      </div>
+
+      <div class="layer l-clusters" data-v="1.28">
+        <div class="cluster cl-top">
+          <span class="lab" id="cl-top-lab"></span><span class="val" id="cl-top-val"></span>
+        </div>
+        <div class="cluster cl-mid">
+          <span class="rule"></span>
+          <span id="cl-mid-txt"></span>
+        </div>
+        <div class="cluster cl-right">
+          <span class="s" id="cl-right-s1"></span>
+          <span class="s" id="cl-right-s2"></span>
+          <span class="v" id="cl-right-v"></span>
+        </div>
+        <div class="cluster cl-role" id="cl-role"></div>
+        <div class="cluster cl-tail" id="cl-tail"></div>
+        <div class="vert" id="cl-vert"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- 04 · inversion — "fire prosjekter", blurs out on exit -->
+  <section class="panel p-out" id="inversion" data-beat="inversion">
+    <div class="inner" id="out">
+      <div class="g" id="out-g"></div>
+      <div class="sub" id="out-sub"></div>
+    </div>
+  </section>
+
+  <!-- 05 · projects — Phase A stubs, rendered from content.js -->
+  <section class="p-projects grain" id="projects" data-beat="projects"></section>
+
+  <!-- 06 · colophon — Phase A stub -->
+  <section class="p-colophon" id="colophon" data-beat="colophon"></section>
+
+</main>
+
+</body>
+</html>

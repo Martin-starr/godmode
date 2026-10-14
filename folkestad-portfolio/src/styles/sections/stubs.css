@@ -1,0 +1,87 @@
+/* ============================================================
+   05 · projects + 06 · colophon — Phase A STUBS.
+   Just enough that the scroll continues past the inversion
+   beat. Phase B replaces these with full editorial sections.
+   ============================================================ */
+
+/* ---------- projects ---------- */
+.p-projects{
+  background:var(--paper);color:var(--ink);
+  padding:18vh var(--gutter);
+}
+.proj{
+  display:grid;gap:1.1rem;
+  grid-template-columns:minmax(0,1fr);
+  max-width:64rem;
+  padding:9vh 0;
+  border-top:1px solid var(--line);
+}
+.proj:first-child{border-top:0;padding-top:0}
+.proj-idx{
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--grey-dark);
+}
+.proj-title{
+  font-family:var(--didone);font-style:italic;font-weight:560;
+  font-size:clamp(2.6rem,7.5vw,6.5rem);line-height:.9;letter-spacing:-.02em;
+}
+.proj-meta{
+  display:flex;flex-wrap:wrap;gap:.4rem 1.4rem;
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--grey-dark);
+}
+.proj-blurb{
+  max-width:52ch;font-size:.9375rem;line-height:1.6;
+}
+.proj-blurb.is-todo{color:var(--grey-dark)}
+/* engraved-plate style image placeholder frame */
+.proj-frame{
+  margin-top:1.4rem;width:min(100%,40rem);aspect-ratio:16/10;
+  position:relative;background:var(--ivory);
+  box-shadow:0 1px 0 rgba(20,20,15,.2);
+}
+.proj-frame::before{
+  content:'';position:absolute;inset:0;mix-blend-mode:multiply;
+  background:
+    repeating-linear-gradient(38deg,rgba(20,20,15,.28) 0 1px,transparent 1px 6px),
+    repeating-linear-gradient(-42deg,rgba(20,20,15,.16) 0 1px,transparent 1px 7px);
+}
+.proj-frame span{
+  position:absolute;top:.6rem;left:.6rem;
+  font-family:var(--mono);font-size:.5rem;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--grey-dark);
+}
+
+/* ---------- colophon ---------- */
+.p-colophon{
+  background:var(--ink);color:var(--ivory);
+  min-height:92vh;position:relative;overflow:hidden;
+  display:grid;align-content:center;gap:1.4rem;
+  padding:16vh var(--gutter) 30vh;
+}
+.colo-idx{
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--grey);
+}
+.colo-lede{
+  max-width:24ch;font-size:clamp(1.5rem,3vw,2.6rem);
+  line-height:1.18;letter-spacing:-.03em;
+}
+.colo-mail{
+  font-family:var(--mono);font-size:.8125rem;letter-spacing:.04em;
+  color:var(--ivory);text-decoration:none;border-bottom:1px solid var(--line-dark);
+  width:fit-content;padding-bottom:.2rem;
+}
+.colo-loc{
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--grey);
+}
+/* Waka Waka-style giant cropped wordmark at page bottom */
+.colo-crop{
+  position:absolute;bottom:0;left:0;right:0;
+  overflow:hidden;height:.62em;pointer-events:none;
+  font-weight:800;letter-spacing:-.045em;line-height:1;
+  font-size:clamp(6rem,19vw,22rem);color:var(--coal);
+  white-space:nowrap;
+}
+.colo-crop span{display:block;transform:translateY(.06em)}

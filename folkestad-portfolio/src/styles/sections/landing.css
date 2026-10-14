@@ -1,0 +1,23 @@
+/* ---------- 01 · landing (ink) ---------- */
+.p-land{
+  background:var(--ink);color:var(--ivory);
+  display:grid;place-items:center;
+}
+.wordmark{
+  font-size:clamp(2.4rem,7.5vw,7rem);
+  letter-spacing:-.045em;line-height:1;text-align:center;font-weight:400;
+}
+.wordmark .paren{font-family:var(--serif);font-weight:300;font-style:italic;color:var(--grey)}
+.wordmark .name{font-weight:800}
+.cue{
+  position:absolute;bottom:14vh;left:50%;transform:translateX(-50%);
+  display:flex;align-items:baseline;gap:.4rem;font-size:.8125rem;
+}
+.cue .s{font-weight:800;letter-spacing:.02em;font-size:.6875rem;text-transform:uppercase}
+.cue .v{font-family:var(--serif);font-style:italic;color:var(--grey)}
+.cue .arw{display:inline-block;animation:nudge 2.4s var(--e) infinite}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(7px)}}
+
+@media (prefers-reduced-motion:reduce){
+  .cue .arw{animation:none}
+}

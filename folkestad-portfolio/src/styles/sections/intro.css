@@ -1,0 +1,15 @@
+/* ---------- 02 · intro (ivory) ---------- */
+.p-intro{
+  background:var(--ivory);color:var(--ink);
+  display:grid;align-content:center;padding:0 var(--gutter);
+}
+.lede{
+  max-width:23ch;
+  font-size:clamp(1.6rem,3.4vw,3.1rem);
+  line-height:1.16;letter-spacing:-.03em;font-weight:400;
+}
+.lede b{font-weight:800}
+.idx{
+  font-family:var(--mono);font-size:.5625rem;letter-spacing:.18em;
+  color:var(--grey-dark);margin-bottom:var(--gutter);text-transform:uppercase;
+}
