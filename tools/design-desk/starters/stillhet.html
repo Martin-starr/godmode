@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stillhet — dempet startside</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300&family=Karla:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bone:#EFEBE4;
+  --clay:#C3AF97;
+  --umber:#3B322A;
+  --ink:#221D18;
+  --whisper:#8B8073;
+  --hair:#DCD5CA;
+  --serif:'Cormorant Garamond',Georgia,serif;
+  --sans:'Karla',Helvetica,sans-serif;
+  --rhythm:132px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bone);color:var(--ink);font-family:var(--serif);font-size:19px;
+  line-height:1.68;font-weight:300;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 34px}
+.tag{font-family:var(--sans);font-weight:400;font-size:9.5px;letter-spacing:.32em;
+  text-transform:uppercase;color:var(--whisper)}
+.hair{border:0;border-top:1px solid var(--hair)}
+
+/* ── HEADER: one label, one line, a great deal of air ── */
+header{padding:88px 0 0}
+header .top{display:flex;justify-content:space-between;align-items:baseline;
+  padding-bottom:82px;gap:22px;flex-wrap:wrap}
+header h1{font-size:clamp(46px,8.4vw,104px);line-height:1.02;font-weight:300;
+  letter-spacing:-.026em;max-width:19ch;padding:0 0 42px}
+header h1 em{font-style:italic;color:var(--clay)}
+header .lead{display:grid;grid-template-columns:1fr;gap:26px;padding:34px 0 var(--rhythm)}
+@media(min-width:860px){header .lead{grid-template-columns:1fr 1fr;gap:88px}}
+header .lead p{color:var(--umber);max-width:46ch}
+
+/* ── OBJEKT: the product sits deliberately off the centre axis ── */
+#objekt{padding:0 0 var(--rhythm)}
+#objekt .row{display:grid;grid-template-columns:1fr;gap:46px;align-items:end}
+@media(min-width:860px){#objekt .row{grid-template-columns:.85fr 1.15fr;gap:76px}}
+#objekt figure{background:linear-gradient(168deg,#E5DED3,#D8CFC1);
+  aspect-ratio:4/5;display:grid;place-items:center;padding:44px}
+#objekt figure svg{width:100%;height:100%;max-width:210px;display:block}
+#objekt .txt{padding-bottom:14px}
+#objekt h2{font-size:clamp(29px,4vw,44px);line-height:1.1;font-weight:300;
+  letter-spacing:-.022em;margin:16px 0 22px;max-width:20ch;text-wrap:balance}
+#objekt p{color:var(--umber);max-width:42ch;margin-bottom:22px}
+#objekt dl{display:grid;grid-template-columns:auto 1fr;gap:9px 26px;
+  border-top:1px solid var(--hair);padding-top:20px;margin-top:30px}
+#objekt dt{font-family:var(--sans);font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--whisper);padding-top:5px}
+#objekt dd{font-size:17px;color:var(--ink)}
+
+/* ── MATERIALE ── */
+#materiale{padding:0 0 var(--rhythm)}
+#materiale h2{font-size:26px;font-weight:300;letter-spacing:-.014em;margin:18px 0 52px;
+  max-width:24ch}
+#materiale .cols{display:grid;gap:52px;grid-template-columns:repeat(auto-fit,minmax(232px,1fr))}
+#materiale h3{font-family:var(--sans);font-size:9.5px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--whisper);font-weight:400;margin-bottom:15px;padding-bottom:13px;
+  border-bottom:1px solid var(--hair)}
+#materiale p{font-size:17.5px;line-height:1.7;color:var(--umber)}
+
+/* ── KOLLEKSJON ── */
+#kolleksjon{padding:0 0 var(--rhythm)}
+#kolleksjon h2{font-size:26px;font-weight:300;margin:18px 0 34px}
+#kolleksjon ul{list-style:none}
+#kolleksjon li{display:flex;justify-content:space-between;align-items:baseline;gap:26px;
+  padding:23px 0;border-bottom:1px solid var(--hair)}
+#kolleksjon li:first-child{border-top:1px solid var(--hair)}
+#kolleksjon .nm{font-size:23px;font-weight:300;letter-spacing:-.012em}
+#kolleksjon .nm em{font-style:italic;color:var(--whisper);font-size:17px;margin-left:11px}
+#kolleksjon .pr{font-family:var(--sans);font-size:12px;letter-spacing:.1em;color:var(--umber);
+  flex:0 0 auto;font-variant-numeric:tabular-nums}
+
+footer{border-top:1px solid var(--hair);padding:38px 0 92px}
+footer .row{display:flex;justify-content:space-between;gap:24px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="top">
+      <span class="tag">Stillhet</span>
+      <span class="tag">Keramikk — Jæren</span>
+    </div>
+    <h1>Ti kar, dreid <em>etter</em> hverandre</h1>
+    <hr class="hair">
+    <div class="lead">
+      <p>Hver serie er ferdig når leira er ferdig. Vi graver den selv, én gang i året,
+        og det holder til rundt tre hundre kar.</p>
+      <p>Når leira er brukt opp, venter vi til neste høst. Det er hele
+        produksjonsplanen.</p>
+    </div>
+  </div>
+</header>
+
+<section id="objekt">
+  <div class="wrap">
+    <div class="row">
+      <figure>
+        <svg viewBox="0 0 200 250" fill="none" xmlns="http://www.w3.org/2000/svg"
+             aria-label="Kar nr. 04">
+          <path d="M78 26h44v20c0 8 26 26 26 62v92c0 26-20 44-48 44s-48-18-48-44V108c0-36 26-54 26-62V26z"
+                stroke="#6B5F52" stroke-width="1.1"/>
+          <ellipse cx="100" cy="26" rx="22" ry="5.5" stroke="#6B5F52" stroke-width="1.1"/>
+          <path d="M62 168c14 8 62 8 76 0" stroke="#6B5F52" stroke-width=".7" opacity=".45"/>
+          <path d="M60 196c16 9 64 9 80 0" stroke="#6B5F52" stroke-width=".7" opacity=".3"/>
+        </svg>
+      </figure>
+      <div class="txt">
+        <span class="tag">Kar nr. 04</span>
+        <h2>Til vann, greiner og ingenting</h2>
+        <p>Dreid i én bevegelse, uten sammenføyning. Halsen er smal nok til å holde
+          en enkelt gren, og vid nok til å fylles uten kanne.</p>
+        <p>Brent to ganger. Innsiden er glasert, utsiden står ubehandlet, slik at den
+          blir mørkere av å bli brukt.</p>
+        <dl>
+          <dt>Høyde</dt><dd>24 cm</dd>
+          <dt>Leire</dt><dd>Egen, gravd ved Hå</dd>
+          <dt>Brenning</dt><dd>1240 °C, redusert</dd>
+          <dt>Opplag</dt><dd>32 av 300</dd>
+        </dl>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="materiale">
+  <div class="wrap">
+    <span class="tag">Materiale</span>
+    <h2>Tre ting vi ikke gjør</h2>
+    <div class="cols">
+      <div>
+        <h3>Ingen former</h3>
+        <p>Alt dreies. To kar fra samme serie skiller seg med noen millimeter, og det
+          er den eneste garantien vi gir.</p>
+      </div>
+      <div>
+        <h3>Ingen farge</h3>
+        <p>Glasuren er aske og feltspat. Fargen kommer fra jernet som allerede ligger
+          i leira, og varierer med hvor i skråningen den ble gravd.</p>
+      </div>
+      <div>
+        <h3>Ingen hast</h3>
+        <p>Tørking tar fjorten dager. Vi har prøvd å korte det ned, og karene sprakk
+          i ovnen hver gang.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="kolleksjon">
+  <div class="wrap">
+    <span class="tag">Tilgjengelig nå</span>
+    <h2>Høsten 2026</h2>
+    <ul>
+      <li><span class="nm">Kar nr. 02 <em>lav, vid</em></span><span class="pr">1 450 kr</span></li>
+      <li><span class="nm">Kar nr. 04 <em>høy, smal hals</em></span><span class="pr">1 850 kr</span></li>
+      <li><span class="nm">Skål nr. 07 <em>uglasert kant</em></span><span class="pr">980 kr</span></li>
+      <li><span class="nm">Fat nr. 11 <em>til brød</em></span><span class="pr">1 240 kr</span></li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <span class="tag">Stillhet Keramikk</span>
+      <span class="tag">Verkstedbesøk etter avtale</span>
+      <span class="tag">post@stillhet.no</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>

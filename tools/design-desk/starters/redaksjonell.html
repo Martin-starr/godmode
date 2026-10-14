@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Feltnotater — redaksjonell startside</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,200..800;1,6..72,200..800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F5F2EA;
+  --ink:#14120F;
+  --accent:#C8412B;
+  --muted:#6F675A;
+  --rule:#D6D0C1;
+  --serif:'Newsreader',Georgia,serif;
+  --mono:'IBM Plex Mono',ui-monospace,monospace;
+  --gutter:28px;
+  --measure:64ch;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--serif);
+  font-optical-sizing:auto;font-size:18px;line-height:1.55;
+  -webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 var(--gutter)}
+.meta{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  color:var(--muted)}
+.rule{border:0;border-top:1px solid var(--rule)}
+.thick{border-top:2px solid var(--ink)}
+
+/* ── MASTHEAD ── */
+.masthead{padding:44px 0 0}
+.masthead .top{display:flex;justify-content:space-between;align-items:baseline;
+  padding-bottom:13px;gap:20px;flex-wrap:wrap}
+.masthead h1{font-size:clamp(56px,11vw,132px);line-height:.86;font-weight:300;
+  letter-spacing:-.035em;padding:22px 0 18px;font-optical-sizing:auto}
+.masthead h1 em{font-style:italic;font-weight:200;color:var(--accent)}
+.masthead .strip{display:flex;justify-content:space-between;gap:20px;padding:11px 0 0;flex-wrap:wrap}
+
+/* ── LEDER: text column with a margin column beside it ── */
+.leder{padding:58px 0 66px}
+.leder .wrap{display:grid;grid-template-columns:1fr;gap:34px}
+@media(min-width:900px){.leder .wrap{grid-template-columns:minmax(0,1.5fr) minmax(0,.74fr);gap:58px}}
+.leder h2{font-size:31px;font-weight:400;line-height:1.16;letter-spacing:-.02em;
+  margin-bottom:20px;max-width:30ch;text-wrap:balance}
+.leder .body{max-width:var(--measure)}
+.leder .body p{margin-bottom:19px;color:#26221C}
+.leder .body p:first-of-type::first-letter{float:left;font-size:76px;line-height:.78;
+  font-weight:300;padding:6px 11px 0 0;color:var(--accent)}
+.leder aside{border-top:2px solid var(--ink);padding-top:14px}
+.leder aside h3{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;
+  text-transform:uppercase;font-weight:500;margin-bottom:13px}
+.leder aside p{font-size:15.5px;line-height:1.6;color:var(--muted);margin-bottom:13px}
+.leder aside .note{border-left:2px solid var(--accent);padding-left:13px;font-style:italic}
+
+/* ── PULL QUOTE: breaks the measure on purpose ── */
+.utdrag{padding:4px 0 74px}
+.utdrag blockquote{font-size:clamp(30px,5.2vw,58px);line-height:1.08;font-weight:200;
+  letter-spacing:-.028em;max-width:22ch;position:relative}
+.utdrag blockquote:before{content:'«';position:absolute;left:-.62em;top:-.06em;
+  color:var(--accent);font-weight:300}
+.utdrag cite{display:block;font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;
+  text-transform:uppercase;color:var(--muted);font-style:normal;margin-top:26px}
+
+/* ── INNHOLD: a table of contents with dot leaders ── */
+.innhold{padding:0 0 78px}
+.innhold h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  font-weight:500;padding-bottom:11px;border-bottom:2px solid var(--ink);margin-bottom:5px}
+.innhold ol{list-style:none;counter-reset:t}
+.innhold li{counter-increment:t;display:flex;align-items:baseline;gap:11px;
+  padding:15px 0;border-bottom:1px solid var(--rule)}
+.innhold li:before{content:counter(t,decimal-leading-zero);font-family:var(--mono);
+  font-size:11px;color:var(--accent);flex:0 0 auto;padding-top:3px}
+.innhold .t{font-size:20px;line-height:1.25;flex:0 1 auto}
+.innhold .dots{flex:1 1 auto;border-bottom:1px dotted var(--rule);min-width:24px;
+  transform:translateY(-4px)}
+.innhold .pg{font-family:var(--mono);font-size:11.5px;color:var(--muted);flex:0 0 auto;
+  font-variant-numeric:tabular-nums}
+
+/* ── BIDRAG ── */
+.bidrag{padding:0 0 76px}
+.bidrag h2{font-family:var(--mono);font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;
+  font-weight:500;padding-bottom:11px;border-bottom:2px solid var(--ink);margin-bottom:26px}
+.bidrag .grid{display:grid;gap:30px;grid-template-columns:repeat(auto-fit,minmax(212px,1fr))}
+.bidrag h3{font-size:20px;font-weight:400;margin-bottom:5px;letter-spacing:-.012em}
+.bidrag .role{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--accent);margin-bottom:9px}
+.bidrag p{font-size:15px;line-height:1.6;color:var(--muted)}
+
+footer{border-top:2px solid var(--ink);padding:22px 0 60px}
+footer .row{display:flex;justify-content:space-between;gap:20px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="wrap">
+    <div class="top">
+      <span class="meta">Nummer 07 — Vinter</span>
+      <span class="meta">Utgitt i Stavanger</span>
+    </div>
+    <hr class="rule thick">
+    <h1>Felt<em>notater</em></h1>
+    <hr class="rule">
+    <div class="strip">
+      <span class="meta">Et tidsskrift om arbeid som gjøres ute</span>
+      <span class="meta">96 sider — 180 kr</span>
+    </div>
+  </div>
+</header>
+
+<section class="leder" id="leder">
+  <div class="wrap">
+    <div class="body">
+      <h2>Om å måle noe som ikke vil måles</h2>
+      <p>Jorda svarer sjelden når du spør den direkte. Den svarer om et halvt år, i en
+        avling som ble litt bedre enn i fjor, eller i en rad som ikke tok seg. Det er
+        et vanskelig utgangspunkt for noen som skal skrive ned hva som virker.</p>
+      <p>Så vi begynte å notere alt. Temperaturen om morgenen, hvor lang tid det tok
+        før haugen begynte å dampe, hvilken uke meitemarken flyttet opp i det ferske
+        laget. Ikke fordi tallene er sanne hver for seg, men fordi de til sammen
+        begynner å tegne en form.</p>
+      <p>Dette nummeret handler om den formen. Om folk som holder journal over jord,
+        vann og vær, og om hva de har funnet ut når de leser tilbake i egne notater
+        etter fem år.</p>
+    </div>
+    <aside>
+      <h3>I dette nummeret</h3>
+      <p>Fire produsenter deler journalene sine — én av dem uendret siden 1998.</p>
+      <p class="note">«Jeg skrev ned været hver dag i tjue år før jeg forsto hva jeg
+        holdt på med.»</p>
+      <p>Fotografier fra fem gårdsbruk gjennom en hel sesong.</p>
+    </aside>
+  </div>
+</section>
+
+<section class="utdrag" id="utdrag">
+  <div class="wrap">
+    <blockquote>Den som fører journal, oppdager at han har hatt samme problem
+      fire ganger.</blockquote>
+    <cite>Ingrid Halvorsen — side 34</cite>
+  </div>
+</section>
+
+<section class="innhold" id="innhold">
+  <div class="wrap">
+    <h2>Innhold</h2>
+    <ol>
+      <li><span class="t">Haugen som ikke ville varme</span><span class="dots"></span><span class="pg">08</span></li>
+      <li><span class="t">Fem år med samme notatbok</span><span class="dots"></span><span class="pg">18</span></li>
+      <li><span class="t">Hva meitemarken faktisk gjør om vinteren</span><span class="dots"></span><span class="pg">27</span></li>
+      <li><span class="t">Intervju: Ingrid Halvorsen</span><span class="dots"></span><span class="pg">34</span></li>
+      <li><span class="t">Å lese jord med hendene</span><span class="dots"></span><span class="pg">46</span></li>
+      <li><span class="t">Brev fra lesere</span><span class="dots"></span><span class="pg">88</span></li>
+    </ol>
+  </div>
+</section>
+
+<section class="bidrag" id="bidrag">
+  <div class="wrap">
+    <h2>Bidragsytere</h2>
+    <div class="grid">
+      <div>
+        <h3>Ingrid Halvorsen</h3>
+        <div class="role">Journal siden 1998</div>
+        <p>Driver tolv dekar utenfor Nærbø. Har ført daglige notater i tjueseks år.</p>
+      </div>
+      <div>
+        <h3>Aslak Rygg</h3>
+        <div class="role">Fotografi</div>
+        <p>Fotograferte fem bruk gjennom en hel sesong, alltid fra samme punkt.</p>
+      </div>
+      <div>
+        <h3>Marte Solheim</h3>
+        <div class="role">Tekst</div>
+        <p>Skriver om landbruk og målemetoder. Bidro med essayet på side 46.</p>
+      </div>
+      <div>
+        <h3>Øystein Fjell</h3>
+        <div class="role">Redaktør</div>
+        <p>Grunnla Feltnotater i 2019 etter fjorten år som agronom.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="row">
+      <span class="meta">Feltnotater — utgitt to ganger i året</span>
+      <span class="meta">post@feltnotater.no</span>
+    </div>
+  </div>
+</footer>
+
+</body>
+</html>
