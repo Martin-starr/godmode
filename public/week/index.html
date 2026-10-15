@@ -5,64 +5,160 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#2b3a2e">
+<meta name="theme-color" content="#e6e6e4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#2e2e2e" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon.svg">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700&family=Barlow:wght@400;500&display=swap">
 <title>Week</title>
 <style>
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
-  body{margin:0;background:#2b3a2e;color:#f3f0e6;font:19px/1.4 "Chalkboard SE","Comic Sans MS","Segoe Print",cursive;padding:env(safe-area-inset-top) 16px 40px}
-  header{display:flex;align-items:center;justify-content:space-between;padding:14px 0;font-size:22px}
-  header button{background:none;border:0;color:inherit;font:inherit;font-size:30px;padding:0 12px}
-  h2{margin:18px 0 4px;font-size:17px;opacity:.6;font-weight:normal;letter-spacing:.04em}
-  h2.today{opacity:1;color:#ffe08a}
-  .task{padding:8px 4px;border-bottom:1px dashed rgba(255,255,255,.12);word-break:break-word}
-  .task.done{text-decoration:line-through;text-decoration-thickness:4px;text-decoration-color:#f3f0e6cc;opacity:.45}
-  input{width:100%;background:none;border:0;border-bottom:1px dashed rgba(255,255,255,.12);color:inherit;font:inherit;padding:8px 4px;outline:0;-webkit-user-select:text;user-select:text}
-  input::placeholder{color:rgba(255,255,255,.25)}
+  :root{--bg:#e6e6e4;--card:#ececea;--ink:#2a2a2a;--mute:#8a8a88;--line:#c9c9c6;--acc:#e8531a;--ghost:#b4b4b1}
+  @media(prefers-color-scheme:dark){:root{--bg:#2e2e2e;--card:#343434;--ink:#f2f2f0;--mute:#8e8e8c;--line:#454545;--acc:#ff6a2b;--ghost:#6a6a68}}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;margin:0}
+  html{background:var(--bg)}
+  body{color:var(--ink);font:16px/1.35 Barlow,"Helvetica Neue",sans-serif;padding-top:env(safe-area-inset-top);padding-bottom:calc(40px + env(safe-area-inset-bottom));min-height:100vh}
+  .h{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.01em}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
+  header button{background:none;border:0;color:var(--ink);font:inherit;font-size:28px;line-height:1;padding:4px 14px;cursor:pointer}
+  #title{font-size:15px;letter-spacing:.14em;color:var(--mute);text-decoration:underline dotted;text-underline-offset:5px;cursor:pointer}
+  .day{border-bottom:1px solid var(--line);padding:0 24px}
+  .day>.top{display:flex;align-items:baseline;justify-content:space-between;padding:22px 0;cursor:pointer}
+  .day .name{font-size:32px;line-height:1}
+  .day .count{font-size:13px;color:var(--mute);letter-spacing:.04em}
+  .day.today .name{color:var(--acc)}
+  .body{display:none;padding-bottom:28px}
+  .day.open .body{display:block}
+  .day.open .top{padding-bottom:4px}
+  .date{font-size:13px;color:var(--mute);margin-bottom:16px}
+  .task{display:flex;align-items:flex-start;gap:12px;padding:7px 0;cursor:pointer;animation:in .18s ease-out both}
+  @keyframes in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+  .box{flex:none;width:15px;height:15px;margin-top:3px;border:1.5px solid var(--ink);border-radius:2px;position:relative}
+  .done{color:var(--acc);text-decoration:line-through;text-decoration-thickness:1.5px}
+  .done .box{border-color:var(--acc)}
+  .done .box:after{content:"";position:absolute;left:3px;top:0;width:5px;height:9px;border:solid var(--acc);border-width:0 2px 2px 0;transform:rotate(45deg)}
+  .moved{color:var(--ghost);cursor:default;text-decoration:line-through;text-decoration-color:var(--ghost)}
+  .moved .box{border-style:dashed;border-color:var(--ghost)}
+  .moved small{text-decoration:none;font-size:11px;letter-spacing:.06em;text-transform:uppercase;margin-left:auto;padding-left:8px;white-space:nowrap;align-self:center}
+  input{width:100%;background:none;border:0;color:var(--ink);font:inherit;padding:14px 0 0;outline:0;-webkit-user-select:text;user-select:text}
+  input::placeholder{color:var(--mute)}
+  /* calendar */
+  #cal{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;padding-top:env(safe-area-inset-top);z-index:9;overflow-y:auto}
+  #cal.open{display:flex}
+  #cal header{justify-content:space-between}
+  #cal #mon{font-size:22px}
+  .grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;padding:16px;width:100%}
+  .wd{font-size:11px;color:var(--mute);text-align:center;letter-spacing:.08em}
+  .cell{min-width:0;aspect-ratio:1;border:1px solid var(--line);border-radius:4px;background:var(--card);display:flex;flex-direction:column;justify-content:space-between;padding:6px;font-size:12px;cursor:pointer}
+  .cell.blank{visibility:hidden}
+  .cell.now{border-color:var(--acc);border-width:2px}
+  .cell b{font-size:16px}
+  .cell small{font-size:10px;color:var(--mute);letter-spacing:.04em}
+  .cell.l1{background:color-mix(in srgb,var(--acc) 18%,var(--card))}
+  .cell.l2{background:color-mix(in srgb,var(--acc) 38%,var(--card))}
+  .cell.l3{background:color-mix(in srgb,var(--acc) 62%,var(--card));color:#fff}
+  .cell.l4{background:var(--acc);color:#fff}
+  .cell.l3 small,.cell.l4 small{color:#fff9}
+  #cal p{text-align:center;color:var(--mute);font-size:12px;letter-spacing:.06em;padding:8px 16px}
 </style>
 </head>
 <body>
-<header><button id="prev">‹</button><span id="title"></span><button id="next">›</button></header>
+<header><button id="prev">‹</button><span id="title" class="h"></span><button id="next">›</button></header>
 <main id="days"></main>
+
+<div id="cal">
+  <header><button id="mprev">‹</button><span id="mon" class="h"></span><button id="mnext">›</button></header>
+  <div class="grid" id="grid"></div>
+  <p>TAP A DAY TO OPEN IT · SHADE = TASK LOAD</p>
+  <header style="border:0;justify-content:center"><button id="close" style="font-size:14px;letter-spacing:.14em" class="h">CLOSE</button></header>
+</div>
+
 <script>
-const K=d=>[d.getFullYear(),d.getMonth()+1,d.getDate()].map(n=>String(n).padStart(2,"0")).join("-"); // local "YYYY-MM-DD"
+const K=d=>[d.getFullYear(),d.getMonth()+1,d.getDate()].map(n=>String(n).padStart(2,'0')).join('-');
+const P=k=>new Date(k.slice(0,4),k.slice(5,7)-1,k.slice(8,10),12);
 const load=k=>JSON.parse(localStorage.getItem(k)||'[]');
 const save=(k,v)=>v.length?localStorage.setItem(k,JSON.stringify(v)):localStorage.removeItem(k);
-let monday=new Date();monday.setHours(12,0,0,0);monday.setDate(monday.getDate()-(monday.getDay()+6)%7);
-let offset=0;
+const dateKeys=()=>Object.keys(localStorage).filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)).sort();
+const TODAY=K(new Date());
+const DAY=864e5;
+let sel=TODAY;                       // the day shown open
+let open=new Set([TODAY]);
 
+/* 2. carry-over: undone tasks from past days move to today; the origin keeps a trail */
+(function rollover(){
+  const today=load(TODAY);let n=0;
+  dateKeys().filter(k=>k<TODAY).forEach(k=>{
+    const list=load(k);
+    list.forEach(t=>{if(!t.done&&!t.moved){today.push({text:t.text,done:false,from:t.from||k});t.moved=TODAY;n++}});
+    save(k,list);
+  });
+  if(n)save(TODAY,today);
+})();
+
+/* week view */
+function weekStart(k){const d=P(k);d.setDate(d.getDate()-(d.getDay()+6)%7);return d}
 function render(){
-  const start=new Date(monday);start.setDate(start.getDate()+offset*7);
-  const end=new Date(start);end.setDate(end.getDate()+6);
-  const f=d=>d.toLocaleDateString(undefined,{day:'numeric',month:'short'});
+  const start=weekStart(sel),end=new Date(+start+6*DAY);
+  const f=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
   title.textContent=`${f(start)} – ${f(end)}`;
   days.innerHTML='';
   for(let i=0;i<7;i++){
-    const d=new Date(start);d.setDate(d.getDate()+i);const k=K(d),list=load(k);
-    const h=document.createElement('h2');
-    h.textContent=d.toLocaleDateString(undefined,{weekday:'long'});
-    if(k===K(new Date()))h.className='today';
-    days.append(h);
+    const d=new Date(+start+i*DAY),k=K(d),list=load(k);
+    const live=list.filter(t=>!t.moved),done=live.filter(t=>t.done).length;
+    const day=document.createElement('section');
+    day.className='day'+(k===TODAY?' today':'')+(open.has(k)?' open':'');
+    day.innerHTML=`<div class="top"><span class="name h">${d.toLocaleDateString('en-GB',{weekday:'long'})}</span>
+      <span class="count">${live.length?`${done} / ${live.length}`:''}</span></div>
+      <div class="body"><div class="date">${d.toLocaleDateString('en-GB',{month:'long',day:'numeric',year:'numeric'})}</div><div class="list"></div></div>`;
+    day.querySelector('.top').onclick=()=>{open.has(k)?open.delete(k):open.add(k);render()};
+    const ul=day.querySelector('.list');
     list.forEach((t,i)=>{
-      const el=document.createElement('div');el.className='task'+(t.done?' done':'');el.textContent=t.text;
-      let timer;
-      const edit=()=>{const v=prompt('Edit (empty = delete)',t.text);if(v===null)return;
-        v.trim()?list[i].text=v.trim():list.splice(i,1);save(k,list);render()};
-      el.onpointerdown=()=>{timer=setTimeout(()=>{timer=0;edit()},500)};
-      el.onpointerup=()=>{if(timer){clearTimeout(timer);t.done=!t.done;save(k,list);render()}};
-      el.onpointerleave=el.onpointercancel=()=>clearTimeout(timer);
-      el.oncontextmenu=e=>e.preventDefault();
-      days.append(el);
+      const el=document.createElement('div');
+      el.className='task'+(t.done?' done':'')+(t.moved?' moved':'');
+      el.innerHTML=`<span class="box"></span><span>${esc(t.text)}</span>`+(t.moved?`<small>→ not done</small>`:'');
+      if(!t.moved){
+        let timer;
+        const edit=()=>{const v=prompt('Edit task (empty = delete)',t.text);if(v===null)return;
+          v.trim()?list[i].text=v.trim():list.splice(i,1);save(k,list);render()};
+        el.onpointerdown=()=>{timer=setTimeout(()=>{timer=0;edit()},500)};
+        el.onpointerup=()=>{if(timer){clearTimeout(timer);t.done=!t.done;save(k,list);render()}};
+        el.onpointerleave=el.onpointercancel=()=>clearTimeout(timer);
+        el.oncontextmenu=e=>e.preventDefault();
+      }
+      ul.append(el);
     });
-    const inp=document.createElement('input');inp.placeholder='+';inp.maxLength=140;inp.enterKeyHint='done';
+    const inp=document.createElement('input');inp.placeholder='Add a new task...';inp.maxLength=140;inp.enterKeyHint='done';
     inp.onkeydown=e=>{if(e.key!=='Enter')return;const v=inp.value.trim();inp.value='';if(v){list.push({text:v,done:false});save(k,list);render()}};
     inp.onblur=()=>inp.onkeydown({key:'Enter'});
-    days.append(inp);
+    day.querySelector('.body').append(inp);
+    days.append(day);
   }
 }
-prev.onclick=()=>{offset--;render()};
-next.onclick=()=>{offset++;render()};
+const esc=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const shift=n=>{sel=K(new Date(+P(sel)+n*7*DAY));render()};
+prev.onclick=()=>shift(-1);next.onclick=()=>shift(1);
+
+/* 3. calendar: month grid shaded by task count, tap a day to open it */
+let mcur=P(TODAY);
+function calendar(){
+  mon.textContent=mcur.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
+  grid.innerHTML='';
+  'MON TUE WED THU FRI SAT SUN'.split(' ').forEach(w=>{const s=document.createElement('span');s.className='wd';s.textContent=w;grid.append(s)});
+  const first=new Date(mcur.getFullYear(),mcur.getMonth(),1,12),last=new Date(mcur.getFullYear(),mcur.getMonth()+1,0,12);
+  for(let i=0;i<(first.getDay()+6)%7;i++){const b=document.createElement('div');b.className='cell blank';grid.append(b)}
+  for(let d=new Date(first);d<=last;d.setDate(d.getDate()+1)){
+    const k=K(d),n=load(k).filter(t=>!t.moved).length,lvl=n?Math.min(4,Math.ceil(n/2)):0;
+    const c=document.createElement('div');c.className='cell'+(lvl?' l'+lvl:'')+(k===TODAY?' now':'');
+    c.innerHTML=`<b>${d.getDate()}</b><small>${n?n+' ✓':''}</small>`;
+    c.onclick=()=>{sel=k;open=new Set([k]);cal.classList.remove('open');render();window.scrollTo(0,0)};
+    grid.append(c);
+  }
+}
+title.onclick=()=>{mcur=P(sel);calendar();cal.classList.add('open')};
+mprev.onclick=()=>{mcur.setMonth(mcur.getMonth()-1);calendar()};
+mnext.onclick=()=>{mcur.setMonth(mcur.getMonth()+1);calendar()};
+close.onclick=()=>cal.classList.remove('open');
+
 render();
 </script>
 </body>
