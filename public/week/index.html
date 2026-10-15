@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#2b3a2e">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.svg">
+<title>Week</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+  body{margin:0;background:#2b3a2e;color:#f3f0e6;font:19px/1.4 "Chalkboard SE","Comic Sans MS","Segoe Print",cursive;padding:env(safe-area-inset-top) 16px 40px}
+  header{display:flex;align-items:center;justify-content:space-between;padding:14px 0;font-size:22px}
+  header button{background:none;border:0;color:inherit;font:inherit;font-size:30px;padding:0 12px}
+  h2{margin:18px 0 4px;font-size:17px;opacity:.6;font-weight:normal;letter-spacing:.04em}
+  h2.today{opacity:1;color:#ffe08a}
+  .task{padding:8px 4px;border-bottom:1px dashed rgba(255,255,255,.12);word-break:break-word}
+  .task.done{text-decoration:line-through;text-decoration-thickness:4px;text-decoration-color:#f3f0e6cc;opacity:.45}
+  input{width:100%;background:none;border:0;border-bottom:1px dashed rgba(255,255,255,.12);color:inherit;font:inherit;padding:8px 4px;outline:0;-webkit-user-select:text;user-select:text}
+  input::placeholder{color:rgba(255,255,255,.25)}
+</style>
+</head>
+<body>
+<header><button id="prev">‹</button><span id="title"></span><button id="next">›</button></header>
+<main id="days"></main>
+<script>
+const K=d=>[d.getFullYear(),d.getMonth()+1,d.getDate()].map(n=>String(n).padStart(2,"0")).join("-"); // local "YYYY-MM-DD"
+const load=k=>JSON.parse(localStorage.getItem(k)||'[]');
+const save=(k,v)=>v.length?localStorage.setItem(k,JSON.stringify(v)):localStorage.removeItem(k);
+let monday=new Date();monday.setHours(12,0,0,0);monday.setDate(monday.getDate()-(monday.getDay()+6)%7);
+let offset=0;
+
+function render(){
+  const start=new Date(monday);start.setDate(start.getDate()+offset*7);
+  const end=new Date(start);end.setDate(end.getDate()+6);
+  const f=d=>d.toLocaleDateString(undefined,{day:'numeric',month:'short'});
+  title.textContent=`${f(start)} – ${f(end)}`;
+  days.innerHTML='';
+  for(let i=0;i<7;i++){
+    const d=new Date(start);d.setDate(d.getDate()+i);const k=K(d),list=load(k);
+    const h=document.createElement('h2');
+    h.textContent=d.toLocaleDateString(undefined,{weekday:'long'});
+    if(k===K(new Date()))h.className='today';
+    days.append(h);
+    list.forEach((t,i)=>{
+      const el=document.createElement('div');el.className='task'+(t.done?' done':'');el.textContent=t.text;
+      let timer;
+      const edit=()=>{const v=prompt('Edit (empty = delete)',t.text);if(v===null)return;
+        v.trim()?list[i].text=v.trim():list.splice(i,1);save(k,list);render()};
+      el.onpointerdown=()=>{timer=setTimeout(()=>{timer=0;edit()},500)};
+      el.onpointerup=()=>{if(timer){clearTimeout(timer);t.done=!t.done;save(k,list);render()}};
+      el.onpointerleave=el.onpointercancel=()=>clearTimeout(timer);
+      el.oncontextmenu=e=>e.preventDefault();
+      days.append(el);
+    });
+    const inp=document.createElement('input');inp.placeholder='+';inp.maxLength=140;inp.enterKeyHint='done';
+    inp.onkeydown=e=>{if(e.key!=='Enter')return;const v=inp.value.trim();inp.value='';if(v){list.push({text:v,done:false});save(k,list);render()}};
+    inp.onblur=()=>inp.onkeydown({key:'Enter'});
+    days.append(inp);
+  }
+}
+prev.onclick=()=>{offset--;render()};
+next.onclick=()=>{offset++;render()};
+render();
+</script>
+</body>
+</html>
