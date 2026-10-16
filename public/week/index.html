@@ -21,6 +21,8 @@
   .h{font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.01em}
   header{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}
   header button{background:none;border:0;color:var(--ink);font:inherit;font-size:28px;line-height:1;padding:4px 14px;cursor:pointer}
+  #sub{font-size:11px;letter-spacing:.14em;color:var(--mute);margin-top:7px;font-family:"Barlow Condensed","Arial Narrow",sans-serif;font-weight:700}
+  #sub b{color:var(--acc);cursor:pointer;font-weight:700}
   #title{font-size:15px;letter-spacing:.14em;color:var(--mute);text-decoration:underline dotted;text-underline-offset:5px;cursor:pointer}
   .day{border-bottom:1px solid var(--line);padding:0 24px}
   .day>.top{display:flex;align-items:baseline;justify-content:space-between;padding:22px 0;cursor:pointer}
@@ -70,13 +72,14 @@
 </style>
 </head>
 <body>
-<header><button id="prev">‹</button><span id="title" class="h"></span><button id="next">›</button></header>
+<header><button id="prev">‹</button><div style="text-align:center"><span id="title" class="h"></span><div id="sub"></div></div><button id="next">›</button></header>
 <main id="days"></main>
 <div id="sync">NOT SYNCED YET</div>
 <div id="pin"><h1 class="h">Week</h1><input id="pincode" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="PIN"><p id="pinmsg"></p></div>
 
 <div id="cal">
   <header><button id="mprev">‹</button><span id="mon" class="h"></span><button id="mnext">›</button></header>
+  <p id="mtotal"></p>
   <div class="grid" id="grid"></div>
   <p>TAP A DAY TO OPEN IT · SHADE = TASK LOAD</p>
   <header style="border:0;justify-content:center"><button id="calclose" style="font-size:14px;letter-spacing:.14em" class="h">CLOSE</button></header>
@@ -110,6 +113,10 @@ function render(){
   const start=weekStart(sel),end=new Date(+start+6*DAY);
   const f=d=>d.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
   title.textContent=`${f(start)} – ${f(end)}`;
+  let wd=0,wt=0;for(let i=0;i<7;i++){const l=load(K(new Date(+start+i*DAY))).filter(t=>!t.moved);wt+=l.length;wd+=l.filter(t=>t.done).length}
+  const away=K(start)!==K(weekStart(TODAY));
+  sub.innerHTML=(wt?`DONE ${wd} / ${wt}`:'NO TASKS')+(away?' &nbsp;·&nbsp; <b id="today">BACK TO TODAY</b>':'');
+  if(away)today.onclick=()=>{sel=TODAY;open=new Set([TODAY]);render();window.scrollTo(0,0)};
   days.innerHTML='';
   for(let i=0;i<7;i++){
     const d=new Date(+start+i*DAY),k=K(d),list=load(k);
@@ -151,17 +158,18 @@ prev.onclick=()=>shift(-1);next.onclick=()=>shift(1);
 let mcur=P(TODAY);
 function calendar(){
   mon.textContent=mcur.toLocaleDateString('en-GB',{month:'long',year:'numeric'});
-  grid.innerHTML='';
+  grid.innerHTML='';let md=0,mt=0;
   'MON TUE WED THU FRI SAT SUN'.split(' ').forEach(w=>{const s=document.createElement('span');s.className='wd';s.textContent=w;grid.append(s)});
   const first=new Date(mcur.getFullYear(),mcur.getMonth(),1,12),last=new Date(mcur.getFullYear(),mcur.getMonth()+1,0,12);
   for(let i=0;i<(first.getDay()+6)%7;i++){const b=document.createElement('div');b.className='cell blank';grid.append(b)}
   for(let d=new Date(first);d<=last;d.setDate(d.getDate()+1)){
-    const k=K(d),n=load(k).filter(t=>!t.moved).length,lvl=n?Math.min(4,Math.ceil(n/2)):0;
+    const k=K(d),live=load(k).filter(t=>!t.moved),n=live.length,lvl=n?Math.min(4,Math.ceil(n/2)):0;mt+=n;md+=live.filter(t=>t.done).length;
     const c=document.createElement('div');c.className='cell'+(lvl?' l'+lvl:'')+(k===TODAY?' now':'');
     c.innerHTML=`<b>${d.getDate()}</b><small>${n?n+' ✓':''}</small>`;
     c.onclick=()=>{sel=k;open=new Set([k]);cal.classList.remove('open');render();window.scrollTo(0,0)};
     grid.append(c);
   }
+  mtotal.textContent=mt?`DONE ${md} / ${mt} THIS MONTH`:'NO TASKS THIS MONTH';
 }
 title.onclick=()=>{mcur=P(sel);calendar();cal.classList.add('open')};
 mprev.onclick=()=>{mcur.setMonth(mcur.getMonth()-1);calendar()};
