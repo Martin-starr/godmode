@@ -60,24 +60,33 @@
   .cell.l4{background:var(--acc);color:#fff}
   .cell.l3 small,.cell.l4 small{color:#fff9}
   #cal p{text-align:center;color:var(--mute);font-size:12px;letter-spacing:.06em;padding:8px 16px}
+  #pin{position:fixed;inset:0;background:var(--bg);display:none;flex-direction:column;align-items:center;justify-content:center;gap:18px;z-index:10}
+  #pin.open{display:flex}
+  #pin h1{font-size:40px}
+  #pin input{width:140px;text-align:center;font-size:34px;letter-spacing:.4em;border-bottom:2px solid var(--ink);padding:6px 0}
+  #pin p{color:var(--acc);font-size:13px;letter-spacing:.08em;min-height:18px}
+  #sync{position:fixed;left:0;right:0;bottom:0;text-align:center;font-size:11px;letter-spacing:.1em;color:var(--mute);padding:6px 0 calc(6px + env(safe-area-inset-bottom));display:none}
+  #sync.on{display:block}
 </style>
 </head>
 <body>
 <header><button id="prev">‹</button><span id="title" class="h"></span><button id="next">›</button></header>
 <main id="days"></main>
+<div id="sync">NOT SYNCED YET</div>
+<div id="pin"><h1 class="h">Week</h1><input id="pincode" type="password" inputmode="numeric" maxlength="6" autocomplete="off" placeholder="PIN"><p id="pinmsg"></p></div>
 
 <div id="cal">
   <header><button id="mprev">‹</button><span id="mon" class="h"></span><button id="mnext">›</button></header>
   <div class="grid" id="grid"></div>
   <p>TAP A DAY TO OPEN IT · SHADE = TASK LOAD</p>
-  <header style="border:0;justify-content:center"><button id="close" style="font-size:14px;letter-spacing:.14em" class="h">CLOSE</button></header>
+  <header style="border:0;justify-content:center"><button id="calclose" style="font-size:14px;letter-spacing:.14em" class="h">CLOSE</button></header>
 </div>
 
 <script>
 const K=d=>[d.getFullYear(),d.getMonth()+1,d.getDate()].map(n=>String(n).padStart(2,'0')).join('-');
 const P=k=>new Date(k.slice(0,4),k.slice(5,7)-1,k.slice(8,10),12);
 const load=k=>JSON.parse(localStorage.getItem(k)||'[]');
-const save=(k,v)=>v.length?localStorage.setItem(k,JSON.stringify(v)):localStorage.removeItem(k);
+const save=(k,v)=>{v.length?localStorage.setItem(k,JSON.stringify(v)):localStorage.removeItem(k);localStorage.setItem('ts:'+k,Date.now());push()};
 const dateKeys=()=>Object.keys(localStorage).filter(k=>/^\d{4}-\d\d-\d\d$/.test(k)).sort();
 const TODAY=K(new Date());
 const DAY=864e5;
@@ -85,7 +94,7 @@ let sel=TODAY;                       // the day shown open
 let open=new Set([TODAY]);
 
 /* 2. carry-over: undone tasks from past days move to today; the origin keeps a trail */
-(function rollover(){
+function rollover(){
   const today=load(TODAY);let n=0;
   dateKeys().filter(k=>k<TODAY).forEach(k=>{
     const list=load(k);
@@ -93,7 +102,7 @@ let open=new Set([TODAY]);
     save(k,list);
   });
   if(n)save(TODAY,today);
-})();
+}
 
 /* week view */
 function weekStart(k){const d=P(k);d.setDate(d.getDate()-(d.getDay()+6)%7);return d}
@@ -157,9 +166,43 @@ function calendar(){
 title.onclick=()=>{mcur=P(sel);calendar();cal.classList.add('open')};
 mprev.onclick=()=>{mcur.setMonth(mcur.getMonth()-1);calendar()};
 mnext.onclick=()=>{mcur.setMonth(mcur.getMonth()+1);calendar()};
-close.onclick=()=>cal.classList.remove('open');
+calclose.onclick=()=>cal.classList.remove('open');
 
 render();
+
+/* sync: localStorage is the working copy; /api/week holds the merged truth.
+   Per date, the newer change time (ts) wins — on this phone and on the server. */
+const PIN=()=>localStorage.getItem('pin');
+const api=(method,body)=>fetch('/api/week',{method,headers:{'x-pin':PIN(),'content-type':'application/json'},body:body&&JSON.stringify(body)});
+const blob=()=>Object.fromEntries(Object.keys(localStorage).filter(k=>k.startsWith('ts:')).map(k=>k.slice(3)).map(k=>[k,{list:load(k),ts:+localStorage.getItem('ts:'+k)}]));
+function merge(data){let newer=false;for(const [k,v] of Object.entries(data||{})){
+  if(v.ts>+(localStorage.getItem('ts:'+k)||0)){v.list.length?localStorage.setItem(k,JSON.stringify(v.list)):localStorage.removeItem(k);localStorage.setItem('ts:'+k,v.ts);newer=true}}return newer}
+let timer;
+function push(){clearTimeout(timer);if(!PIN())return;timer=setTimeout(async()=>{
+  try{const r=await api('PUT',{data:blob()});sync.classList.toggle('on',!r.ok);if(r.ok)merge((await r.json()).data)}catch{sync.classList.add('on')}},800)}
+async function pull(){
+  if(!PIN())return false;
+  try{const r=await api('GET');if(r.status===401){localStorage.removeItem('pin');return false}
+    if(r.ok){merge((await r.json()).data);sync.classList.remove('on');return true}}catch{}
+  sync.classList.add('on');return false;
+}
+async function start(){
+  dateKeys().forEach(k=>localStorage.getItem('ts:'+k)||localStorage.setItem('ts:'+k,1));
+  if(!PIN()){pin.classList.add('open');pincode.focus();return}
+  pin.classList.remove('open');
+  await pull();rollover();render();
+}
+pincode.oninput=async()=>{
+  if(pincode.value.length<3)return;
+  pinmsg.textContent='';localStorage.setItem('pin',pincode.value);
+  const ok=await pull();
+  if(!ok&&!PIN()){pinmsg.textContent='WRONG PIN';pincode.value=''}
+  else if(!ok){pinmsg.textContent='NO CONNECTION';localStorage.removeItem('pin');pincode.value=''}
+  else start();
+};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&PIN())pull().then(ok=>{if(ok){rollover();render()}})});
+if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+start();
 </script>
 </body>
 </html>
