@@ -3307,6 +3307,7 @@ function InboxView({ data, canEdit, addTask, setView, showToast }) {
     setLoading(false);
   };
 
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- fetchInbox is stable for the lifetime of the view (pre-v1 code, left as is)
   useEffect(() => { fetchInbox(); }, []);
 
   const applyTab = (key) => {

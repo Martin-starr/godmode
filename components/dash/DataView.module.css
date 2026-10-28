@@ -1,0 +1,22 @@
+/* Data page: the range controls, the three-up chart grid on a laptop, and
+   the measurement notes. Everything else comes from dash.css. */
+
+.controls { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 12px 20px; }
+.dates { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; }
+@media (min-width: 760px) { .dates { width: 360px; } }
+
+/* The system chips mark their choice in ink; gold stays on the active
+   period chip, the one accent on the screen. */
+:global(.chips) .sys[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+
+.series + .series { margin-top: 30px; }
+.charts { display: grid; grid-template-columns: 1fr; gap: 16px; }
+@media (min-width: 1000px) { .charts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; } }
+.cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.cell .plot { margin-top: auto; padding-top: 4px; }
+.ct { font-size: 14px; line-height: 1.3; }
+
+.feed { max-width: 440px; }
+
+.om { color: var(--ink); font-size: 15px; line-height: 1.5; }
+.om p + p { margin-top: 10px; }

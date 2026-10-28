@@ -1,0 +1,36 @@
+/* Kanaler: one row per channel. Stacked on a phone, three columns
+   (channel + hint · select · label) from 760 px. */
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 8px;
+}
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ch {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.fixed {
+  display: flex;
+  align-items: center;
+  min-height: var(--tap);
+}
+.note {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+@media (min-width: 760px) {
+  .row {
+    grid-template-columns: minmax(220px, 1fr) minmax(0, 1.4fr) minmax(0, 1.4fr);
+    gap: 12px 20px;
+    align-items: start;
+  }
+  .actions { max-width: 300px; }
+}

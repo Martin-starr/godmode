@@ -1,3 +1,5 @@
 {
-  "crons": []
+  "crons": [
+    { "path": "/api/ecowitt/backfill", "schedule": "0 3 * * *" }
+  ]
 }
