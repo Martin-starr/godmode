@@ -79,8 +79,10 @@ export const PUT = guarded(async (req) => {
   if (!rows) return err("Mangler kanaler.");
 
   const sql = db();
-  const systems = await listSystems(sql);
-  const active = new Set(systems.map((s) => s.id));
+  // Every system, not only the active ones: a channel already mapped to a
+  // system that was set inactive must still round-trip through a save.
+  const systems = await listSystems(sql, { activeOnly: false });
+  const known = new Set(systems.map((s) => s.id));
 
   // Validate everything first; nothing is written if one row is wrong.
   const seen = new Set();
@@ -104,7 +106,7 @@ export const PUT = guarded(async (req) => {
       role = "unassigned";
     } else if (target === "hygiene") {
       role = "hygiene";
-    } else if (UUID.test(target) && active.has(target.toLowerCase())) {
+    } else if (UUID.test(target) && known.has(target.toLowerCase())) {
       role = "bed";
       system_id = target.toLowerCase();
     } else {

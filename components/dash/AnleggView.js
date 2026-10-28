@@ -39,7 +39,8 @@ export default function AnleggView() {
     if (!res.ok) toast(j.error || "Fikk ikke oppdatert.");
     else if (j.configured === false) toast(j.message);
     else if (j.error) toast("Fikk ikke kontakt med Ecowitt. Viser siste lagrede verdier.");
-    else toast("Oppdatert " + fmtTime(new Date()));
+    else if (j.fetched) toast("Oppdatert " + fmtTime(new Date()));
+    else toast("Allerede oppdatert. Prøv igjen om et minutt.");
   };
 
   if (api.status === "auth") return <Login onLogin={() => api.reload()} />;
@@ -77,8 +78,8 @@ export default function AnleggView() {
 }
 
 function SystemCard({ card }) {
-  const href = card.kind === "unassigned" ? "/mer/kanaler" : card.kind === "system" ? "/anlegg/" + card.key : "/anlegg/" + card.key;
-  const dot = card.kind === "system" && card.temp != null
+  const href = card.kind === "unassigned" ? "/mer/kanaler" : "/anlegg/" + card.key;
+  const dot = (card.kind === "system" || card.kind === "extra") && card.temp != null
     ? (card.temp >= TEMP_OK[0] && card.temp <= TEMP_OK[1] ? "ok" : "warn")
     : null;
   const noSensor = card.channel == null;
@@ -104,7 +105,7 @@ function SystemCard({ card }) {
         <div className="card-f">
           <span className="small num">
             {card.kind === "system"
-              ? (card.ph ? `pH ${fmtNum(card.ph.value, 1)} · manuell · ${fmtDay(card.ph.at)}` : "pH — ingen måling")
+              ? (card.ph ? `pH ${fmtNum(card.ph.value, 1)} · manuell${card.ph.handheld ? " · pinnemåler" : ""} · ${fmtDay(card.ph.at)}` : "pH — ingen måling")
               : "7 dager"}
           </span>
           <Sparkline points={card.spark} ariaLabel="Temperatur siste 7 dager" />

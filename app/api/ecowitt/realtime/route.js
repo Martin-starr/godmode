@@ -16,6 +16,9 @@ export const dynamic = "force-dynamic";
 //    across instances, which is what keeps repeated pull-to-refresh from
 //    hammering the API.
 const TTL_MS = 5 * 60 * 1000;
+// "Oppdater" (force=1) may shorten the wait to a minute, never to zero: the
+// whole API budget is about one call per ten seconds, shared with the cron.
+const FORCE_FLOOR_MS = 60 * 1000;
 let memo = { at: 0, payload: null };
 let sampleLogged = false;
 
@@ -36,10 +39,12 @@ export const GET = guarded(async (req) => {
   let error = null;
 
   const [{ newest }] = await sql`select max(ts) as newest from public.sensor_readings where source = 'ecowitt-realtime'`;
-  const dbFresh = newest && now - new Date(newest).getTime() < TTL_MS;
-  const memFresh = memo.payload && now - memo.at < TTL_MS;
+  const ttl = force ? FORCE_FLOOR_MS : TTL_MS;
+  const ageDb = newest ? now - new Date(newest).getTime() : Infinity;
+  const ageMem = memo.payload ? now - memo.at : Infinity;
+  const fresh = Math.min(ageDb, ageMem) < ttl;
 
-  if (force || (!dbFresh && !memFresh)) {
+  if (!fresh) {
     try {
       const payload = await fetchRealtime(cfg);
       memo = { at: now, payload };

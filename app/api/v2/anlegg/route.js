@@ -17,7 +17,7 @@ export const dynamic = "force-dynamic";
 export const GET = guarded(async () => {
   const sql = db();
   const now = new Date();
-  const sparkFrom = new Date(now.getTime() - 7 * 86400e3);
+  const sparkFrom = new Date(Math.floor((now.getTime() - 7 * 86400e3) / 3600e3) * 3600e3);
 
   const systems = await listSystems(sql);
   const channels = await listChannels(sql);
@@ -62,9 +62,19 @@ export const GET = guarded(async () => {
       name: s.name,
       category: s.category,
       ...cardFor(ch),
-      ph: p ? { value: n(p.ph), at: p.logged_at, date: p.date, source: p.source } : null,
+      // Old pH values came from a two-pin meter; the card says so.
+      ph: p ? { value: n(p.ph), at: p.logged_at, date: p.date, source: p.source, handheld: p.source !== "mobil-v2" } : null,
     };
   });
+  // A second probe in the same bed, or a probe on a system since set
+  // inactive, still reports: it gets its own card rather than vanishing.
+  const used = new Set(cards.map((c) => c.channel).filter((c) => c != null));
+  for (const ch of channels) {
+    if (ch.role === "bed" && ch.channel > 0 && !used.has(ch.channel)) {
+      used.add(ch.channel);
+      cards.push({ key: "kanal-" + ch.channel, kind: "extra", name: (ch.system_name || "CH" + ch.channel) + " · CH" + ch.channel, category: null, ...cardFor(ch), ph: null });
+    }
+  }
   for (const ch of channels) {
     if (ch.role === "hygiene") cards.push({ key: "kanal-" + ch.channel, kind: "hygiene", name: channelTitle(ch), category: null, ...cardFor(ch), ph: null });
   }

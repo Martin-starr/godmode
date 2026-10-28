@@ -5,13 +5,12 @@ import { useSearchParams } from "next/navigation";
 import { useApi } from "./api";
 import Login from "./Login";
 import { LineChart } from "./Charts";
-import { fmtNum, fmtIsoDay, fmtIsoDayYear, fmtTime } from "@/lib/format";
+import { fmtNum, fmtIsoDay, fmtIsoDayYear, fmtTime, fmtResolution } from "@/lib/format";
 import { DATE_ONLY, isoDateOslo, addDaysIso } from "@/lib/time";
 import { OM_MALINGENE } from "@/lib/om-malingene";
+import { SENSOR_START, FIRST_LOG } from "@/lib/v2";
 import s from "./DataView.module.css";
 
-const SENSOR_START = "2026-09-15";
-const FIRST_LOG = "2025-07-07";
 const HANDHELD_NOTE = "Loggene før 15. sep 2026 er tatt med håndholdt måler (pinne) — relative verdier, ikke sporbare.";
 
 const okDate = (v) => (v && DATE_ONLY.test(v) ? v : null);
@@ -23,13 +22,6 @@ const presetsFor = (today) => [
   ["sep", "siden 15. sep", SENSOR_START],
   ["alt", "alt", FIRST_LOG],
 ];
-
-function resolution(minutes) {
-  if (minutes < 60) return minutes + " min";
-  if (minutes === 60) return "1 time";
-  if (minutes < 1440) return minutes / 60 + " timer";
-  return "1 døgn";
-}
 
 const hasData = (ser) => [ser.temp, ser.ec, ser.moisture].some((pts) => pts.some((p) => p.v != null));
 
@@ -119,8 +111,9 @@ export default function DataView() {
       {!d ? null : (
         <div className="stack-l" aria-busy={stale ? "true" : undefined}>
           <section aria-label="Sensordata">
+            {!d.configured && !d.series.some(hasData) ? <p className="notice">{d.message}</p> : null}
             {d.series.length ? d.series.map((ser) => <Series key={ser.key} ser={ser} minutes={d.minutes} />) : (
-              <p className="small">Ingen sensordata i perioden.</p>
+              d.configured ? <p className="small">Ingen sensordata i perioden.</p> : null
             )}
           </section>
 
@@ -175,7 +168,7 @@ export default function DataView() {
               <a className="btn ghost" href={csvHref("sensor")} download>Last ned CSV · sensor</a>
               <a className="btn ghost" href={csvHref("logg")} download>Last ned CSV · logg</a>
             </div>
-            <p className="small">Semikolon som skilletegn og komma som desimaltegn, klar for norsk Excel. Sensorfilen har rå målinger hvert 30. minutt, loggfilen alle manuelle loggføringer i perioden.</p>
+            <p className="small">Semikolon som skilletegn og komma som desimaltegn, klar for norsk Excel. Sensorfilen har alle lagrede målinger (historikk hvert 30. minutt pluss hver oppdatering), loggfilen alle manuelle loggføringer i perioden. Tidspunkt står i norsk tid, med UTC i egen kolonne.</p>
           </section>
 
           <hr className="rule" />
@@ -197,7 +190,7 @@ function Series({ ser, minutes }) {
     <section className={s.series} aria-label={ser.name}>
       <div className="topline" style={{ marginBottom: 12 }}>
         <h2 className="h2">{ser.name}</h2>
-        <span className="small num">CH{ser.channel} · auto · snitt per {resolution(minutes)}</span>
+        <span className="small num">CH{ser.channel} · auto · snitt per {fmtResolution(minutes)}</span>
       </div>
       {hasData(ser) ? (
         <div className={s.charts}>

@@ -35,6 +35,13 @@ export default function ThemeToggle() {
     const root = document.documentElement;
     if (value === "auto") delete root.dataset.theme;
     else root.dataset.theme = value;
+    // The browser chrome (address bar) follows the theme-color metas; with a
+    // forced theme both metas get that colour, on automatic they go back to
+    // one colour per scheme.
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+      const dark = value === "dark" || (value === "auto" && (m.getAttribute("media") || "").includes("dark"));
+      m.setAttribute("content", dark ? "#101A30" : "#ffffff");
+    });
   };
 
   return (

@@ -114,26 +114,30 @@ export default function KanalerView() {
                 {r.channel === 0 ? (
                   <div className={s.fixed}>{ROOM}</div>
                 ) : (
-                  <select
-                    className="select"
-                    aria-label={"Tildeling for CH" + r.channel}
-                    value={r.target}
-                    onChange={(e) => edit(r.channel, { target: e.target.value })}
-                  >
-                    <option value={NONE}>Ikke tildelt</option>
-                    {systems.map((sys) => <option key={sys.id} value={sys.id}>{sys.name}</option>)}
-                    {orphan ? <option value={r.target}>Inaktivt system</option> : null}
-                    <option value={HYGIENE}>Hygienisering (prekompost)</option>
-                  </select>
+                  <div className="field">
+                    <label htmlFor={"kanal-" + r.channel + "-bed"}>Bed</label>
+                    <select
+                      id={"kanal-" + r.channel + "-bed"}
+                      className="select"
+                      value={r.target}
+                      onChange={(e) => edit(r.channel, { target: e.target.value })}
+                    >
+                      <option value={NONE}>Ikke tildelt</option>
+                      {systems.map((sys) => <option key={sys.id} value={sys.id}>{sys.name}</option>)}
+                      {orphan ? <option value={r.target}>Inaktivt system</option> : null}
+                      <option value={HYGIENE}>Hygienisering (prekompost)</option>
+                    </select>
+                  </div>
                 )}
                 {dup ? <div className={s.note}>{dup}</div> : null}
               </div>
-              <div>
+              <div className="field">
+                <label htmlFor={"kanal-" + r.channel + "-label"}>Merkelapp</label>
                 <input
+                  id={"kanal-" + r.channel + "-label"}
                   className="input"
                   type="text"
-                  aria-label={"Merkelapp for CH" + r.channel}
-                  placeholder="Merkelapp, valgfritt"
+                  placeholder="Valgfritt"
                   maxLength={80}
                   value={r.label}
                   onChange={(e) => edit(r.channel, { label: e.target.value })}

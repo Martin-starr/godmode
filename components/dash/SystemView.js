@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useApi } from "./api";
 import Login from "./Login";
 import { LineChart } from "./Charts";
-import { fmtNum, fmtWhen, fmtIsoDay, fmtTime } from "@/lib/format";
+import { fmtNum, fmtWhen, fmtIsoDay, fmtTime, fmtResolution } from "@/lib/format";
 
 export default function SystemView({ keyId }) {
   const api = useApi("/api/v2/system/" + encodeURIComponent(keyId));
@@ -41,8 +41,9 @@ export default function SystemView({ keyId }) {
 
       {d.series ? (
         <>
+          <p className="small num">CH{d.channel} · auto · snitt per {fmtResolution(d.series.minutes)} · siste 6 uker</p>
           <section className="stack">
-            <h2 className="h2">Temperatur °C · siste 6 uker</h2>
+            <h2 className="h2">Temperatur °C</h2>
             <LineChart points={d.series.temp} decimals={1} title="Temperatur siste 6 uker" />
           </section>
           <section className="stack">
@@ -81,7 +82,8 @@ function LogRow({ e }) {
   if (e.feed_liters != null) parts.push(`fôring ${fmtNum(e.feed_liters, 0)} l`);
   if (e.harvest_liters != null) parts.push(`høsting ${fmtNum(e.harvest_liters, 0)} l`);
   const when = e.source === "mobil-v2" && e.logged_at ? fmtIsoDay(e.date) + " " + fmtTime(e.logged_at) : fmtIsoDay(e.date);
-  const kind = e.source === "historical_handwritten" ? "håndskrevet" : e.created_by;
+  const handheld = e.source !== "mobil-v2";
+  const kind = [e.source === "historical_handwritten" ? "håndskrevet" : e.created_by, handheld ? "håndholdt måler" : null].filter(Boolean).join(" · ");
   return (
     <li>
       <div className="spread">

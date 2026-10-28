@@ -122,7 +122,7 @@ function Row({ e, onDelete }) {
   const when = fresh && e.logged_at ? fmtIsoDay(e.date) + " " + fmtTime(e.logged_at) : fmtIsoDay(e.date);
   const who = e.source === "historical_handwritten" ? "håndskrevet" : e.created_by;
   const parts = [];
-  if (e.ph != null) parts.push(`pH ${fmtNum(e.ph, 1)} · manuell`);
+  if (e.ph != null) parts.push(`pH ${fmtNum(e.ph, 1)}`);
   if (e.moisture_handheld != null) parts.push(`fukt ${fmtNum(e.moisture_handheld, 0)} % håndholdt`);
   if (e.temperature != null) parts.push(`temp ${fmtNum(e.temperature, 1)} °C håndholdt`);
   if (e.feed_liters != null) parts.push(`fôring ${fmtNum(e.feed_liters, 0)} l`);
@@ -131,7 +131,7 @@ function Row({ e, onDelete }) {
   return (
     <li>
       <div className="spread">
-        <span className="num">{[when, e.system, who].filter(Boolean).join(" · ")}</span>
+        <span className="num">{[when, e.system, who, "manuell"].filter(Boolean).join(" · ")}</span>
         {e.deletable ? <button type="button" className="link" onClick={() => onDelete(e.id)}>Slett</button>
           : handheld ? <span className="small">håndholdt måler</span> : null}
       </div>

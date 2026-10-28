@@ -1,37 +1,14 @@
 import { db } from "@/lib/db";
 import { json, err, guarded } from "@/lib/http";
-import { listSystems, listChannels, HYGIENE_LABEL, bucketMinutes, bucketRows, bucketGrid, logOut, n, UUID } from "@/lib/v2";
-import { DATE_ONLY, dayStart, dayEnd, addDaysIso, todayOslo, isoDateOslo } from "@/lib/time";
+import { config, NOT_CONFIGURED } from "@/lib/ecowitt";
+import { listSystems, listChannels, HYGIENE_LABEL, bucketMinutes, bucketRows, bucketGrid, logOut, n, UUID, parseRange } from "@/lib/v2";
+import { dayStart, dayEnd, addDaysIso } from "@/lib/time";
 
 export const runtime = "nodejs";
 export const maxDuration = 20;
 export const dynamic = "force-dynamic";
 
-// The sensors started reporting 15 Sep 2026; the first manual log is from
-// 7 Jul 2025. The Data page's "alt" preset reaches back to that first log.
-const SENSOR_START = "2026-09-15";
-const FIRST_LOG = "2025-07-07";
-const MAX_DAYS = 400;
 const LOG_CAP = 2000;
-
-// Range from the query string: ISO dates, from ≤ to, to no later than today,
-// and at most MAX_DAYS long — except that the lower bound may always reach
-// the first log, so "alt" keeps showing every log there is.
-function parseRange(sp) {
-  const rawFrom = sp.get("from") || SENSOR_START;
-  const rawTo = sp.get("to") || todayOslo();
-  if (!DATE_ONLY.test(rawFrom) || !DATE_ONLY.test(rawTo)) return { error: "Datoene må være på formen ÅÅÅÅ-MM-DD." };
-  // A month 13 or a 30 Feb rolls over instead of failing; the round trip catches it.
-  if (isoDateOslo(dayStart(rawFrom)) !== rawFrom || isoDateOslo(dayStart(rawTo)) !== rawTo) return { error: "Ugyldig dato." };
-  if (rawFrom > rawTo) return { error: "Fra-datoen må være før Til-datoen." };
-  const today = todayOslo();
-  const to = rawTo > today ? today : rawTo;
-  const cap = addDaysIso(to, -MAX_DAYS);
-  const floor = cap < FIRST_LOG ? cap : FIRST_LOG;
-  let from = rawFrom < floor ? floor : rawFrom;
-  if (from > to) from = to;
-  return { from, to, query: { from: rawFrom, to: rawTo } };
-}
 
 // Which series the selector offers: every channel ≥ 1 that is mapped (bed or
 // hygiene), plus unmapped channels that actually reported in the range.
@@ -147,7 +124,10 @@ export const GET = guarded(async (req) => {
   }));
   const feedTotal = feedWeeks.length ? feedWeeks.reduce((a, w) => a + (w.liters || 0), 0) : null;
 
+  const cfg = config();
   return json({
+    configured: cfg.configured,
+    message: cfg.configured ? null : NOT_CONFIGURED,
     range: { from, to },
     query: { ...range.query, system: systemKey },
     system: systemKey,
