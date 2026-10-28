@@ -1,0 +1,58 @@
+{
+  "_note": "Synthetic sample in the documented api/v3 real_time shape (WH51 docs + WH52 temperature/EC sub-fields). Replace with the first real response from the station once keys are in; the parser logs it.",
+  "code": 0,
+  "msg": "success",
+  "time": "1793176200",
+  "data": {
+    "outdoor": {
+      "temperature": { "time": "1793176200", "unit": "℃", "value": "9.1" },
+      "humidity": { "time": "1793176200", "unit": "%", "value": "88" }
+    },
+    "indoor": {
+      "temperature": { "time": "1793176200", "unit": "℃", "value": "18.4" },
+      "humidity": { "time": "1793176200", "unit": "%", "value": "71" }
+    },
+    "pressure": {
+      "relative": { "time": "1793176200", "unit": "hPa", "value": "1008.2" },
+      "absolute": { "time": "1793176200", "unit": "hPa", "value": "1007.9" }
+    },
+    "soil_ch1": {
+      "soilmoisture": { "time": "1793176140", "unit": "%", "value": "41" },
+      "temperature": { "time": "1793176140", "unit": "℃", "value": "21.3" },
+      "ec": { "time": "1793176140", "unit": "µS/cm", "value": "1240" }
+    },
+    "soil_ch2": {
+      "soilmoisture": { "time": "1793176140", "unit": "%", "value": "38" },
+      "temperature": { "time": "1793176140", "unit": "℃", "value": "20.8" },
+      "ec": { "time": "1793176140", "unit": "µS/cm", "value": "1105" }
+    },
+    "soil_ch3": {
+      "soilmoisture": { "time": "1793176080", "unit": "%", "value": "44" },
+      "temperature": { "time": "1793176080", "unit": "℃", "value": "22.0" },
+      "ec": { "time": "1793176080", "unit": "µS/cm", "value": "1390" }
+    },
+    "soil_ch4": {
+      "soilmoisture": { "time": "1793176140", "unit": "%", "value": "36" },
+      "temperature": { "time": "1793176140", "unit": "℃", "value": "19.6" },
+      "ec": { "time": "1793176140", "unit": "µS/cm", "value": "980" }
+    },
+    "soil_ch5": {
+      "soilmoisture": { "time": "1793176140", "unit": "%", "value": "40" },
+      "temperature": { "time": "1793176140", "unit": "℃", "value": "21.0" },
+      "ec": { "time": "1793176140", "unit": "µS/cm", "value": "1210" }
+    },
+    "soil_ch6": {
+      "soilmoisture": { "time": "1793176140", "unit": "%", "value": "52" },
+      "temperature": { "time": "1793176140", "unit": "℃", "value": "56.4" },
+      "ec": { "time": "1793176140", "unit": "µS/cm", "value": "2310" }
+    },
+    "soil_ch7": {
+      "soilmoisture": { "time": "1793176140", "unit": "%", "value": "-" },
+      "temperature": { "time": "1793176140", "unit": "℃", "value": "-" },
+      "ec": { "time": "1793176140", "unit": "µS/cm", "value": "-" }
+    },
+    "battery": {
+      "soilmoisture_sensor_ch1": { "time": "1793176140", "unit": "V", "value": "1.6" }
+    }
+  }
+}
