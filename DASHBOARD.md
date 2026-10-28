@@ -4,6 +4,62 @@ Next.js 14-app for internal drift på Jæren: produksjonslogging (temp/pH/fukt),
 systemoversikt, §19-hygienisering, oppgaver, prosjekter (kanban), partnere,
 SOP-/dokumentbibliotek og innstillinger. Norsk UI, IBM Plex Sans, navy/gull.
 
+## v1 (2026-10-28): Anlegg · Logg · Data
+
+Appen åpnes på telefonen hver dag. Tre faner og en «Mer»-lenke:
+
+| Fane | Rute | Hva |
+|---|---|---|
+| Anlegg (standard) | `/` | Ett kort per aktivt system (`public.systems`, `sort_order`): temp °C, EC µS/cm, fukt % (vol.) fra sensorene (merket **auto · kl 09:30**), siste manuelle pH (merket **manuell**), 7-dagers temperaturlinje, statusprikk på temperatur (15–25 °C ok, ellers gull). Romklima fra GW1200 øverst. «Oppdater» kaller `/api/ecowitt/realtime`. Trykk på kortet → `/anlegg/<id>` med 6-ukers kurver og manuell logg. |
+| Logg | `/logg` | pH (kun glasselektrode), fukt håndholdt, fôring, høsting, notat → én rad i `public.logs` (`source = 'mobil-v2'`, `logged_at = now()`), «Alle» gir én rad per system for fôring. «Siste 10» med sletting innen 10 minutter. |
+| Data | `/data` | Datoområde (standard 15. sep 2026 → i dag), kurver per system, loggtabell, fôring per uke, to CSV-filer (semikolon, desimalkomma) og boksen «Om målingene» (`lib/om-malingene.js`). |
+| Mer | `/mer` | Ukeplan (`/week/`), Kanaler (`/mer/kanaler`), alle gamle faner (`/gammel?view=…`), utseende (lyst/mørkt), logg ut. |
+
+Det gamle dashbordet er uendret og ligger på `/gammel` (lenker som `/?view=seo`
+videresendes dit). Ukeappen på `/week/` er urørt.
+
+**Utseende:** IBM Plex Sans, navy `#101A30`, gull `#C9A055` som eneste aksent,
+lyst og mørkt via `prefers-color-scheme` (og manuelt valg under Mer).
+Stilark: `app/(dash)/dash.css`. Felles komponenter: `components/dash/`.
+
+### Sensorer (Ecowitt)
+
+7 × WH52 (CH1–CH7) + GW1200 rapporterer til ecowitt.net. Appen henter fra
+Ecowitt sitt API v3 (`lib/ecowitt.js`), ikke fra gatewayen direkte.
+
+- `GET /api/ecowitt/realtime` — siste verdier, én rad per kanal, mellomlagret 5 min.
+- `GET /api/ecowitt/backfill?days=3` eller `?from=YYYY-MM-DD&to=…` — historikk i
+  30-minutters oppløsning, én ≤7-dagers bolk per kall, setter bare inn rader som
+  mangler. Krever `Authorization: Bearer <CRON_SECRET>`.
+- `vercel.json` kjører backfill daglig kl 03:00 (Hobby tillater daglige cron-jobber).
+- `npm run ecowitt:backfill -- --from 2026-09-15` kjører hele historikken mot
+  dash.verminord.app (trenger `CRON_SECRET` i miljøet, 10 s pause mellom kall).
+- `npm test` kjører parseren mot eksempelsvar i `test/fixtures/`. Første ekte svar
+  logges i funksjonsloggen på Vercel (`[ecowitt] real_time sample`); bytt ut
+  fixturene med det og juster parseren om WH52 heter noe annet enn `soil_chN`.
+
+Miljøvariabler på Vercel (`verminord-dash` → Settings → Environment Variables,
+alle miljøer): `ECOWITT_APPLICATION_KEY`, `ECOWITT_API_KEY`, `ECOWITT_MAC`.
+`CRON_SECRET` finnes fra før. Uten nøklene viser sidene «Ingen sensordata ennå —
+legg inn Ecowitt-nøkler i Vercel» og ingenting krasjer.
+
+Hvilken kanal som står i hvilket bed velges under Mer → Kanaler
+(`public.sensor_channels`, roller `bed` / `hygiene` / `room` / `unassigned`).
+
+### Tabeller (migrasjon `dash-scripts/migrations/013_dash_v1_sensors.sql`)
+
+- `public.sensor_readings (ts, channel, soil_temp_c, soil_moisture_vol_pct, ec_us_cm,
+  indoor_temp_c, indoor_rh_pct, pressure_hpa, raw, source)`, unik på `(ts, channel)`.
+  Kanal 0 = GW1200 inne.
+- `public.sensor_channels (channel, system_id, label, role, updated_at)`.
+- `public.logs` fikk `logged_at`, `harvest_liters`, `moisture_handheld`. Gamle rader
+  har `logged_at` satt til kl 12:00 på loggdatoen.
+- Rollen `dash_app` har nå egne RLS-policyer på `public.logs`, `public.systems` og
+  de to nye tabellene.
+
+Regel uten unntak i UI: sensorverdier merkes **auto**, innskrevne verdier **manuell**.
+pH vises aldri som auto (WH52 har ingen pH-kanal).
+
 ## Bakgrunn
 
 Appen ble opprinnelig deployet rett fra en midlertidig Claude Code-container

@@ -12,6 +12,7 @@ const TEMP_OK = [15, 25];
 
 export default function AnleggView() {
   const api = useApi("/api/v2/anlegg");
+  const { status, data, reload } = api;
   const toast = useToast();
   const [busy, setBusy] = useState(false);
   const poked = useRef(false);
@@ -19,13 +20,13 @@ export default function AnleggView() {
   // First paint comes from what is stored. Then the station is asked once
   // (the endpoint caches for five minutes) and the page quietly updates.
   useEffect(() => {
-    if (api.status !== "ok" || poked.current) return;
+    if (status !== "ok" || !data || poked.current) return;
     poked.current = true;
-    if (!api.data.configured) return;
+    if (!data.configured) return;
     apiFetch("/api/ecowitt/realtime").then((r) => (r.ok ? r.json() : null)).then((j) => {
-      if (j && j.fetched) api.reload({ quiet: true });
+      if (j && j.fetched) reload({ quiet: true });
     }).catch(() => {});
-  }, [api.status, api.data, api.reload]);
+  }, [status, data, reload]);
 
   const refresh = async () => {
     if (busy) return;
