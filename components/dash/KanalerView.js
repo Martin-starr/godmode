@@ -94,7 +94,7 @@ export default function KanalerView() {
     <div className="stack-l">
       <header className="stack">
         <Link href="/mer" className="link">Mer</Link>
-        <h1 className="h1">Kanaler</h1>
+        <h1 className="h1"><span className="eyebrow" aria-hidden="true">Mer · Kanaler</span>Kanaler</h1>
         <p className="lead">Hvilken sensor står hvor. Lagre når alt stemmer.</p>
         <p className="small">Sensorene rapporterer uansett. Tildelingen bestemmer bare hvilket kort tallene vises på.</p>
       </header>

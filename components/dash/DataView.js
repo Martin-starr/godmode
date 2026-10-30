@@ -68,7 +68,7 @@ export default function DataView() {
     <div className="stack-l">
       <header className="stack">
         <div className="topline">
-          <h1 className="h1">Data</h1>
+          <h1 className="h1"><span className="eyebrow" aria-hidden="true">Drift · Data</span>Data</h1>
           {stale || (rangeOk && api.status === "loading") ? <span className="small">Laster.</span> : null}
         </div>
         <div className={s.controls}>
@@ -128,7 +128,7 @@ export default function DataView() {
                   <table className="tbl">
                     <thead>
                       <tr>
-                        <th>Dato</th><th>System</th><th className="r">pH</th><th className="r">Fukt håndholdt</th>
+                        <th>Dato</th><th>System</th><th className="r"><span className="unit">pH</span></th><th className="r">Fukt håndholdt</th>
                         <th className="r">Fôring l</th><th className="r">Høsting l</th><th>Notat</th><th>Kilde</th>
                       </tr>
                     </thead>

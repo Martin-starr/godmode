@@ -67,7 +67,7 @@ export default function LoggView() {
   return (
     <div className={s.layout}>
       <form className={"stack " + s.form} onSubmit={save} noValidate>
-        <h1 className="h1">Logg</h1>
+        <h1 className="h1"><span className="eyebrow" aria-hidden="true">Drift · Logg</span>Logg</h1>
 
         <div className="chips" role="group" aria-label="System">
           {d.systems.map((x) => (
@@ -76,7 +76,7 @@ export default function LoggView() {
           <button type="button" className="chip" aria-pressed={isAll} onClick={() => pick(ALL)}>{ALL}</button>
         </div>
 
-        <Field id="logg-ph" label="pH" value={f.ph} onChange={set("ph")} disabled={isAll} hint={PH_HINT} />
+        <Field id="logg-ph" label={<span className="unit">pH</span>} value={f.ph} onChange={set("ph")} disabled={isAll} hint={PH_HINT} />
         <Field id="logg-fukt" label="Fukt, håndholdt %" value={f.moist} onChange={set("moist")} disabled={isAll} />
         <div className="grid2">
           <Field id="logg-foring" label="Fôring, liter" value={f.feed} onChange={set("feed")} hint={isAll ? "Samme mengde til hvert system." : null} />

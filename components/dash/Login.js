@@ -28,7 +28,7 @@ export default function Login({ onLogin }) {
 
   return (
     <form className="login stack" onSubmit={submit}>
-      <h1 className="h1">Logg inn</h1>
+      <h1 className="h1"><span className="eyebrow" aria-hidden="true">Verminord · Intern</span>Logg inn</h1>
       <div className="field">
         <label htmlFor="login-name">Bruker</label>
         {team.length ? (

@@ -26,7 +26,7 @@ export default function SystemView({ keyId }) {
     <div className="stack-l">
       <header className="stack">
         <Link href="/" className="link">Anlegg</Link>
-        <h1 className="h1">{d.title}</h1>
+        <h1 className="h1"><span className="eyebrow" aria-hidden="true">Anlegg · Detalj</span>{d.title}</h1>
         {d.channel == null ? (
           <p className="lead">Ingen sensor tildelt. Velg kanal under Mer, Kanaler.</p>
         ) : l ? (
@@ -47,7 +47,7 @@ export default function SystemView({ keyId }) {
             <LineChart points={d.series.temp} decimals={1} title="Temperatur siste 6 uker" />
           </section>
           <section className="stack">
-            <h2 className="h2">Ledningsevne µS/cm</h2>
+            <h2 className="h2">Ledningsevne <span className="unit">µS/cm</span></h2>
             <LineChart points={d.series.ec} decimals={0} title="Ledningsevne siste 6 uker" />
           </section>
           <section className="stack">

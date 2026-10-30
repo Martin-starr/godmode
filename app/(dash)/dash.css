@@ -109,6 +109,11 @@ svg { display: block; }
   .page { padding: 32px 24px 64px; }
 }
 
+/* Desktop-only pieces (sidebar, date line, eyebrows, number row, the
+   headline's gold tail) are styled in desktop.css; below 1024 px they are
+   not drawn at all, so phones and tablets look exactly as before. */
+.side, .topmeta, .eyebrow, .kpis, .desk-only { display: none; }
+
 /* ---- type ---- */
 .h1 { font-size: 24px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
 .h2 { font-size: 17px; font-weight: 700; line-height: 1.3; }
@@ -119,6 +124,9 @@ svg { display: block; }
 .big { font-size: 30px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 .big .u { font-size: 13px; font-weight: 400; color: var(--muted); letter-spacing: 0; margin-left: 3px; }
 .ital { font-style: italic; }
+/* A unit or symbol inside a label keeps its case even where the label is
+   set in capitals (desktop): uppercase turns µS/cm into "MS/CM" and pH into "PH". */
+.unit { text-transform: none; }
 .topline { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; justify-content: space-between; margin-bottom: 18px; }
 .rule { border: 0; border-top: 1px solid var(--line); margin: 20px 0; }
 .stack > * + * { margin-top: 14px; }

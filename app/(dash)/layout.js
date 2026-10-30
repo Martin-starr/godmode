@@ -1,4 +1,5 @@
 import "./dash.css";
+import "./desktop.css";
 import Shell from "@/components/dash/Shell";
 
 export const metadata = {
