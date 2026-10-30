@@ -88,7 +88,7 @@ function SystemCard({ card }) {
     <Link href={href} className="card">
       <div className="card-h">
         <span className="name">{card.name}</span>
-        {card.kind === "unassigned" ? <span className="small">Velg bed under Kanaler</span>
+        {card.kind === "unassigned" && !card.label ? <span className="small">Velg bed under Kanaler</span>
           : card.category === "precompost" ? <span className="small">prekompost</span>
           : card.label && card.kind === "hygiene" ? null : null}
       </div>

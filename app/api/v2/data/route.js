@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { json, err, guarded } from "@/lib/http";
 import { config, NOT_CONFIGURED } from "@/lib/ecowitt";
-import { listSystems, listChannels, HYGIENE_LABEL, bucketMinutes, bucketRows, bucketGrid, logOut, n, UUID, parseRange } from "@/lib/v2";
+import { listSystems, listChannels, channelTitle, HYGIENE_LABEL, bucketMinutes, bucketRows, bucketGrid, logOut, n, UUID, parseRange } from "@/lib/v2";
 import { dayStart, dayEnd, addDaysIso } from "@/lib/time";
 
 export const runtime = "nodejs";
@@ -26,7 +26,7 @@ function seriesList(systems, channels, activeChannels) {
   const unassigned = [];
   for (const c of channels) {
     if (c.channel >= 1 && c.role === "unassigned" && activeChannels.has(c.channel)) {
-      unassigned.push({ key: "kanal-" + c.channel, name: "CH" + c.channel + " (ikke tildelt)", channel: c.channel, kind: "unassigned" });
+      unassigned.push({ key: "kanal-" + c.channel, name: channelTitle(c), channel: c.channel, kind: "unassigned" });
     }
   }
   for (const ch of [...activeChannels].sort((a, b) => a - b)) {
