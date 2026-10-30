@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { json, err, guarded } from "@/lib/http";
-import { parseLoggerExport, evaluate } from "@/lib/hygiene";
+import { parseLoggerExport, evaluate, MIN_PROBES } from "@/lib/hygiene";
 
 export const runtime = "nodejs";
 export const maxDuration = 25;
@@ -15,18 +15,21 @@ async function latestPayload(sql) {
     from dash.hygiene_imports order by id desc`;
   if (!imports.length) return { latest: null, imports: [] };
   const imp = imports[0];
-  const rows = await sql`select extract(epoch from ts) * 1000 as ts, ch, temp
+  const rows = await sql`select extract(epoch from ts) * 1000 as ts, ch, temp, excluded
     from dash.hygiene_readings where import_id = ${imp.id} order by ts, ch`;
-  const readings = rows.map((r) => ({ ts: Number(r.ts), ch: Number(r.ch), temp: Number(r.temp) }));
+  const readings = rows.map((r) => ({ ts: Number(r.ts), ch: Number(r.ch), temp: Number(r.temp), excluded: r.excluded || null }));
   const { minTemp, minMinutes } = await hygieneTargets(sql);
-  const { channels, pass } = evaluate(readings, minTemp, minMinutes);
+  const { channels, pass, together, excluded, spans, screened } = evaluate(readings, minTemp, minMinutes);
 
-  // Series for the chart: one point per timestamp with temps indexed by channel.
+  // Series for the chart: one point per timestamp with temps indexed by
+  // channel. Readings set aside as probe faults are left out (null), so the
+  // chart shows what the verdict was computed from; the spans list says what
+  // was removed and why.
   const chs = channels.map((c) => c.ch);
   const byTs = new Map();
-  for (const r of readings) {
+  for (const r of screened) {
     if (!byTs.has(r.ts)) byTs.set(r.ts, {});
-    byTs.get(r.ts)[r.ch] = r.temp;
+    byTs.get(r.ts)[r.ch] = r.reason ? null : r.temp;
   }
   const series = [...byTs.entries()]
     .sort((a, b) => a[0] - b[0])
@@ -40,8 +43,12 @@ async function latestPayload(sql) {
       to: series.length ? series[series.length - 1].t : null,
       channels,
       pass,
+      together,
+      excluded,
+      spans: spans.map((s) => ({ ch: s.ch, from: s.from, to: s.to, count: s.count, min: s.min, max: s.max, reasons: s.reasons })),
       minTemp,
       minMinutes,
+      minProbes: MIN_PROBES,
       series,
     },
     imports,
@@ -60,8 +67,9 @@ export const POST = guarded(
     if (!file || typeof file !== "object") return err("Ingen fil mottatt.");
     const text = Buffer.from(await file.arrayBuffer()).toString("utf8");
     let points;
+    let channels;
     try {
-      points = parseLoggerExport(text);
+      ({ points, channels } = parseLoggerExport(text));
     } catch (e) {
       return err(e.message);
     }
@@ -77,7 +85,7 @@ export const POST = guarded(
       for (let i = 0; i < p.temps.length; i++) {
         if (p.temps[i] == null) continue;
         ts.push(new Date(p.ts).toISOString());
-        ch.push(i + 1);
+        ch.push(channels[i]);
         temp.push(p.temps[i]);
       }
     }

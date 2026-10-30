@@ -2410,10 +2410,45 @@ function HygieneView({ canEdit }) {
                   {c.maxMinutes}
                   <span style={{ fontSize: 14, color: "var(--muted)", fontWeight: 500 }}> min</span>
                 </div>
-                <div className="c">lengste sammenhengende ≥ {latest.minTemp}°C · krav {latest.minMinutes} min</div>
+                <div className="c">
+                  lengste sammenhengende ≥ {latest.minTemp}°C · krav {latest.minMinutes} min
+                  {c.excluded ? " · " + c.excluded + " målinger satt til side" : ""}
+                </div>
               </div>
             ))}
           </div>
+          {latest.together ? (
+            <div className="mut" style={{ marginBottom: 18 }}>
+              Minst {latest.minProbes} sonder samtidig ≥ {latest.minTemp}°C: {latest.together.minutes} min
+              {latest.together.minutes ? " (" + fmtDT(latest.together.from) + " – " + fmtDT(latest.together.to) + ")" : ""} · krav {latest.minMinutes} min.
+              {" "}Én sonde alene kan aldri gi godkjent.
+            </div>
+          ) : null}
+          {latest.spans && latest.spans.length ? (
+            <div style={{ marginBottom: 26 }}>
+              <div className="sechead">
+                <span className="eyebrow">Satt til side som sondefeil</span>
+                <span className="mut">{latest.excluded} målinger</span>
+              </div>
+              <div className="mut" style={{ marginBottom: 10 }}>
+                Verdier en kompostmasse ikke kan ha (under 0 eller over 85 °C), brå sprang på mer enn 3 °C på ett minutt, de ti minuttene rundt, og minutter der kanalrekkefølgen er usikker. De vises ikke i grafen og teller ikke i vurderingen. Rådataene ligger urørt i databasen.
+              </div>
+              <table className="dtbl">
+                <tbody>
+                  {latest.spans.map((sp, i) => (
+                    <tr key={i}>
+                      <td>
+                        <span className="sy">Kanal {sp.ch}</span>
+                        <div className="dt">{fmtDT(sp.from)} – {fmtDT(sp.to)} · {sp.reasons.join(", ")}</div>
+                      </td>
+                      <td className="num">{sp.count} målinger</td>
+                      <td className="num rt">{String(Math.round(sp.min * 10) / 10).replace(".", ",")}–{String(Math.round(sp.max * 10) / 10).replace(".", ",")} °C</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           <div className="charthead">
             <span className="eyebrow">Temperatur · {fmtDT(latest.from)} – {fmtDT(latest.to)}</span>
           </div>
