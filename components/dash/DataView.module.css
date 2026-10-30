@@ -11,7 +11,7 @@
 
 .series + .series { margin-top: 30px; }
 .charts { display: grid; grid-template-columns: 1fr; gap: 16px; }
-@media (min-width: 1000px) and (max-width: 1023px), (min-width: 1200px) { .charts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; } }
+@media (min-width: 1000px) and (max-width: 1023.98px), (min-width: 1200px) { .charts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; } }
 .cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 .cell .plot { margin-top: auto; padding-top: 4px; }
 .ct { font-size: 14px; line-height: 1.3; }

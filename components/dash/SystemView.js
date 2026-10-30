@@ -25,7 +25,7 @@ export default function SystemView({ keyId }) {
   return (
     <div className="stack-l">
       <header className="stack">
-        <Link href="/" className="link">Anlegg</Link>
+        <Link href="/" className="link phone-only">Anlegg</Link>
         <h1 className="h1"><span className="eyebrow" aria-hidden="true">Anlegg · Detalj</span>{d.title}</h1>
         {d.channel == null ? (
           <p className="lead">Ingen sensor tildelt. Velg kanal under Mer, Kanaler.</p>
@@ -37,6 +37,7 @@ export default function SystemView({ keyId }) {
         ) : (
           <p className="lead">CH{d.channel} · ingen måling ennå</p>
         )}
+        <hr className="rule desk-only" />
       </header>
 
       {d.series ? (

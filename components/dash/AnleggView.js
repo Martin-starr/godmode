@@ -52,16 +52,25 @@ export default function AnleggView() {
 
   // The big-screen headline and number row, in the old dashboard's manner:
   // how many beds with a sensor sit outside 15–25 °C right now.
+  // Only readings from the last two hours count, and beds are counted once
+  // even when two probes sit in the same bed.
+  const fresh = (c) => c.ts && Date.now() - new Date(c.ts).getTime() < 2 * 3600e3;
+  const bedOf = (c) => c.system_id || c.key;
   const systems = d.cards.filter((c) => c.kind === "system");
-  const placed = d.cards.filter((c) => (c.kind === "system" || c.kind === "extra") && c.temp != null);
-  const outside = placed.filter((c) => c.temp < TEMP_OK[0] || c.temp > TEMP_OK[1]).length;
   const probes = d.cards.filter((c) => c.channel != null);
-  const reporting = probes.filter((c) => c.ts && Date.now() - new Date(c.ts).getTime() < 2 * 3600e3).length;
-  const tail = !placed.length
+  const reporting = probes.filter(fresh).length;
+  const inBeds = d.cards.filter((c) => (c.kind === "system" || c.kind === "extra") && c.channel != null);
+  const freshInBeds = inBeds.filter((c) => c.temp != null && fresh(c));
+  const bedsWithSensor = new Set(inBeds.map(bedOf)).size;
+  const measured = new Set(freshInBeds.map(bedOf)).size;
+  const outside = new Set(freshInBeds.filter((c) => c.temp < TEMP_OK[0] || c.temp > TEMP_OK[1]).map(bedOf)).size;
+  const tail = !bedsWithSensor
     ? "Ingen sensor tildelt ennå."
-    : outside === 0
-      ? "Alt innenfor 15–25 °C."
-      : `${outside} bed utenfor 15–25 °C.`;
+    : !measured
+      ? "Ingen fersk måling."
+      : outside === 0
+        ? `Alle ${measured} bed med sensor innenfor 15–25 °C.`
+        : `${outside} bed utenfor 15–25 °C.`;
 
   return (
     <div className="stack-l">
@@ -86,9 +95,9 @@ export default function AnleggView() {
           <Kpi k="Sensorer" v={String(reporting)} c={`av ${probes.length} rapporterer`} />
           <Kpi
             k="Utenfor 15–25 °C"
-            v={placed.length ? String(outside) : "—"}
+            v={measured ? String(outside) : "—"}
             gold={outside > 0}
-            c={placed.length ? `av ${placed.length} bed med sensor` : "ingen bed tildelt ennå"}
+            c={measured ? `av ${measured} bed med fersk måling` : bedsWithSensor ? "ingen fersk måling" : "ingen bed tildelt ennå"}
           />
           <Kpi
             k="Rom"

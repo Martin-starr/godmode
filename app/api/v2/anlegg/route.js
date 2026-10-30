@@ -72,7 +72,7 @@ export const GET = guarded(async () => {
   for (const ch of channels) {
     if (ch.role === "bed" && ch.channel > 0 && !used.has(ch.channel)) {
       used.add(ch.channel);
-      cards.push({ key: "kanal-" + ch.channel, kind: "extra", name: (ch.system_name || "CH" + ch.channel) + " · CH" + ch.channel, category: null, ...cardFor(ch), ph: null });
+      cards.push({ key: "kanal-" + ch.channel, kind: "extra", system_id: ch.system_id, name: (ch.system_name || "CH" + ch.channel) + " · CH" + ch.channel, category: null, ...cardFor(ch), ph: null });
     }
   }
   for (const ch of channels) {

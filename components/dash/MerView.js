@@ -40,6 +40,7 @@ export default function MerView() {
   return (
     <div className="stack-l">
       <h1 className="h1"><span className="eyebrow" aria-hidden="true">Annet · Mer</span>Mer</h1>
+      <hr className="rule desk-only" />
 
       <ul className="list">
         <Row href="/week/" external>Ukeplan</Row>
@@ -58,7 +59,7 @@ export default function MerView() {
       <section className="stack">
         <h2 className="h2">Utseende</h2>
         <ThemeToggle />
-        <p className="small desk-only">På PC betyr Automatisk lyst, som det gamle dashbordet.</p>
+        <p className="small desk-only">På stor skjerm betyr Automatisk lyst, som det gamle dashbordet.</p>
       </section>
 
       <section className="stack">

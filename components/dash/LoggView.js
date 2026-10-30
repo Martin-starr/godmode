@@ -76,6 +76,7 @@ export default function LoggView() {
           <button type="button" className="chip" aria-pressed={isAll} onClick={() => pick(ALL)}>{ALL}</button>
         </div>
 
+        <div className="stack panel">
         <Field id="logg-ph" label={<span className="unit">pH</span>} value={f.ph} onChange={set("ph")} disabled={isAll} hint={PH_HINT} />
         <Field id="logg-fukt" label="Fukt, håndholdt %" value={f.moist} onChange={set("moist")} disabled={isAll} />
         <div className="grid2">
@@ -89,6 +90,7 @@ export default function LoggView() {
 
         {error ? <p className="notice error" role="alert">{error}</p> : null}
         <button className="btn wide" type="submit" disabled={saving || empty} aria-busy={saving}>{saving ? "Lagrer" : "Lagre"}</button>
+        </div>
       </form>
 
       <section className="stack" aria-label="Siste loggføringer">

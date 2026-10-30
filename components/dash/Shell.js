@@ -72,15 +72,27 @@ export default function Shell({ children }) {
   }, []);
 
   // Who is signed in, for the sidebar footer. Only fetched where the
-  // sidebar is visible; refreshed on navigation so it appears after login.
+  // sidebar is visible; refreshed on navigation, right after a login, and
+  // when the window grows past 1024 px.
   useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia || !window.matchMedia(DESKTOP).matches) return;
+    if (typeof window === "undefined" || !window.matchMedia) return;
+    const mq = window.matchMedia(DESKTOP);
     let alive = true;
-    apiFetch("/api/v2/me")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((j) => { if (alive) setMe(j); })
-      .catch(() => {});
-    return () => { alive = false; };
+    const load = () => {
+      if (!mq.matches) return;
+      apiFetch("/api/v2/me")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { if (alive) setMe(j); })
+        .catch(() => {});
+    };
+    load();
+    window.addEventListener("vd-login", load);
+    if (mq.addEventListener) mq.addEventListener("change", load);
+    return () => {
+      alive = false;
+      window.removeEventListener("vd-login", load);
+      if (mq.removeEventListener) mq.removeEventListener("change", load);
+    };
   }, [pathname]);
 
   const logout = async () => {
@@ -95,7 +107,7 @@ export default function Shell({ children }) {
         <aside className="side">
           <div className="side-brand">
             {/* eslint-disable-next-line @next/next/no-img-element -- static logo, as in the old dashboard */}
-            <img src="/logo-white.png" alt="Verminord" width={130} height={59} />
+            <img src="/logo-white.png" alt="Verminord" width={130} height={59} loading="lazy" />
             <small>Intern · Drift Jæren</small>
           </div>
           <nav className="side-nav" aria-label="Hovedmeny">
@@ -117,6 +129,7 @@ export default function Shell({ children }) {
           {me ? (
             <div className="side-foot">
               <b>{me.name} · {me.access}</b>
+              {me.sync ? <span className="side-sync"><span className="side-dot" />{me.sync}</span> : null}
               <button type="button" className="side-out" onClick={logout}>Logg ut</button>
             </div>
           ) : null}
@@ -130,7 +143,7 @@ export default function Shell({ children }) {
           ))}
         </nav>
         <main className="page">
-          <div className="topmeta"><span data-clock>{clock}</span></div>
+          <div className="topmeta"><span data-clock>{clock}</span><span>{me && me.sync ? me.sync : ""}</span></div>
           {children}
         </main>
       </div>

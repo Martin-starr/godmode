@@ -23,11 +23,14 @@ export default function Login({ onLogin }) {
     const res = await postJson("/api/login", { name, password });
     setBusy(false);
     if (!res.ok) { setError(await errorMessage(res, "Innlogging feilet.")); return; }
+    window.dispatchEvent(new Event("vd-login"));
     onLogin && onLogin();
   };
 
   return (
     <form className="login stack" onSubmit={submit}>
+      {/* eslint-disable-next-line @next/next/no-img-element -- static logo, as in the old dashboard */}
+      <img className="desk-only login-logo" src="/logo-dark.png" alt="" width={130} height={60} loading="lazy" />
       <h1 className="h1"><span className="eyebrow" aria-hidden="true">Verminord · Intern</span>Logg inn</h1>
       <div className="field">
         <label htmlFor="login-name">Bruker</label>

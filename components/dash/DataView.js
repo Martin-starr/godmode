@@ -17,8 +17,8 @@ const okDate = (v) => (v && DATE_ONLY.test(v) ? v : null);
 
 // Period chips: key, label, from-date. All of them end today.
 const presetsFor = (today) => [
-  ["7d", "7 d", addDaysIso(today, -6)],
-  ["30d", "30 d", addDaysIso(today, -29)],
+  ["7d", <>7 <span className="unit" key="u">d</span></>, addDaysIso(today, -6)],
+  ["30d", <>30 <span className="unit" key="u">d</span></>, addDaysIso(today, -29)],
   ["sep", "siden 15. sep", SENSOR_START],
   ["alt", "alt", FIRST_LOG],
 ];
@@ -71,6 +71,7 @@ export default function DataView() {
           <h1 className="h1"><span className="eyebrow" aria-hidden="true">Drift · Data</span>Data</h1>
           {stale || (rangeOk && api.status === "loading") ? <span className="small">Laster.</span> : null}
         </div>
+        <hr className="rule desk-only" />
         <div className={s.controls}>
           <div className={s.dates}>
             <div className="field">
