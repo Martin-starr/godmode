@@ -53,7 +53,7 @@ export default function KanalerView() {
   if (api.status === "error" && !api.data) {
     return (
       <div className="stack">
-        <Link href="/mer" className="link">Mer</Link>
+        <Link href="/mer" className="link phone-only">Mer</Link>
         <p className="notice error">{api.error} <button className="link" type="button" onClick={() => api.reload()}>Prøv igjen</button></p>
       </div>
     );
@@ -94,9 +94,10 @@ export default function KanalerView() {
     <div className="stack-l">
       <header className="stack">
         <Link href="/mer" className="link">Mer</Link>
-        <h1 className="h1">Kanaler</h1>
+        <h1 className="h1"><span className="eyebrow" aria-hidden="true">Mer · Kanaler</span>Kanaler</h1>
         <p className="lead">Hvilken sensor står hvor. Lagre når alt stemmer.</p>
         <p className="small">Sensorene rapporterer uansett. Tildelingen bestemmer bare hvilket kort tallene vises på.</p>
+        <hr className="rule desk-only" />
       </header>
 
       <ul className="list">

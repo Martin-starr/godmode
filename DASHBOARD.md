@@ -22,6 +22,14 @@ videresendes dit). Ukeappen på `/week/` er urørt.
 lyst og mørkt via `prefers-color-scheme` (og manuelt valg under Mer).
 Stilark: `app/(dash)/dash.css`. Felles komponenter: `components/dash/`.
 
+**På PC (fra 1024 px)** får de samme sidene det gamle dashbordets utseende
+(Martin, 2026-10-30): navy sidemeny med logo, kremhvit side, datolinje øverst,
+stor overskrift med gull kursiv hale og nøkkeltallsrad på Anlegg. Alt ligger i
+`app/(dash)/desktop.css` innenfor én media query, så telefon og nettbrett er
+uendret. På PC er «Automatisk» lyst uansett hva maskinen står på; «Mørkt»
+under Mer gir en mørk utgave. Enheter og symboler i store bokstaver-etiketter
+pakkes i `<span className="unit">` så µS/cm og pH beholder sin skrivemåte.
+
 ### Sensorer (Ecowitt)
 
 7 × WH52 (CH1–CH7) + GW1200 rapporterer til ecowitt.net. Appen henter fra

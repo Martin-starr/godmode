@@ -3,6 +3,6 @@
 .layout { display: grid; gap: 26px; }
 .form { max-width: 520px; }
 .off { opacity: 0.5; }
-@media (min-width: 900px) {
+@media (min-width: 900px) and (max-width: 1023.98px), (min-width: 1240px) {
   .layout { grid-template-columns: minmax(0, 520px) minmax(0, 1fr); column-gap: 56px; align-items: start; }
 }
