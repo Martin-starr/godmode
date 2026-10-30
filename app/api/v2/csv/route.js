@@ -43,12 +43,12 @@ function csvResponse(name, lines) {
 }
 
 // What the sensor file calls each channel: the bed's name, the hygiene
-// label, or nothing at all for a channel nobody has assigned yet.
+// label, a probe's own label, or nothing for an unnamed unassigned channel.
 function csvName(ch) {
   if (!ch) return "";
   if (ch.role === "bed" && ch.system_name) return ch.system_name;
   if (ch.role === "hygiene") return ch.label || HYGIENE_LABEL;
-  return "";
+  return ch.label || "";
 }
 
 // ts is Europe/Oslo wall-clock (what Excel reads as a date); ts_utc is the
