@@ -184,3 +184,17 @@ test("callApi: retries once on 5xx, surfaces API error codes without retrying", 
   assert.equal(seen.searchParams.get("call_back"), "indoor,soil_ch1");
   assert.ok(seen.href.startsWith("https://api.ecowitt.net/api/v3/device/history?"));
 });
+
+test("parseRealtime: the real WH52 response (soil_moisture_ec_chN groups)", () => {
+  const real = JSON.parse(readFileSync(new URL("./fixtures/ecowitt-realtime-wh52.json", import.meta.url)));
+  const { readings, unknownGroups } = parseRealtime(real);
+  assert.deepEqual(unknownGroups, []);
+  assert.deepEqual(readings.map((r) => r.channel), [0, 1, 2]);
+  const ch1 = readings[1];
+  assert.equal(ch1.soil_temp_c, 20.8);
+  assert.equal(ch1.soil_moisture_vol_pct, 21);
+  assert.equal(ch1.ec_us_cm, 1050);
+  assert.equal(readings[2].ec_us_cm, 540);
+  assert.equal(readings[0].indoor_temp_c, 19.2);
+  assert.ok(discoverGroups(real).includes("soil_moisture_ec_ch1"));
+});
