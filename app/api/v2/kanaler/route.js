@@ -18,7 +18,7 @@ export const dynamic = "force-dynamic";
 
 const MAX_CHANNEL = 16;
 const MAX_LABEL = 80;
-const SOIL_KEY = /^soil(_ec)?_ch\d+$/i;
+const SOIL_KEY = /^soil(_?moisture)?(_?ec)?_?ch_?\d+$/i;
 
 // The realtime parser stores the whole Ecowitt group on the row, and the
 // owner's name for the channel ("Prekompost Temp & Moisture") rides along.
