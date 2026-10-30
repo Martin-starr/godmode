@@ -1,0 +1,67 @@
+name: Ecowitt backfill
+
+# Fills public.sensor_readings with the station's 30-minute history from
+# the Ecowitt cloud, by calling /api/ecowitt/backfill on the live site in
+# six-day windows (one API chunk each), ten seconds apart. Idempotent: rows
+# that already exist are skipped, so running it twice changes nothing.
+#
+# Run it from the Actions tab (also works in the GitHub app on a phone):
+# "Ecowitt backfill" -> "Run workflow". Uses the same CRON_SECRET repo
+# secret as scheduled-jobs.yml.
+
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: First day (YYYY-MM-DD)
+        required: true
+        default: "2026-09-15"
+      to:
+        description: Last day (YYYY-MM-DD, empty = today)
+        required: false
+        default: ""
+
+concurrency:
+  group: ecowitt-backfill
+  cancel-in-progress: false
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Backfill in six-day windows
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          BASE_URL: ${{ vars.DASH_BASE_URL || 'https://dash.verminord.app' }}
+          FROM: ${{ inputs.from }}
+          TO: ${{ inputs.to }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CRON_SECRET:-}" ]; then
+            echo "::error::CRON_SECRET repo secret is not set."; exit 1
+          fi
+          export TZ=Europe/Oslo
+          end="${TO:-$(date +%F)}"
+          d="$FROM"
+          total=0
+          while [[ "$d" < "$end" || "$d" == "$end" ]]; do
+            stop=$(date -d "$d +5 days" +%F)
+            [[ "$stop" > "$end" ]] && stop="$end"
+            for attempt in 1 2 3; do
+              code=$(curl -sS -o resp.json -w '%{http_code}' --max-time 70 \
+                -H "Authorization: Bearer ${CRON_SECRET}" \
+                "${BASE_URL}/api/ecowitt/backfill?from=${d}&to=${stop}" || echo 000)
+              [ "$code" = "200" ] && break
+              echo "HTTP $code for $d..$stop (attempt $attempt): $(head -c 300 resp.json 2>/dev/null)"
+              sleep 20
+            done
+            if [ "$code" != "200" ]; then echo "::error::Gave up on $d..$stop"; exit 1; fi
+            n=$(jq -r '.inserted' resp.json); p=$(jq -r '.parsed' resp.json)
+            total=$((total + n))
+            echo "$d .. $stop: $p read, $n new"
+            d=$(date -d "$stop +1 day" +%F)
+            sleep 10
+          done
+          echo "Done: $total new rows."
+          echo "### Ecowitt backfill: $total new rows ($FROM .. $end)" >> "$GITHUB_STEP_SUMMARY"
