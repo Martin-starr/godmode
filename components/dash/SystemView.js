@@ -14,7 +14,7 @@ export default function SystemView({ keyId }) {
   if (api.status === "error" && !api.data) {
     return (
       <div className="stack">
-        <Link href="/" className="link">Anlegg</Link>
+        <Link href="/anlegg" className="link">Anlegg</Link>
         <p className="notice error">{api.error}</p>
       </div>
     );
@@ -25,7 +25,7 @@ export default function SystemView({ keyId }) {
   return (
     <div className="stack-l">
       <header className="stack">
-        <Link href="/" className="link phone-only">Anlegg</Link>
+        <Link href="/anlegg" className="link phone-only">Anlegg</Link>
         <h1 className="h1"><span className="eyebrow" aria-hidden="true">Anlegg · Detalj</span>{d.title}</h1>
         {d.channel == null ? (
           <p className="lead">Ingen sensor tildelt. Velg kanal under Mer, Kanaler.</p>

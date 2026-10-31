@@ -42,12 +42,13 @@ async function failMsg(res, fallback) {
 const SYS_COLORS = { CFT1: "#1C3A5C", CFT2: "#B8993A", CFT3: "#6B7544", "Wedge 1": "#A64B2A", "Breeder Bin": "#5A6270" };
 const SYS_DASH = { CFT1: "", CFT2: "", CFT3: "", "Wedge 1": "", "Breeder Bin": "5 4" };
 const METRIC_KEY = { TEMP: "temp", PH: "ph", FUKT: "fukt" };
-const RANGE_LABEL = { "7D": "siste 7 dager", "30D": "siste 30 dager", "60D": "siste 60 dager", YTD: "i år", ALL: "hele historikken" };
-const RANGES = ["7D", "30D", "60D", "YTD", "ALL"];
+const RANGE_LABEL = { "7D": "siste 7 dager", "14D": "siste 14 dager", "30D": "siste 30 dager", "60D": "siste 60 dager", YTD: "i år", ALL: "hele historikken" };
+const RANGES = ["7D", "14D", "30D", "60D", "YTD", "ALL"];
 const METRICS = [["TEMP", "Temp"], ["PH", "pH"], ["FUKT", "Fukt"]];
 
 function rangeDays(range) {
   if (range === "7D") return 7;
+  if (range === "14D") return 14;
   if (range === "30D") return 30;
   if (range === "60D") return 60;
   if (range === "YTD") {
@@ -239,10 +240,13 @@ function LoginView({ team, onLogin }) {
 /* Line chart (SVG)                                                    */
 /* ------------------------------------------------------------------ */
 
-function Chart({ series, metric, range, h = 300, target }) {
+function Chart({ series, metric, range, h = 300, target, span }) {
   const base = metric === "TEMP" ? [15, 30] : metric === "PH" ? [6.5, 8.5] : [55, 90];
-  let lo = base[0];
-  let hi = base[1];
+  // Sensor curves (they come with a span) are fitted to their own values;
+  // the fixed base ranges are made for hand-meter logs.
+  const anyVal = series.some((s) => s.values.length);
+  let lo = span && anyVal ? Infinity : base[0];
+  let hi = span && anyVal ? -Infinity : base[1];
   series.forEach((s) => s.values.forEach((v) => {
     if (v < lo) lo = v;
     if (v > hi) hi = v;
@@ -269,7 +273,11 @@ function Chart({ series, metric, range, h = 300, target }) {
 
   const lines = series.flatMap((s, i) => {
     if (!s.values.length) return [];
-    const x = (idx) => (s.values.length === 1 ? 515 : 42 + (946 * idx) / (s.values.length - 1));
+    // Sensor series carry their own positions (0–1 along the span); manual
+    // logs are spaced evenly, one step per entry, as they always were.
+    const x = s.xs
+      ? (idx) => 42 + 946 * s.xs[idx]
+      : (idx) => (s.values.length === 1 ? 515 : 42 + (946 * idx) / (s.values.length - 1));
     const out = [];
     if (s.values.length > 1) {
       const pts = s.values.map((v, idx) => x(idx) + "," + y(v)).join(" ");
@@ -286,6 +294,7 @@ function Chart({ series, metric, range, h = 300, target }) {
   const dateLabel = (daysAgo) => {
     const d = new Date();
     d.setDate(d.getDate() - daysAgo);
+    if (span) d.setTime(span.to - (span.to - span.from) * (daysAgo / Math.max(1, days - 1)));
     return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getFullYear()).slice(2);
   };
 
@@ -586,7 +595,28 @@ function DagsRamme({ routineItems, houseRules, canEdit }) {
 // promise. Once data exists it cannot be missed — which is the whole point:
 // the readings were being written and never read.
 function SensorStrip({ sensorLatest }) {
-  const rows = sensorLatest || [];
+  // First paint from the stored values; then the station is asked once (the
+  // endpoint caches for five minutes) and the rows update in place.
+  const [live, setLive] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    api("/api/ecowitt/realtime")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!alive || !j || !Array.isArray(j.latest)) return;
+        const m = new Map();
+        for (const x of j.latest) m.set(Number(x.channel), x);
+        setLive(m);
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, []);
+  const num = (v) => (v == null ? null : Number(v));
+  const rows = (sensorLatest || []).map((r) => {
+    const x = live && live.get(r.channel);
+    if (!x || new Date(x.ts) <= new Date(r.measured_at)) return r;
+    return { ...r, temp: num(x.soil_temp_c), moisture: num(x.soil_moisture_vol_pct), ec: num(x.ec_us_cm), measured_at: x.ts };
+  });
   if (!rows.length) return null;
 
   const now = Date.now();
@@ -594,7 +624,7 @@ function SensorStrip({ sensorLatest }) {
   // The gateway posts continuously (expected_interval_min 30). Past an hour a
   // probe is not "a bit behind", it has stopped — usually a flat battery.
   const stale = rows.filter((r) => age(r) > 60).length;
-  const unnamed = rows.filter((r) => /^Kanal \d+$/.test(r.system)).length;
+  const unnamed = rows.filter((r) => /ikke tildelt/.test(r.system)).length;
 
   const fmt = (v, unit) => (v == null ? "–" : Math.round(v * 10) / 10 + unit);
   const ago = (m) => (m < 60 ? m + " min siden" : Math.round(m / 60) + " t siden");
@@ -603,7 +633,7 @@ function SensorStrip({ sensorLatest }) {
     <>
       <div className="rule" />
       <div className="sechead">
-        <span className="eyebrow">Sensorer · autologger</span>
+        <span className="eyebrow">Sensorer · Ecowitt</span>
         <span className="mut" style={{ fontSize: 11 }}>
           {rows.length} {rows.length === 1 ? "kanal" : "kanaler"}
           {stale ? " · " + stale + " svarer ikke" : ""}
@@ -612,8 +642,8 @@ function SensorStrip({ sensorLatest }) {
       </div>
       {unnamed ? (
         <div className="mut" style={{ fontSize: 12, marginBottom: 10 }}>
-          Gi kanalene navn under Innstillinger → Sensorer, ellers er målingene
-          vanskelige å tolke i ettertid.
+          Koble kanalene til et bed under <a href="/mer/kanaler">Kanaler</a>, ellers er
+          målingene vanskelige å tolke i ettertid.
         </div>
       ) : null}
       <div style={{ border: "1px solid var(--line)", borderRadius: 2, background: "#fff" }}>
@@ -655,8 +685,57 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
   const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
   const series = buildSeries(data.readings, active, metric, range);
 
+  // "Sensor" mode: the Ecowitt probes' own curves for the same range,
+  // averaged per hour / 6 h / day. pH has no probe, so pH is always manual.
+  const [source, setSource] = useState("manuell");
+  const [sensor, setSensor] = useState(null);
+  const [sensorTry, setSensorTry] = useState(0);
+  const sensorMetric = metric === "FUKT" ? "fukt" : "temp";
+  const sensorKey = range + ":" + sensorMetric;
+  const useSensor = source === "sensor" && metric !== "PH";
+  useEffect(() => {
+    if (!useSensor || (sensor && sensor.key === sensorKey && sensor.data)) return;
+    let alive = true;
+    setSensor({ key: sensorKey, loading: true });
+    (async () => {
+      const r = await api("/api/v2/brief-sensor?days=" + rangeDays(range) + "&metric=" + sensorMetric);
+      const body = r.ok ? await r.json().catch(() => null) : null;
+      if (alive) setSensor(body && !body.error ? { key: sensorKey, data: body } : { key: sensorKey, error: true });
+    })();
+    return () => {
+      alive = false;
+      // A fetch cut short must not leave "Henter …" behind for next time.
+      setSensor((s) => (s && s.loading ? null : s));
+    };
+  }, [useSensor, sensorKey, sensorTry]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const sensorData = useSensor && sensor && sensor.key === sensorKey ? sensor.data : null;
+  const sensorSeries = sensorData
+    ? sensorData.series
+        .slice()
+        .sort((a, b) => {
+          const ia = active.indexOf(a.name);
+          const ib = active.indexOf(b.name);
+          return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+        })
+        .map((ser, i) => {
+          const spanMs = Math.max(1, sensorData.to - sensorData.from);
+          return {
+            id: ser.name,
+            color: SYS_COLORS[ser.name] || ["#1C3A5C", "#B8993A", "#6B7544", "#A64B2A", "#5A6270"][i % 5],
+            dash: SYS_DASH[ser.name] || "",
+            values: ser.points.map((p) => p[1]),
+            xs: ser.points.map((p) => Math.min(1, Math.max(0, (p[0] - sensorData.from) / spanMs))),
+          };
+        })
+    : [];
+  const chartSeries = useSensor ? sensorSeries : series;
+  const bucketLabel = sensorData
+    ? sensorData.bucketMinutes === 60 ? "snitt per time" : sensorData.bucketMinutes === 360 ? "snitt per 6 timer" : "snitt per døgn"
+    : "";
+
   const stats = (() => {
-    const all = series.flatMap((s) => s.values);
+    const all = chartSeries.flatMap((s) => s.values);
     if (!all.length) return { min: "—", max: "—", avg: "—" };
     const lo = Math.min(...all);
     const hi = Math.max(...all);
@@ -752,7 +831,20 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
           <div className={"v " + (outside.fukt > 0 ? "warn" : "")}>{outside.fukt}</div>
           <div className="c">av {outside.obs} obs</div>
         </div>
-        <div className="rt">
+        <div className="rt" style={{ display: "flex", gap: 10, flexWrap: "wrap", justifyContent: "flex-end" }}>
+          <div className="toggle">
+            {[["manuell", "Manuell"], ["sensor", "Sensor"]].map(([key, label]) => (
+              <button
+                key={key}
+                className={"tbtn " + (source === key ? "on" : "")}
+                onClick={() => setSource(key)}
+                disabled={key === "sensor" && metric === "PH"}
+                title={key === "sensor" && metric === "PH" ? "pH måles bare manuelt" : undefined}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <div className="toggle">
             {METRICS.map(([key, label]) => (
               <button key={key} className={"tbtn " + (metric === key ? "on" : "")} onClick={() => setMetric(key)}>{label}</button>
@@ -762,11 +854,34 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
       </div>
       <div className="chartwrap">
         <div className="charthead">
-          <span className="eyebrow">Produksjonslogger · {RANGE_LABEL[range]}</span>
+          <span className="eyebrow">
+            {useSensor ? "Sensorer · " + (bucketLabel ? bucketLabel + " · " : "") : "Produksjonslogger · "}{RANGE_LABEL[range]}
+          </span>
+          {source === "sensor" && metric === "PH" ? <span className="mut" style={{ fontSize: 11 }}>pH måles bare manuelt · viser logger</span> : null}
+          {useSensor && metric === "FUKT" ? (
+            <span className="mut" style={{ fontSize: 11 }}>Sensorfukt er ukalibrert for kompost · følg trenden, ikke tallet · målområdet gjelder håndmåler</span>
+          ) : null}
         </div>
-        <Chart series={series} metric={metric} range={range} target={data.targets.find((x) => x.metric === METRIC_KEY[metric])} />
+        {useSensor && sensor && sensor.loading ? (
+          <div className="mut" style={{ padding: "60px 0", textAlign: "center" }}>Henter sensordata …</div>
+        ) : useSensor && sensor && sensor.error ? (
+          <div className="mut" style={{ padding: "60px 0", textAlign: "center" }}>
+            Fikk ikke hentet sensordata.{" "}
+            <button className="lnk" style={{ padding: 0 }} onClick={() => setSensorTry((n) => n + 1)}>Prøv igjen</button>
+          </div>
+        ) : useSensor && !chartSeries.some((x) => x.values.length) ? (
+          <div className="mut" style={{ padding: "60px 0", textAlign: "center" }}>Ingen sensormålinger i perioden. Sensorene startet 15. september.</div>
+        ) : (
+          <Chart
+            series={chartSeries}
+            metric={metric}
+            range={range}
+            span={sensorData ? { from: sensorData.from, to: sensorData.to } : undefined}
+            target={useSensor && metric === "FUKT" ? undefined : data.targets.find((x) => x.metric === METRIC_KEY[metric])}
+          />
+        )}
         <div className="legend">
-          {series.map((s) => (
+          {chartSeries.map((s) => (
             <span className="lg" key={s.id}>
               <span className="sw" style={{ background: s.color, opacity: s.dash ? 0.8 : 1 }} />
               {s.id}
@@ -2301,17 +2416,34 @@ function HygieneChart({ series, minTemp }) {
     );
   }
 
+  // One line per unbroken stretch: readings set aside (null) and holes of
+  // more than five minutes show as gaps, never as a straight line across.
   const lines = [];
   for (let ch = 0; ch < chCount; ch++) {
-    const pts = series
-      .filter((s) => s.temps[ch] !== undefined && s.temps[ch] !== null)
-      .map((s) => x(s.t) + "," + y(s.temps[ch]))
-      .join(" ");
-    if (!pts) continue;
     const style = HYG_STYLES[ch % 4];
-    lines.push(
-      <polyline key={"p" + ch} points={pts} fill="none" stroke={style.color} strokeWidth={1.7} strokeDasharray={style.dash || undefined} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" opacity={style.dash ? 0.85 : 1} />
-    );
+    const segs = [];
+    let cur = null;
+    let prevT = null;
+    for (const s of series) {
+      const v = s.temps[ch];
+      if (v === undefined) continue;
+      if (v === null || (prevT !== null && s.t - prevT > 5 * 60000)) cur = null;
+      if (v !== null) {
+        if (!cur) { cur = []; segs.push(cur); }
+        cur.push(x(s.t) + "," + y(v));
+        prevT = s.t;
+      }
+    }
+    segs.forEach((seg, k) => {
+      if (seg.length === 1) {
+        const [cx, cy] = seg[0].split(",");
+        lines.push(<circle key={"d" + ch + "-" + k} cx={cx} cy={cy} r={1.6} fill={style.color} />);
+        return;
+      }
+      lines.push(
+        <polyline key={"p" + ch + "-" + k} points={seg.join(" ")} fill="none" stroke={style.color} strokeWidth={1.7} strokeDasharray={style.dash || undefined} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" opacity={style.dash ? 0.85 : 1} />
+      );
+    });
   }
 
   return (
@@ -2410,10 +2542,45 @@ function HygieneView({ canEdit }) {
                   {c.maxMinutes}
                   <span style={{ fontSize: 14, color: "var(--muted)", fontWeight: 500 }}> min</span>
                 </div>
-                <div className="c">lengste sammenhengende ≥ {latest.minTemp}°C · krav {latest.minMinutes} min</div>
+                <div className="c">
+                  lengste sammenhengende ≥ {latest.minTemp}°C · krav {latest.minMinutes} min
+                  {c.excluded ? " · " + c.excluded + " målinger satt til side" : ""}
+                </div>
               </div>
             ))}
           </div>
+          {latest.together ? (
+            <div className="mut" style={{ marginBottom: 18 }}>
+              Alle sonder samtidig ≥ {latest.minTemp}°C (minst {latest.minProbes}): {latest.together.minutes} min
+              {latest.together.minutes ? " (" + fmtDT(latest.together.from) + " – " + fmtDT(latest.together.to) + ")" : ""} · krav {latest.minMinutes} min.
+              {" "}Én sonde alene kan aldri gi godkjent.
+            </div>
+          ) : null}
+          {latest.spans && latest.spans.length ? (
+            <div style={{ marginBottom: 26 }}>
+              <div className="sechead">
+                <span className="eyebrow">Satt til side som sondefeil</span>
+                <span className="mut">{latest.excluded} målinger</span>
+              </div>
+              <div className="mut" style={{ marginBottom: 10 }}>
+                Sonder loggeren ikke kunne lese (OL, ----), verdier en kompostmasse ikke kan ha (under 0 eller over 85 °C), brå sprang på mer enn 3 °C på ett minutt og de ti minuttene rundt. Etter en feil teller sonden først igjen når den er tilbake på nivået den hadde, eller en annen sonde bekrefter det nye nivået. Minutter der kanalrekkefølgen er usikker settes også til side. Ingenting av dette vises i grafen eller teller i vurderingen. Rådataene ligger urørt i databasen.
+              </div>
+              <table className="dtbl">
+                <tbody>
+                  {latest.spans.map((sp, i) => (
+                    <tr key={i}>
+                      <td>
+                        <span className="sy">Kanal {sp.ch}</span>
+                        <div className="dt">{fmtDT(sp.from)} – {fmtDT(sp.to)} · {sp.reasons.join(", ")}</div>
+                      </td>
+                      <td className="num">{sp.count} målinger</td>
+                      <td className="num rt">{sp.min == null ? "ingen verdi" : String(Math.round(sp.min * 10) / 10).replace(".", ",") + "–" + String(Math.round(sp.max * 10) / 10).replace(".", ",") + " °C"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
           <div className="charthead">
             <span className="eyebrow">Temperatur · {fmtDT(latest.from)} – {fmtDT(latest.to)}</span>
           </div>
@@ -2778,7 +2945,7 @@ function FeedingBatchesView({ data, canEdit, showToast }) {
 /* Innstillinger                                                       */
 /* ------------------------------------------------------------------ */
 
-function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSystem, updateSystem, deleteSystem, addMember, updateMember, deleteMember, saveSensorMap }) {
+function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSystem, updateSystem, deleteSystem, addMember, updateMember, deleteMember }) {
   const isAdmin = data.user?.access === "Admin";
   const [memberAdding, setMemberAdding] = useState(false);
   const EMPTY_MEMBER = { name: "", role: "", access: "Redigering", password: "" };
@@ -2923,12 +3090,11 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
           })}
           <div className="sechead" style={{ marginTop: 36 }}>
             <span className="eyebrow">Sensorer</span>
-            <span className="mut" style={{ fontSize: 11 }}>Ecowitt · kanal → system</span>
+            <a className="lnk" href="/mer/kanaler" style={{ fontSize: 12 }}>Endre under Kanaler →</a>
           </div>
           {sensorChannels.length === 0 ? (
             <div className="mut" style={{ fontSize: 12, padding: "12px 0" }}>
-              Ingen sensorer har meldt seg ennå. Kanaler dukker opp her av seg selv
-              så snart gatewayen sender sin første måling.
+              Ingen sensorer har meldt seg ennå.
             </div>
           ) : (
             sensorChannels.map((ch) => {
@@ -2937,7 +3103,7 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
               return (
                 <div className="setrow" key={ch.channel}>
                   <div>
-                    <div className={"sl" + (ch.system ? "" : " mut")}>Kanal {ch.channel}</div>
+                    <div className={"sl" + (r && r.assigned ? "" : " mut")}>CH{ch.channel} · {r ? r.system : "ukjent"}</div>
                     <div className="ss">
                       {r
                         ? fmtVal(r.temp, "°") + " · " + fmtVal(r.moisture, "%") + " fukt · " +
@@ -2945,20 +3111,6 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
                         : "ingen målinger ennå"}
                     </div>
                   </div>
-                  <span className="trange">
-                    <select
-                      className="select"
-                      style={{ width: "auto", padding: "9px 11px", fontSize: 12 }}
-                      value={ch.system || ""}
-                      disabled={!canEdit}
-                      onChange={(e) => e.target.value && saveSensorMap(ch.channel, e.target.value)}
-                    >
-                      <option value="">— velg system —</option>
-                      {data.systems.map((s) => (
-                        <option key={s.id} value={s.id}>{s.id}</option>
-                      ))}
-                    </select>
-                  </span>
                 </div>
               );
             })
@@ -4665,6 +4817,15 @@ const NAV_ARBEID = [
   ["innstillinger", "Innstillinger"],
 ];
 
+// The sensor pages from the new app (full page loads: the two apps never
+// share a page). On a computer this old app is the home page; these are the
+// way across.
+const NAV_NY = [
+  ["/anlegg", "Anlegg"],
+  ["/data", "Data og eksport"],
+  ["/mer/kanaler", "Kanaler"],
+];
+
 function todayLine() {
   const now = new Date();
   const weekday = now.toLocaleDateString("nb-NO", { weekday: "long" });
@@ -4959,28 +5120,6 @@ export default function App() {
     await api("/api/partners/" + id, { method: "DELETE" });
   };
 
-  // Names a sensor channel. The server also re-labels readings already stored
-  // under the "Kanal N" placeholder, so naming a channel late doesn't split its
-  // history into two apparent systems.
-  const saveSensorMap = async (channel, system) => {
-    const res = await api("/api/sensors", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ channel, system }),
-    });
-    if (!res.ok) return reportError(res, "Kunne ikke lagre kanalen.");
-    setData((d) => ({
-      ...d,
-      sensorMap: [
-        ...(d.sensorMap || []).filter((m) => m.channel !== channel),
-        { channel, system, label: "", active: 1 },
-      ].sort((a, b) => a.channel - b.channel),
-      sensorLatest: (d.sensorLatest || []).map((r) =>
-        r.channel === channel ? { ...r, system } : r
-      ),
-    }));
-  };
-
   const addSystem = async (id) => {
     const res = await api("/api/systems", {
       method: "POST",
@@ -5128,6 +5267,10 @@ export default function App() {
           {NAV_DRIFT.map(navButton)}
           <div className="navk">Arbeid</div>
           {NAV_ARBEID.map(navButton)}
+          <div className="navk">Sensorer</div>
+          {NAV_NY.map(([href, label]) => (
+            <a key={href} className="navItem" href={href} style={{ textDecoration: "none" }}>{label}</a>
+          ))}
         </nav>
         <div className="sidefoot">
           <b>{user.name} · {user.access}</b>
@@ -5207,7 +5350,6 @@ export default function App() {
               saveTargets={saveTargets}
               canEdit={editable}
               addSystem={addSystem}
-              saveSensorMap={saveSensorMap}
               updateSystem={updateSystem}
               deleteSystem={deleteSystem}
               addMember={addMember}

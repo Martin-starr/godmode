@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { json, err, guarded } from "@/lib/http";
-import { parseLoggerExport, evaluate } from "@/lib/hygiene";
+import { parseLoggerExport, evaluate, MIN_PROBES, FAULT, R_FAULT } from "@/lib/hygiene";
 
 export const runtime = "nodejs";
 export const maxDuration = 25;
@@ -15,18 +15,21 @@ async function latestPayload(sql) {
     from dash.hygiene_imports order by id desc`;
   if (!imports.length) return { latest: null, imports: [] };
   const imp = imports[0];
-  const rows = await sql`select extract(epoch from ts) * 1000 as ts, ch, temp
+  const rows = await sql`select extract(epoch from ts) * 1000 as ts, ch, temp, excluded
     from dash.hygiene_readings where import_id = ${imp.id} order by ts, ch`;
-  const readings = rows.map((r) => ({ ts: Number(r.ts), ch: Number(r.ch), temp: Number(r.temp) }));
+  const readings = rows.map((r) => ({ ts: Number(r.ts), ch: Number(r.ch), temp: r.temp == null ? null : Number(r.temp), excluded: r.excluded || null }));
   const { minTemp, minMinutes } = await hygieneTargets(sql);
-  const { channels, pass } = evaluate(readings, minTemp, minMinutes);
+  const { channels, pass, together, excluded, spans, screened } = evaluate(readings, minTemp, minMinutes);
 
-  // Series for the chart: one point per timestamp with temps indexed by channel.
+  // Series for the chart: one point per timestamp with temps indexed by
+  // channel. Readings set aside as probe faults are left out (null), so the
+  // chart shows what the verdict was computed from; the spans list says what
+  // was removed and why.
   const chs = channels.map((c) => c.ch);
   const byTs = new Map();
-  for (const r of readings) {
+  for (const r of screened) {
     if (!byTs.has(r.ts)) byTs.set(r.ts, {});
-    byTs.get(r.ts)[r.ch] = r.temp;
+    byTs.get(r.ts)[r.ch] = r.reason ? null : r.temp;
   }
   const series = [...byTs.entries()]
     .sort((a, b) => a[0] - b[0])
@@ -40,8 +43,12 @@ async function latestPayload(sql) {
       to: series.length ? series[series.length - 1].t : null,
       channels,
       pass,
+      together,
+      excluded,
+      spans: spans.map((s) => ({ ch: s.ch, from: s.from, to: s.to, count: s.count, min: s.min, max: s.max, reasons: s.reasons })),
       minTemp,
       minMinutes,
+      minProbes: MIN_PROBES,
       series,
     },
     imports,
@@ -60,8 +67,9 @@ export const POST = guarded(
     if (!file || typeof file !== "object") return err("Ingen fil mottatt.");
     const text = Buffer.from(await file.arrayBuffer()).toString("utf8");
     let points;
+    let channels;
     try {
-      points = parseLoggerExport(text);
+      ({ points, channels } = parseLoggerExport(text));
     } catch (e) {
       return err(e.message);
     }
@@ -70,15 +78,21 @@ export const POST = guarded(
     // watchdog halfway through, leaving a corrupt partial import displayed as
     // the current §19 record. One transaction + unnest keeps it to a single
     // round-trip and makes the import all-or-nothing.
+    // A cell the logger could not fill ("----", "OL", empty) is the logger
+    // reporting a probe fault. It is stored as one (no temperature, with the
+    // reason), so the §19 check sets that probe aside around it instead of
+    // bridging the hole.
     const ts = [];
     const ch = [];
     const temp = [];
+    const excluded = [];
     for (const p of points) {
       for (let i = 0; i < p.temps.length; i++) {
-        if (p.temps[i] == null) continue;
         ts.push(new Date(p.ts).toISOString());
-        ch.push(i + 1);
-        temp.push(p.temps[i]);
+        ch.push(channels[i]);
+        const fault = p.temps[i] === FAULT;
+        temp.push(fault ? null : p.temps[i]);
+        excluded.push(fault ? R_FAULT : null);
       }
     }
     if (!ts.length) return err("Filen inneholdt ingen gyldige temperaturmålinger.");
@@ -91,9 +105,9 @@ export const POST = guarded(
         values (${file.name}, ${user.name}, ${points.length}, '')
         returning id`)[0];
       for (let i = 0; i < ts.length; i += CHUNK) {
-        await tx`insert into dash.hygiene_readings (import_id, ts, ch, temp)
-          select ${imp.id}, t::timestamptz, c, tv
-          from unnest(${ts.slice(i, i + CHUNK)}::text[], ${ch.slice(i, i + CHUNK)}::int[], ${temp.slice(i, i + CHUNK)}::real[]) as u(t, c, tv)`;
+        await tx`insert into dash.hygiene_readings (import_id, ts, ch, temp, excluded)
+          select ${imp.id}, t::timestamptz, c, tv, ex
+          from unnest(${ts.slice(i, i + CHUNK)}::text[], ${ch.slice(i, i + CHUNK)}::int[], ${temp.slice(i, i + CHUNK)}::real[], ${excluded.slice(i, i + CHUNK)}::text[]) as u(t, c, tv, ex)`;
       }
     });
     return json({ ok: true, rows: points.length });

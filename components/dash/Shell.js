@@ -20,7 +20,8 @@ const TABS = [
 // page loads: the Week app is a static page outside this app.
 const SIDE = [
   ["Drift", [
-    ["/", "Anlegg", (p) => p === "/" || p.startsWith("/anlegg")],
+    ["/oversikt", "Oversikt", () => false, true],
+    ["/anlegg", "Anlegg", (p) => p === "/" || p.startsWith("/anlegg")],
     ["/logg", "Logg", (p) => p.startsWith("/logg")],
     ["/data", "Data", (p) => p.startsWith("/data")],
   ]],
