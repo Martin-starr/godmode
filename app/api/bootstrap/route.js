@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { channelTitle } from "@/lib/v2";
 import { canEdit } from "@/lib/auth";
 import { json, guarded } from "@/lib/http";
 import { classify } from "@/lib/integrations";
@@ -72,14 +73,30 @@ export const GET = guarded(async (req, ctx, user) => {
   const integrations = await sql`select key, label, expected_interval_min, last_ok_at,
       last_error, last_error_at, consecutive_failures, muted_until
     from dash.integrations order by key`;
-  // Newest reading per sensor channel. Cheap (one row per channel, max 16) and
-  // carried in the bootstrap so the Brief can show live sensor values without
-  // a second round trip. The full history is behind /api/sensors.
-  const sensorLatest = await sql`select distinct on (channel)
-      channel, system, temp, moisture, ec, battery, measured_at
-    from dash.sensor_readings order by channel, measured_at desc`;
-  const sensorMap = await sql`select channel, system, label, active
-    from dash.sensor_map order by channel`;
+  // Newest reading per Ecowitt probe (public.sensor_readings, filled by the
+  // realtime/backfill routes) with the bed it sits in from Kanaler
+  // (public.sensor_channels). One row per channel ≥ 1, max 8. The old
+  // push-gateway tables (dash.sensor_readings / dash.sensor_map) never
+  // received data and are no longer read.
+  const sensorRows = await sql`select distinct on (r.channel)
+      r.channel, r.ts, r.soil_temp_c, r.soil_moisture_vol_pct, r.ec_us_cm,
+      c.role, c.label, s.name as system_name
+    from public.sensor_readings r
+    left join public.sensor_channels c on c.channel = r.channel
+    left join public.systems s on s.id = c.system_id
+    where r.channel >= 1
+    order by r.channel, r.ts desc`;
+  const num = (v) => (v == null ? null : Number(v));
+  const sensorLatest = sensorRows.map((r) => ({
+    channel: Number(r.channel),
+    system: channelTitle({ channel: Number(r.channel), role: r.role, label: r.label, system_name: r.system_name }),
+    assigned: r.role === "bed" && !!r.system_name,
+    temp: num(r.soil_temp_c),
+    moisture: num(r.soil_moisture_vol_pct),
+    ec: num(r.ec_us_cm),
+    measured_at: r.ts,
+  }));
+  const sensorMap = [];
   // The SEO agent's schema is optional at boot: if migration 008 is not
   // applied yet, Brief simply has no SEO block. Three cheap queries,
   // sequential like everything else here.

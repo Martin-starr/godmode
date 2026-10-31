@@ -189,15 +189,17 @@ async function buildReport(sql, days) {
   // the same minute. A hole in the log longer than a few minutes breaks the
   // stretch: nothing documents what the mass did in between. Aggregated
   // across imports — the legal unit is the run in the vessel, not the file.
+  // Fetched from 73 hours before the window, so a run that started before
+  // the window is seen whole and not cut into a false "brutt".
   const hygRows = await sql`
     select extract(epoch from ts) * 1000 as ts, ch, temp, excluded
     from dash.hygiene_readings
-    where ts >= ${win.from}::date
+    where ts >= (${win.from}::date::timestamp at time zone 'Europe/Oslo') - interval '73 hours'
     order by ts, ch`;
   const screened = screenReadings(hygRows.map((r) => ({
-    ts: Number(r.ts), ch: Number(r.ch), temp: Number(r.temp), excluded: r.excluded || null,
+    ts: Number(r.ts), ch: Number(r.ch), temp: r.temp == null ? null : Number(r.temp), excluded: r.excluded || null,
   })));
-  const hygDays = dayStats(screened, HYG_MIN_TEMP);
+  const hygDays = dayStats(screened, HYG_MIN_TEMP).filter((d) => d.date >= win.from);
 
   // dash.batches has no foreign key to hygiene imports or readings — the two
   // were built at different times and nothing links them (see migration 007).
@@ -222,9 +224,15 @@ async function buildReport(sql, days) {
   const lastDataDay = hygDays.length ? hygDays[hygDays.length - 1].date : null;
   const lastTs = screened.reduce((m, r) => (m === null || r.ts > m ? r.ts : m), null);
   const hours = (m) => Math.floor(m / 60);
-  const chains = holdRuns(screened, HYG_MIN_TEMP, HYG_MIN_POINTS)
+  const inWindow = (r) => isoDateOslo(new Date(r.to)) >= win.from;
+  const covers = (list, r) => list.some((o) => o.from <= r.from && o.to >= r.to);
+  // The verdict, same rule as the Hygienisering page: ≥2 probes hot in the
+  // same minute and every logging probe valid and hot, unbroken.
+  const full = holdRuns(screened, HYG_MIN_TEMP, HYG_MIN_POINTS);
+  const fullDone = full.filter((r) => r.minutes >= HYG_MIN_MINUTES);
+  const chains = full
     // Stretches under an hour are noise around the threshold, not attempts.
-    .filter((r) => r.minutes >= 60)
+    .filter((r) => r.minutes >= 60 && inWindow(r))
     .map((r) => {
       const from = isoDateOslo(new Date(r.from));
       const to = isoDateOslo(new Date(r.to));
@@ -241,18 +249,48 @@ async function buildReport(sql, days) {
         status, batches: batchesFor(from, to),
       };
     });
+  const bt = (from, to) => {
+    const b = batchesFor(from, to);
+    return b.length ? ` Gjelder trolig ${b.join(", ")}.` : "";
+  };
 
   for (const c of chains) {
     if (c.status !== "brutt") continue;
-    const bt = c.batches.length ? ` Gjelder trolig ${c.batches.join(", ")}.` : "";
     gaps.push({
       kind: "hygiene",
       key: `gap:hyg-brutt:${c.start}:${c.end}`,
       severity: 3,
       line:
-        `[RØD] Hygienisering ${c.start.slice(0, 16)}–${c.end.slice(0, 16)}: minst ${HYG_MIN_POINTS} sonder ` +
-        `holdt ${HYG_MIN_TEMP} °C i ${c.hours} t, så brøt det. §19 krever ${HYG_MIN_DAYS} sammenhengende døgn ` +
-        `(${HYG_MIN_DAYS * 24} t). Massen kan ikke gå videre til markbedene.${bt}`,
+        `[RØD] Hygienisering ${c.start.slice(0, 16)}–${c.end.slice(0, 16)}: alle sonder holdt ${HYG_MIN_TEMP} °C ` +
+        `i ${c.hours} t, så brøt det. §19 krever ${HYG_MIN_DAYS} sammenhengende døgn ` +
+        `(${HYG_MIN_DAYS * 24} t). Massen kan ikke gå videre til markbedene.${bt(c.from, c.to)}`,
+    });
+  }
+
+  // 72 hours with two probes hot, but a third probe cold, faulty or set
+  // aside the while: not documented. Said out loud, never passed.
+  const loose = holdRuns(screened, HYG_MIN_TEMP, HYG_MIN_POINTS, { requireAll: false })
+    .filter((r) => r.minutes >= HYG_MIN_MINUTES && inWindow(r) && !covers(fullDone, r));
+  // 72 hours on one probe only: an anecdote, not a record.
+  const single = holdRuns(screened, HYG_MIN_TEMP, 1, { requireAll: false })
+    .filter((r) => r.minutes >= HYG_MIN_MINUTES && inWindow(r) && !covers(fullDone, r) && !covers(loose, r));
+  const undocumented = [];
+  for (const [r, why, tag] of [
+    ...loose.map((r) => [r, `minst to sonder holdt ${HYG_MIN_TEMP} °C, men en annen sonde var kald, feilet eller ble satt til side underveis`, "udok"]),
+    ...single.map((r) => [r, `bare én sonde holdt ${HYG_MIN_TEMP} °C`, "enkel"]),
+  ]) {
+    const start = osloStamp(new Date(r.from));
+    const end = osloStamp(new Date(r.to));
+    const from = isoDateOslo(new Date(r.from));
+    const to = isoDateOslo(new Date(r.to));
+    undocumented.push({ from, to, start, end, hours: hours(r.minutes), why });
+    gaps.push({
+      kind: "hygiene",
+      key: `gap:hyg-${tag}:${start}:${end}`,
+      severity: 3,
+      line:
+        `[RØD] Hygienisering ${start.slice(0, 16)}–${end.slice(0, 16)}: ${why} (${hours(r.minutes)} t). ` +
+        `§19 krever minst ${HYG_MIN_POINTS} målepunkter — kjøringen er ikke dokumentert.${bt(from, to)}`,
     });
   }
 
@@ -280,11 +318,11 @@ async function buildReport(sql, days) {
     rejected_days.push({ date: d.date, rejected: d.rejected, channels: d.rejected_ch });
     gaps.push({
       kind: "hygiene",
-      key: `gap:hyg-forkastet:${d.date}:${d.rejected}`,
+      key: `gap:hyg-forkastet:${d.date}:${d.rejected_ch.join("-")}`,
       severity: 2,
       line:
         `[GUL] ${d.date}: ${d.rejected} målinger fra kanal ${d.rejected_ch.join(", ")} satt til side ` +
-        `som sondefeil (umulig verdi, sprang eller usikker kanal). De teller ikke i §19-vurderingen.`,
+        `som sondefeil (loggerfeil, umulig verdi, sprang, uverifisert nivå eller usikker kanal). De teller ikke i §19-vurderingen.`,
     });
   }
 
@@ -331,7 +369,7 @@ async function buildReport(sql, days) {
       avvik: gaps.filter((g) => g.kind === "avvik").length,
     },
     missing_days,
-    hygiene: { chains, thin_days, rejected_days, last_data_day: lastDataDay },
+    hygiene: { chains, undocumented, thin_days, rejected_days, last_data_day: lastDataDay },
     unflagged,
     gaps,
   };
