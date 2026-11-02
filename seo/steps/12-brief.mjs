@@ -149,7 +149,9 @@ export async function run(ctx) {
     system: voice + "\n\n" + brief,
     user: `Uke ${ctx.week}. Analysen:\n\n\`\`\`json\n${JSON.stringify(compact)}\n\`\`\``,
     schema: BRIEF_SCHEMA,
-    maxTokens: 6000,
+    // Adaptive thinking spends from the same budget as the answer. At 6000 the
+    // W45 brief (13 AI answers in the data) was cut off mid-JSON twice.
+    maxTokens: 16000,
     timeoutMs: 300000,
     thinking: true,
     model: BRIEF_MODEL,
@@ -175,7 +177,7 @@ export async function run(ctx) {
           system: voice + "\n\n" + brief + "\n\n" + sources,
           user: `Skriv blogginnlegget for uke ${ctx.week} etter reglene for blog_draft.\n\n${task}\nPilarside å lenke til: ${pillar}`,
           schema: BLOG_SCHEMA,
-          maxTokens: 6000,
+          maxTokens: 16000,
           timeoutMs: 300000,
           thinking: true,
           model: BRIEF_MODEL,
