@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { json, err, guarded } from "@/lib/http";
-import { parseLoggerExport, evaluate, MIN_PROBES, FAULT, R_FAULT } from "@/lib/hygiene";
+import { parseLoggerExport, evaluate, MIN_PROBES, MAX_GAP_MIN, FAULT, R_FAULT } from "@/lib/hygiene";
 
 export const runtime = "nodejs";
 export const maxDuration = 25;
@@ -24,8 +24,11 @@ async function evaluateImport(sql, imp, minTemp, minMinutes) {
   const { channels, pass, together, excluded, spans, screened } = evaluate(readings, minTemp, minMinutes);
 
   // Series for the chart, bucketed so a week of minute data is a few
-  // hundred points per channel. Only readings the verdict counted go in: a
-  // bucket where a channel has nothing valid is null, a gap in the line.
+  // hundred points per channel. A bucket shows the LOWEST valid reading in
+  // it, because the question the chart answers is "did it hold": a dip the
+  // verdict counted as a break must not be averaged away. A bucket where a
+  // channel has nothing valid, or a hole longer than MAX_GAP_MIN, is null,
+  // a gap in the line.
   const chs = channels.map((c) => c.ch);
   let t0 = Infinity;
   let t1 = -Infinity;
@@ -33,18 +36,20 @@ async function evaluateImport(sql, imp, minTemp, minMinutes) {
   const bucketMinutes = screened.length ? Math.max(1, Math.ceil((t1 - t0) / 60000 / TARGET_POINTS)) : 1;
   const bucketMs = bucketMinutes * 60000;
   const buckets = new Map();
-  for (const r of screened) {
+  const prevTs = {};
+  for (const r of [...screened].sort((a, b) => a.ts - b.ts)) {
     const k = Math.floor(r.ts / bucketMs) * bucketMs;
-    if (!buckets.has(k)) buckets.set(k, { sum: {}, n: {} });
+    if (!buckets.has(k)) buckets.set(k, { min: {}, broken: {} });
     const b = buckets.get(k);
-    if (b.n[r.ch] === undefined) { b.n[r.ch] = 0; b.sum[r.ch] = 0; }
+    if (!(r.ch in b.min)) b.min[r.ch] = null;
     if (r.reason || !Number.isFinite(r.temp)) continue;
-    b.n[r.ch]++;
-    b.sum[r.ch] += r.temp;
+    if (prevTs[r.ch] !== undefined && r.ts - prevTs[r.ch] > MAX_GAP_MIN * 60000) b.broken[r.ch] = true;
+    prevTs[r.ch] = r.ts;
+    b.min[r.ch] = b.min[r.ch] === null ? r.temp : Math.min(b.min[r.ch], r.temp);
   }
   const series = [...buckets.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([t, b]) => ({ t, temps: chs.map((c) => (b.n[c] ? Math.round((b.sum[c] / b.n[c]) * 10) / 10 : null)) }));
+    .map(([t, b]) => ({ t, temps: chs.map((c) => (b.broken[c] || b.min[c] == null ? null : Math.round(b.min[c] * 10) / 10)) }));
 
   return {
     ...imp,

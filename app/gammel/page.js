@@ -2254,7 +2254,7 @@ function HygieneCard({ imp, rules, open, onToggle, canEdit, onDelete }) {
         <span>
           <span className="ecard-title">{fmtD(imp.from)} – {fmtD(imp.to)}</span>
           <span className="ecard-sub">
-            {imp.channels.length} sonder · alle samtidig ≥ {rules.minTemp} °C i {hot} min · krav {rules.minMinutes} min
+            {imp.channels.length} sonder · alle samtidig ≥ {rules.minTemp}°C i {hot} min · krav {rules.minMinutes} min
             {imp.excluded ? " · " + imp.excluded + " målinger satt til side" : ""}
           </span>
         </span>
@@ -2286,14 +2286,14 @@ function HygieneCard({ imp, rules, open, onToggle, canEdit, onDelete }) {
                   <span style={{ fontSize: 14, color: "var(--muted)", fontWeight: 500 }}> min</span>
                 </div>
                 <div className="c">
-                  lengste sammenhengende ≥ {rules.minTemp} °C
+                  lengste sammenhengende ≥ {rules.minTemp}°C
                   {c.excluded ? " · " + c.excluded + " satt til side" : ""}
                 </div>
               </div>
             ))}
           </div>
           <div className="mut" style={{ marginBottom: 18 }}>
-            Alle sonder samtidig ≥ {rules.minTemp} °C (minst {rules.minProbes}): {hot} min
+            Alle sonder samtidig ≥ {rules.minTemp}°C (minst {rules.minProbes}): {hot} min
             {hot ? " (" + fmtDT(imp.together.from) + " – " + fmtDT(imp.together.to) + ")" : ""} · krav {rules.minMinutes} min.
             {" "}Én sonde alene kan aldri gi godkjent.
           </div>
@@ -2304,7 +2304,7 @@ function HygieneCard({ imp, rules, open, onToggle, canEdit, onDelete }) {
                 <span className="mut">{imp.excluded} målinger</span>
               </div>
               <div className="mut" style={{ marginBottom: 10 }}>
-                Sonder loggeren ikke kunne lese (OL, ----), verdier en kompostmasse ikke kan ha (under 0 eller over 85 °C), brå sprang på mer enn 3 °C på ett minutt og de ti minuttene rundt. Etter en feil teller sonden først igjen når den er tilbake på nivået den hadde, eller en annen sonde bekrefter det nye nivået. Ingenting av dette vises i grafen eller teller i vurderingen. Rådataene ligger urørt i databasen.
+                Sonder loggeren ikke kunne lese (OL, ----), verdier en kompostmasse ikke kan ha (under 0 eller over 85°C), brå sprang på mer enn 3°C på ett minutt og de ti minuttene rundt. Etter en feil teller sonden først igjen når den er tilbake på nivået den hadde, eller en annen sonde bekrefter det nye nivået. Ingenting av dette vises i grafen eller teller i vurderingen. Rådataene ligger urørt i databasen.
               </div>
               <table className="dtbl">
                 <tbody>
@@ -2315,7 +2315,7 @@ function HygieneCard({ imp, rules, open, onToggle, canEdit, onDelete }) {
                         <div className="dt">{fmtDT(sp.from)} – {fmtDT(sp.to)} · {sp.reasons.join(", ")}</div>
                       </td>
                       <td className="num">{sp.count} målinger</td>
-                      <td className="num rt">{sp.min == null ? "ingen verdi" : nbT(sp.min) + "–" + nbT(sp.max) + " °C"}</td>
+                      <td className="num rt">{sp.min == null ? "ingen verdi" : nbT(sp.min) + "–" + nbT(sp.max) + "°C"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -2428,7 +2428,7 @@ function HygieneView({ canEdit }) {
         <>
           <div className="sechead" style={{ marginTop: 10 }}>
             <span className="eyebrow">Logger</span>
-            <span className="mut">{data.imports.length} · krav {data.minTemp} °C i {data.minMinutes} min på minst {data.minProbes} sonder</span>
+            <span className="mut">{data.imports.length} · krav {data.minTemp}°C i {data.minMinutes} min på minst {data.minProbes} sonder</span>
           </div>
           {analysed.map((imp) => (
             <HygieneCard
@@ -2502,7 +2502,7 @@ function FeedFields({ f, setF, systems }) {
         </div>
         <div className="field" style={{ marginBottom: 0 }}>
           <label>Dato</label>
-          <input className="input" type="date" value={f.date} onChange={set("date")} />
+          <input className="input" type="date" max={isoDaysAgo(0)} value={f.date} onChange={set("date")} />
         </div>
       </div>
       <div className="f2" style={{ marginBottom: 12 }}>
@@ -2659,7 +2659,11 @@ function FeedingBatchesView({ data, canEdit, showToast, refreshAll }) {
     setFeedForm(EMPTY_FEED);
     setAddingFeed(false);
     if (showToast) showToast("Fôring loggført · " + feedForm.system + " · " + fmtDate(feedForm.date));
-    loadFeed(feedDays);
+    // A backdated feeding must not vanish behind the range buttons.
+    const age = Math.round((Date.parse(isoDaysAgo(0)) - Date.parse(feedForm.date)) / 86400e3);
+    const range = FEED_RANGES.find(([v]) => Number(v) >= age) || FEED_RANGES[FEED_RANGES.length - 1];
+    if (range[0] !== feedDays) setFeedDays(range[0]);
+    else loadFeed(feedDays);
     refreshAll();
   };
   const saveFeed = (r) => async (f) => {
@@ -2853,6 +2857,7 @@ function FeedingBatchesView({ data, canEdit, showToast, refreshAll }) {
 function KanalerPanel({ canEdit }) {
   const [d, setD] = useState(null);
   const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
   const load = async () => {
     const r = await api("/api/v2/kanaler");
     const body = r.ok ? await r.json().catch(() => null) : null;
@@ -2864,8 +2869,10 @@ function KanalerPanel({ canEdit }) {
   const targetOf = (c) => (c.role === "bed" ? c.system_id : c.role === "hygiene" ? "hygiene" : c.role === "room" ? "room" : "none");
   const change = async (channel, target) => {
     const channels = d.channels.map((c) => ({ channel: c.channel, label: c.label, target: c.channel === channel ? target : targetOf(c) }));
+    setBusy(true);
     const r = await api("/api/v2/kanaler", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channels }) });
     const body = await r.json().catch(() => null);
+    setBusy(false);
     if (!r.ok || !body || body.error) { setMsg((body && body.error) || "Kunne ikke lagre kanalen."); return; }
     setD(body);
     setMsg("Lagret.");
@@ -2887,7 +2894,9 @@ function KanalerPanel({ canEdit }) {
         <div className="mut" style={{ fontSize: 12, padding: "12px 0" }}>Ingen sensorer har meldt seg ennå. Kanaler dukker opp her av seg selv så snart gatewayen sender sin første måling.</div>
       ) : (
         d.channels.map((c) => {
-          const name = c.role === "room" ? "Rom (GW1200)" : c.role === "bed" ? (d.systems.find((x) => x.id === c.system_id) || {}).name : c.label || c.hint || "";
+          const name = c.role === "room" ? "Rom (GW1200)" : c.role === "bed" ? c.system_name : c.label || c.hint || "";
+          // A bed taken out of service keeps its probe until someone moves it.
+          const retired = c.role === "bed" && !d.systems.some((x) => x.id === c.system_id);
           const l = c.latest;
           const reading = c.role === "room"
             ? (l && l.indoor_temp != null ? fmtVal(l.indoor_temp, "°") + " · " + fmtVal(l.indoor_rh, "%") + " RH" : "ingen målinger ennå")
@@ -2905,12 +2914,13 @@ function KanalerPanel({ canEdit }) {
                   className="select"
                   style={{ width: "auto", padding: "9px 11px", fontSize: 12 }}
                   value={targetOf(c)}
-                  disabled={!canEdit}
+                  disabled={!canEdit || busy}
                   onChange={(e) => change(c.channel, e.target.value)}
                 >
                   <option value="none">Ikke tildelt</option>
                   <option value="hygiene">Hygienisering</option>
                   {d.systems.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                  {retired ? <option value={c.system_id}>{c.system_name} (tatt ut)</option> : null}
                 </select>
               )}
             </div>

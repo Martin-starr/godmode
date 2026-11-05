@@ -41,7 +41,10 @@ export default function Shell({ children }) {
 
   useEffect(() => {
     const desk = window.matchMedia && window.matchMedia(DESKTOP).matches;
-    if (desk) window.location.replace(DESKTOP_HOME + "?view=" + desktopView(pathname));
+    // A deep link into the full dashboard (the Monday mail uses /?view=seo)
+    // keeps its view.
+    const asked = new URLSearchParams(window.location.search).get("view");
+    if (desk) window.location.replace(DESKTOP_HOME + "?view=" + (asked && /^[a-z]+$/.test(asked) ? asked : desktopView(pathname)));
     else setPhone(true);
   }, [pathname]);
 
