@@ -109,9 +109,9 @@ svg { display: block; }
   .page { padding: 32px 24px 64px; }
 }
 
-/* Desktop-only pieces (sidebar, date line, eyebrows, number row, the
-   headline's gold tail) are styled in desktop.css; below 1024 px they are
-   not drawn at all, so phones and tablets look exactly as before. */
+/* This app is the phone app: a computer is sent to /oversikt. Pieces
+   written for a big screen (sidebar, date line, eyebrows, number row, the
+   headline's gold tail) are never drawn here. */
 .side, .topmeta, .eyebrow, .kpis, .desk-only { display: none; }
 
 /* ---- type ---- */

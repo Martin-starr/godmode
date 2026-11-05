@@ -9,7 +9,7 @@ import s from "./LoggView.module.css";
 
 const ALL = "Alle";
 const PH_HINT = "Kun fra pH-måler med glasselektrode. Pinnemålere gir ikke pH — la feltet stå tomt.";
-const EMPTY = { ph: "", moist: "", feed: "", harvest: "", notes: "" };
+const EMPTY = { ph: "", feed: "", harvest: "", notes: "" };
 
 export default function LoggView() {
   const api = useApi("/api/v2/logg");
@@ -30,13 +30,13 @@ export default function LoggView() {
   const known = system === ALL || d.systems.some((x) => x.name === system);
   const sel = known ? system : (d.systems[0] ? d.systems[0].name : "");
   const isAll = sel === ALL;
-  const empty = !f.ph.trim() && !f.moist.trim() && !f.feed.trim() && !f.harvest.trim() && !f.notes.trim();
+  const empty = !f.ph.trim() && !f.feed.trim() && !f.harvest.trim() && !f.notes.trim();
 
   const set = (key) => (e) => { setF((o) => ({ ...o, [key]: e.target.value })); setError(""); };
   const pick = (name) => {
     setSystem(name);
     setError("");
-    if (name === ALL) setF((o) => ({ ...o, ph: "", moist: "", harvest: "" }));
+    if (name === ALL) setF((o) => ({ ...o, ph: "", harvest: "" }));
   };
 
   const save = async (e) => {
@@ -45,7 +45,7 @@ export default function LoggView() {
     setSaving(true);
     setError("");
     const res = await postJson("/api/v2/logg", {
-      system: sel, ph: f.ph, moisture_handheld: f.moist, feed_liters: f.feed, harvest_liters: f.harvest, notes: f.notes,
+      system: sel, ph: f.ph, feed_liters: f.feed, harvest_liters: f.harvest, notes: f.notes,
     });
     const body = await res.json().catch(() => ({}));
     setSaving(false);
@@ -78,7 +78,6 @@ export default function LoggView() {
 
         <div className="stack panel">
         <Field id="logg-ph" label={<span className="unit">pH</span>} value={f.ph} onChange={set("ph")} disabled={isAll} hint={PH_HINT} />
-        <Field id="logg-fukt" label="Fukt, håndholdt %" value={f.moist} onChange={set("moist")} disabled={isAll} />
         <div className="grid2">
           <Field id="logg-foring" label="Fôring, liter" value={f.feed} onChange={set("feed")} hint={isAll ? "Samme mengde til hvert system." : null} />
           <Field id="logg-hosting" label="Høsting, liter" value={f.harvest} onChange={set("harvest")} disabled={isAll} />

@@ -326,9 +326,6 @@ function fmtReceived(ts) {
   return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 
-const hhmm = (m) => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
-const DAY_KEYS = ["Søndag", "Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag"];
-
 // Connector health, surfaced where it cannot be missed.
 //
 // The whole point of the health table is that a dead integration announces
@@ -367,233 +364,6 @@ function HelseBanner({ integrations }) {
 
 // The tick box. Renders an inert placeholder (not nothing) for read-only users
 // so the grid columns still line up between the two cases.
-function RoutineTick({ item, tickable, busy, onToggle }) {
-  if (!tickable) return <span />;
-  return (
-    <button
-      className="rtick"
-      onClick={onToggle}
-      disabled={busy}
-      aria-label={(item.done ? "Angre" : "Merk som gjort") + ": " + item.text}
-      title={item.done ? "Gjort" + (item.done_by ? " av " + item.done_by : "") : "Merk som gjort"}
-      style={{
-        border: "1px solid " + (item.done ? "var(--navy)" : "var(--line)"),
-        background: item.done ? "var(--navy)" : "#fff",
-        color: "#fff",
-        cursor: busy ? "wait" : "pointer",
-        opacity: busy ? 0.5 : 1,
-      }}
-    >
-      {item.done ? "✓" : ""}
-    </button>
-  );
-}
-
-// UKEPLAN SOLO DRIFT, resolved against the wall clock — and tickable.
-//
-// The plan used to render straight from the bootstrap payload, which showed
-// what to do and recorded nothing about whether it happened. It now loads from
-// /api/routines so each item carries its done state for today, and ticking
-// writes a dated record. For a plan whose first rule is "Logg hver dag —
-// loggen er beviset overfor inspeksjonen", the record is the point.
-function DagsRamme({ routineItems, houseRules, canEdit }) {
-  const [now, setNow] = useState(() => new Date());
-  const [live, setLive] = useState(null);
-  const [busy, setBusy] = useState(null);
-
-  const today = new Date().toISOString().slice(0, 10);
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await api("/api/routines?date=" + today);
-        if (!res.ok || cancelled) return;
-        setLive(await res.json());
-      } catch { /* falls back to the bootstrap copy, just without tick state */ }
-    })();
-    return () => { cancelled = true; };
-  }, [today]);
-
-  const toggle = async (item) => {
-    if (!canEdit || busy) return;
-    const next = !item.done;
-    setBusy(item.id);
-    // Optimistic — a checkbox that waits on a round trip feels broken on a
-    // phone with one bar of signal out by the beds.
-    setLive((s) => s && ({
-      ...s,
-      items: s.items.map((i) => (i.id === item.id ? { ...i, done: next } : i)),
-    }));
-    try {
-      const res = await api("/api/routines", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ item_id: item.id, date: today, done: next }),
-      });
-      if (!res.ok) throw new Error("failed");
-    } catch {
-      setLive((s) => s && ({
-        ...s,
-        items: s.items.map((i) => (i.id === item.id ? { ...i, done: !next } : i)),
-      }));
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  useEffect(() => {
-    // Tick on the minute boundary — a page left open overnight would
-    // otherwise keep highlighting yesterday's block.
-    let iv;
-    const to = setTimeout(() => {
-      setNow(new Date());
-      iv = setInterval(() => setNow(new Date()), 60000);
-    }, (60 - new Date().getSeconds()) * 1000);
-    return () => { clearTimeout(to); if (iv) clearInterval(iv); };
-  }, []);
-
-  // Prefer the live payload (carries done state); fall back to the bootstrap
-  // copy so the plan still renders if /api/routines is slow or fails.
-  const items = (live && live.items) || routineItems || [];
-  const frame = items.filter((i) => i.weekday == null);
-  if (!frame.length) return null;
-
-  const dow = now.getDay() === 0 ? 7 : now.getDay();
-  const mins = now.getHours() * 60 + now.getMinutes();
-  const active = frame.find((b) => mins >= b.start_min && mins < b.end_min) || null;
-  const todaysRows = items.filter((i) => i.weekday === dow);
-  const byBlock = (b) => todaysRows.filter((i) => i.block === b);
-  const cov = live && live.coverage;
-  const tickable = canEdit && !!live;
-  const rules = (houseRules || []).filter((r) => r.kind === "regel");
-  const apenSak = (houseRules || []).find((r) => r.kind === "apen_sak");
-  const cuts = frame.filter((b) => b.drop_rank).sort((a, b) => a.drop_rank - b.drop_rank);
-
-  return (
-    <>
-      <div className="rule" />
-      <div className="sechead">
-        <span className="eyebrow">Dagens ramme · {DAY_KEYS[now.getDay()]}</span>
-        <span className="mut" style={{ fontSize: 11 }}>
-          {cov
-            ? `${cov.required_done}/${cov.required_total} kuttes-aldri gjort · ${cov.done}/${cov.total} totalt`
-            : "UKEPLAN SOLO DRIFT v1 · tider er ankere, ikke lover"}
-        </span>
-      </div>
-
-      <div style={{ border: "1px solid var(--line)", background: "#fff", padding: "12px 18px", marginBottom: 14 }}>
-        <span className="eyebrow" style={{ color: "var(--navy)", marginRight: 14 }}>NÅ</span>
-        {active ? (
-          <>
-            <span style={{ fontVariantNumeric: "tabular-nums", marginRight: 12 }}>{hhmm(active.start_min)}–{hhmm(active.end_min)}</span>
-            <strong>{active.block} — {active.text}</strong>
-            {active.never_drop ? <span className="tag gold" style={{ marginLeft: 10 }}>Kuttes aldri</span> : null}
-          </>
-        ) : (
-          <span className="mut">{dow >= 6 ? "Helg — ingen fast ramme." : "Utenfor arbeidsrammen (07:30–16:00)."}</span>
-        )}
-      </div>
-
-      <div style={{ border: "1px solid var(--line)", background: "#fff" }}>
-        {frame.map((b, i) => {
-          const isNow = active && active.id === b.id;
-          const past = !isNow && b.end_min <= mins;
-          return (
-            <div className="rrow" key={b.id} style={{
-              display: "grid", gridTemplateColumns: "28px 220px 1fr", gap: 12, alignItems: "baseline",
-              padding: "10px 18px",
-              borderTop: i ? "1px solid var(--line)" : "none",
-              background: isNow ? "var(--cream)" : "transparent",
-              // A ticked block is done, not gone — dim it like a past block so
-              // the eye skips it, but never hide it. The full day has to stay
-              // readable as a record.
-              opacity: past || b.done ? 0.45 : 1,
-            }}>
-              <span className="rrow-tick">
-                <RoutineTick item={b} tickable={tickable} busy={busy === b.id} onToggle={() => toggle(b)} />
-              </span>
-              <div style={{ display: "flex", gap: 10, alignItems: "baseline" }}>
-                <span style={{ fontVariantNumeric: "tabular-nums", fontSize: 12 }}>{hhmm(b.start_min)}–{hhmm(b.end_min)}</span>
-                <span className="eyebrow" style={{ fontSize: 10 }}>{b.block}</span>
-              </div>
-              <div>
-                <div style={{
-                  fontWeight: isNow ? 600 : 500,
-                  textDecoration: b.done ? "line-through" : "none",
-                }}>
-                  {b.text}
-                  {b.drop_rank ? <span className="mut" style={{ fontSize: 10, marginLeft: 10 }}>KUTT {b.drop_rank}</span> : null}
-                  {b.never_drop ? <span style={{ fontSize: 10, marginLeft: 10, color: "var(--gold)" }}>ALDRI KUTT</span> : null}
-                </div>
-                {b.detail ? <div className="mut" style={{ fontSize: 12, marginTop: 2 }}>{b.detail}</div> : null}
-                {b.done && b.done_by ? (
-                  <div className="mut" style={{ fontSize: 11, marginTop: 2 }}>✓ {b.done_by}</div>
-                ) : null}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {todaysRows.length ? (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(230px, 1fr))", gap: 0, border: "1px solid var(--line)", borderTop: "none", background: "#fff" }}>
-          {["CEO-BLOKK", "FYSISK", "ELLERS"].map((blk) => (
-            <div key={blk} style={{ padding: "14px 18px", borderRight: "1px solid var(--line)" }}>
-              <div className="eyebrow" style={{ fontSize: 10, marginBottom: 6 }}>{blk}</div>
-              {byBlock(blk).length ? byBlock(blk).map((i) => (
-                <div key={i.id} style={{ marginBottom: 6 }}>
-                  <div style={{ fontWeight: 500 }}>
-                    {i.text}
-                    {i.never_drop ? <span className="mut" style={{ fontSize: 10, marginLeft: 8, color: "var(--gold)" }}>ALDRI KUTT</span> : null}
-                  </div>
-                  {i.detail ? <div className="mut" style={{ fontSize: 12 }}>{i.detail}</div> : null}
-                </div>
-              )) : <span className="mut">—</span>}
-            </div>
-          ))}
-        </div>
-      ) : null}
-
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(290px, 1fr))", gap: 16, marginTop: 16 }}>
-        <div style={{ border: "1px solid var(--line)", borderLeft: "3px solid var(--gold)", background: "#fff", padding: "14px 18px" }}>
-          <div className="eyebrow" style={{ marginBottom: 10 }}>Når dagen ryker · kutt i rekkefølge</div>
-          {cuts.map((b, i) => (
-            <div key={b.id} style={{ marginBottom: 4 }}>
-              <span className="mut" style={{ marginRight: 8 }}>{i + 1}.</span>{b.block}
-            </div>
-          ))}
-          <div className="mut" style={{ fontSize: 12, marginTop: 10, paddingTop: 10, borderTop: "1px solid var(--line)" }}>
-            Kuttes aldri: {frame.filter((b) => b.never_drop).map((b) => b.block.toLowerCase()).join(", ")}, samt mating/høsting planlagt i dag.
-          </div>
-        </div>
-        <div style={{ border: "1px solid var(--line)", borderLeft: "3px solid var(--navy)", background: "#fff", padding: "14px 18px" }}>
-          <div className="eyebrow" style={{ marginBottom: 10 }}>Faste regler</div>
-          {rules.map((r) => (
-            <div key={r.text} style={{ marginBottom: 7 }}>
-              <div style={{ fontWeight: 500 }}>{r.text}</div>
-              {r.detail ? <div className="mut" style={{ fontSize: 12 }}>{r.detail}</div> : null}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {apenSak ? (
-        <div style={{ border: "1px solid var(--line)", borderLeft: "3px solid var(--gold)", background: "#fff", padding: "14px 18px", marginTop: 16 }}>
-          <div className="eyebrow" style={{ color: "var(--gold)", marginBottom: 6 }}>Åpen sak</div>
-          <div style={{ fontWeight: 500 }}>{apenSak.text}</div>
-          {apenSak.detail ? <div className="mut" style={{ fontSize: 12, marginTop: 3 }}>{apenSak.detail}</div> : null}
-        </div>
-      ) : null}
-    </>
-  );
-}
-
-// Live values from the Ecowitt soil probes.
-//
-// Renders nothing until the first reading arrives, so it stays invisible until
-// the hardware is actually paired rather than sitting there as an empty
-// promise. Once data exists it cannot be missed — which is the whole point:
-// the readings were being written and never read.
 function SensorStrip({ sensorLatest }) {
   // First paint from the stored values; then the station is asked once (the
   // endpoint caches for five minutes) and the rows update in place.
@@ -642,7 +412,7 @@ function SensorStrip({ sensorLatest }) {
       </div>
       {unnamed ? (
         <div className="mut" style={{ fontSize: 12, marginBottom: 10 }}>
-          Koble kanalene til et bed under <a href="/mer/kanaler">Kanaler</a>, ellers er
+          Koble kanalene til et bed under Innstillinger → Sensorer, ellers er
           målingene vanskelige å tolke i ettertid.
         </div>
       ) : null}
@@ -679,7 +449,7 @@ function SensorStrip({ sensorLatest }) {
   );
 }
 
-function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbox, goToSeo }) {
+function BriefView({ data, range, setRange, metric, setMetric, goToInbox, goToSeo, goToHygiene }) {
   const inbox = data.inbox || [];
   const inboxCounts = data.inboxCounts || { total: 0, urgent: 0 };
   const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
@@ -792,18 +562,6 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
         Aktive: {active.length} systemer · Backlog: {openTasks.length} · Loggført i dag: {today.length}
       </div>
       <div className="rule" />
-      <div className="kpirow">
-        {kpis.map((k) => (
-          <div className="kpi" key={k.label}>
-            <div className="k">{k.label}</div>
-            <div className={"v " + k.cls}>{k.value}</div>
-            <div className="c">{k.caption}</div>
-          </div>
-        ))}
-      </div>
-      <SensorStrip sensorLatest={data.sensorLatest} />
-      <DagsRamme routineItems={data.routineItems} houseRules={data.houseRules} canEdit={canEdit} />
-      <div className="rule" />
       <div className="sechead">
         <span className="eyebrow">Helsestatus · Drift</span>
         <div className="toggle">
@@ -894,6 +652,19 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
           </span>
         </div>
       </div>
+      <div className="rule" />
+      <HygieneBrief goToHygiene={goToHygiene} />
+      <div className="rule" />
+      <div className="kpirow">
+        {kpis.map((k) => (
+          <div className="kpi" key={k.label}>
+            <div className="k">{k.label}</div>
+            <div className={"v " + k.cls}>{k.value}</div>
+            <div className="c">{k.caption}</div>
+          </div>
+        ))}
+      </div>
+      <SensorStrip sensorLatest={data.sensorLatest} />
       <div className="rule" />
       {inbox.length ? (
         <div>
@@ -1010,7 +781,7 @@ function BriefView({ data, range, setRange, metric, setMetric, canEdit, goToInbo
 
 function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggRange, canEdit, editingReadingId, startEditReading, cancelEditReading, deleteReading }) {
   const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
-  const [metric, setMetric] = useState("TEMP");
+  const [metric, setMetric] = useState("PH");
   const series = buildSeries(data.readings, active, metric, loggRange);
   const target = data.targets.find((t) => t.metric === METRIC_KEY[metric]);
   const [busy, setBusy] = useState(false);
@@ -1077,7 +848,7 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
       </div>
       <div className="std-view">
       <div className="hero">Produksjon</div>
-      <div className="herosub">Bekreft at målingen er loggført. Historiske målinger kan legges inn i ettertid.</div>
+      <div className="herosub">pH måles for hånd, resten logger sensorene selv. Historiske målinger kan legges inn i ettertid.</div>
       <div className="rule" />
       <div className="charthead">
         <span className="eyebrow">Historikk · {metric === "TEMP" ? "Temperatur (°C)" : metric === "PH" ? "pH" : "Fuktighet (%)"} · {RANGE_LABEL[loggRange]}</span>
@@ -1124,24 +895,15 @@ function LoggView({ data, form, setForm, saveReading, toast, loggRange, setLoggR
         </div>
         <div className="f2">
           <div className="field">
-            <label>Temperatur (°C)</label>
-            <input className="input" type="number" value={form.temp} onChange={set("temp")} />
-          </div>
-          <div className="field">
             <label>pH</label>
-            <input className="input" type="number" step="0.1" value={form.ph} onChange={set("ph")} />
-          </div>
-        </div>
-        <div className="f2">
-          <div className="field">
-            <label>Fuktighet (%)</label>
-            <input className="input" type="number" value={form.fukt} onChange={set("fukt")} />
+            <input className="input" type="number" step="0.1" min="0" max="14" placeholder="Fra pH-måler" value={form.ph} onChange={set("ph")} />
           </div>
           <div className="field">
             <label>Fôr (liter)</label>
-            <input className="input" type="number" value={form.for_l} onChange={set("for_l")} />
+            <input className="input" type="number" min="0" step="0.5" value={form.for_l} onChange={set("for_l")} />
           </div>
         </div>
+        <div className="mut" style={{ marginTop: -6, marginBottom: 18 }}>Temperatur og fukt logges automatisk av sensorene.</div>
         <div className="field">
           <label>Notater</label>
           <textarea className="ta" placeholder="Valgfritt" value={form.notat} onChange={set("notat")} />
@@ -2390,7 +2152,7 @@ function fmtDT(ms) {
   return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
 }
 
-function HygieneChart({ series, minTemp }) {
+function HygieneChart({ series, minTemp, gapMs = 5 * 60000 }) {
   const chCount = series.reduce((m, s) => Math.max(m, s.temps.length), 0);
   let lo = 10;
   let hi = 80;
@@ -2427,7 +2189,7 @@ function HygieneChart({ series, minTemp }) {
     for (const s of series) {
       const v = s.temps[ch];
       if (v === undefined) continue;
-      if (v === null || (prevT !== null && s.t - prevT > 5 * 60000)) cur = null;
+      if (v === null || (prevT !== null && s.t - prevT > gapMs)) cur = null;
       if (v !== null) {
         if (!cur) { cur = []; segs.push(cur); }
         cur.push(x(s.t) + "," + y(v));
@@ -2459,28 +2221,151 @@ function HygieneChart({ series, minTemp }) {
   );
 }
 
-function HygieneView({ canEdit }) {
+const fmtD = (ms) => {
+  const d = new Date(ms);
+  return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getFullYear()).slice(2);
+};
+const nbT = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
+
+function useHygiene(limit) {
   const [data, setData] = useState(null);
+  const [error, setError] = useState(false);
+  // A DB hiccup must show as an error with retry, not as the misleading
+  // "Ingen logger importert ennå" empty state.
+  const load = async () => {
+    setError(false);
+    const r = await api("/api/hygiene" + (limit ? "?limit=" + limit : ""));
+    const body = r.ok ? await r.json().catch(() => null) : null;
+    if (body && !body.error) setData(body);
+    else setError(true);
+  };
+  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return { data, error, load, setData };
+}
+
+// One logger record: the chart, the dates and the verdict up front; the
+// probes, what was set aside and the file behind it when opened.
+function HygieneCard({ imp, rules, open, onToggle, canEdit, onDelete }) {
+  const gapMs = Math.max(5, 2 * (imp.bucketMinutes || 1)) * 60000;
+  const hot = imp.together.minutes;
+  return (
+    <div className={"ecard" + (open ? " open" : "")}>
+      <button type="button" className="ecard-head" onClick={onToggle} aria-expanded={open}>
+        <span>
+          <span className="ecard-title">{fmtD(imp.from)} – {fmtD(imp.to)}</span>
+          <span className="ecard-sub">
+            {imp.channels.length} sonder · alle samtidig ≥ {rules.minTemp}°C i {hot} min · krav {rules.minMinutes} min
+            {imp.excluded ? " · " + imp.excluded + " målinger satt til side" : ""}
+          </span>
+        </span>
+        <span className="ecard-right">
+          <span className={"tag " + (imp.pass ? "navy" : "gold")}>{imp.pass ? "Godkjent §19" : "Ikke godkjent"}</span>
+          <span className="ecard-chev" aria-hidden="true">{open ? "–" : "+"}</span>
+        </span>
+      </button>
+      <div className="ecard-chart">
+        <HygieneChart series={imp.series} minTemp={rules.minTemp} gapMs={gapMs} />
+        <div className="legend">
+          {imp.channels.map((c, i) => (
+            <span className="lg" key={c.ch}>
+              <span className="sw" style={{ background: HYG_STYLES[i % 4].color, opacity: HYG_STYLES[i % 4].dash ? 0.8 : 1 }} />
+              Kanal {c.ch}
+            </span>
+          ))}
+          <span className="lgmeta"><span>{imp.filename}</span></span>
+        </div>
+      </div>
+      {open ? (
+        <div className="ecard-body">
+          <div className="kpirow" style={{ marginBottom: 18 }}>
+            {imp.channels.map((c) => (
+              <div className="kpi" key={c.ch}>
+                <div className="k">Kanal {c.ch}</div>
+                <div className={"v " + (c.pass ? "" : "gold")}>
+                  {c.maxMinutes}
+                  <span style={{ fontSize: 14, color: "var(--muted)", fontWeight: 500 }}> min</span>
+                </div>
+                <div className="c">
+                  lengste sammenhengende ≥ {rules.minTemp}°C
+                  {c.excluded ? " · " + c.excluded + " satt til side" : ""}
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="mut" style={{ marginBottom: 18 }}>
+            Alle sonder samtidig ≥ {rules.minTemp}°C (minst {rules.minProbes}): {hot} min
+            {hot ? " (" + fmtDT(imp.together.from) + " – " + fmtDT(imp.together.to) + ")" : ""} · krav {rules.minMinutes} min.
+            {" "}Én sonde alene kan aldri gi godkjent.
+          </div>
+          {imp.spans.length ? (
+            <div style={{ marginBottom: 18 }}>
+              <div className="sechead" style={{ marginBottom: 10 }}>
+                <span className="eyebrow">Satt til side som sondefeil</span>
+                <span className="mut">{imp.excluded} målinger</span>
+              </div>
+              <div className="mut" style={{ marginBottom: 10 }}>
+                Sonder loggeren ikke kunne lese (OL, ----), verdier en kompostmasse ikke kan ha (under 0 eller over 85°C), brå sprang på mer enn 3°C på ett minutt og de ti minuttene rundt. Etter en feil teller sonden først igjen når den er tilbake på nivået den hadde, eller en annen sonde bekrefter det nye nivået. Ingenting av dette vises i grafen eller teller i vurderingen. Rådataene ligger urørt i databasen.
+              </div>
+              <table className="dtbl">
+                <tbody>
+                  {imp.spans.map((sp, i) => (
+                    <tr key={i}>
+                      <td>
+                        <span className="sy">Kanal {sp.ch}</span>
+                        <div className="dt">{fmtDT(sp.from)} – {fmtDT(sp.to)} · {sp.reasons.join(", ")}</div>
+                      </td>
+                      <td className="num">{sp.count} målinger</td>
+                      <td className="num rt">{sp.min == null ? "ingen verdi" : nbT(sp.min) + "–" + nbT(sp.max) + "°C"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : null}
+          <div className="setrow" style={{ borderBottom: 0, paddingBottom: 0 }}>
+            <div>
+              <div className="sl">{imp.filename}</div>
+              <div className="ss">Importert {fmtDate(String(imp.imported_at).slice(0, 10))} · {imp.imported_by} · {imp.row_count} punkter</div>
+            </div>
+            {canEdit ? (
+              <button className="lnk g" onClick={() => { if (window.confirm("Slette importen «" + imp.filename + "»?")) onDelete(imp.id); }}>Slett</button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+// The newest logger record on the Brief, same card as the Hygienisering page.
+function HygieneBrief({ goToHygiene }) {
+  const { data, error } = useHygiene(1);
+  const [open, setOpen] = useState(false);
+  const latest = data && data.imports.find((i) => i.analysed);
+  return (
+    <>
+      <div className="sechead">
+        <span className="eyebrow">Hygienisering · siste logg</span>
+        <button className="lnk" onClick={goToHygiene} style={{ fontSize: 12 }}>
+          Alle logger{data ? " (" + data.imports.length + ")" : ""} →
+        </button>
+      </div>
+      {latest ? (
+        <HygieneCard imp={latest} rules={data} open={open} onToggle={() => setOpen(!open)} canEdit={false} />
+      ) : (
+        <div className="mut">{error ? "Fikk ikke lastet hygieniseringsdataene." : data ? "Ingen logger importert ennå." : "Laster …"}</div>
+      )}
+    </>
+  );
+}
+
+function HygieneView({ canEdit }) {
+  const { data, error, load, setData } = useHygiene();
   const [dragHot, setDragHot] = useState(false);
   const [importing, setImporting] = useState(false);
   const [message, setMessage] = useState("");
+  const [openId, setOpenId] = useState(null);
   const inputRef = useRef(null);
-
-  const [loadError, setLoadError] = useState(false);
-  // A DB hiccup must show as an error with retry — not as the misleading
-  // "Ingen logger importert ennå" empty state.
-  const load = async () => {
-    setLoadError(false);
-    const r = await api("/api/hygiene");
-    if (!r.ok) {
-      setLoadError(true);
-      return;
-    }
-    const body = await r.json().catch(() => null);
-    if (body && !body.error) setData(body);
-    else setLoadError(true);
-  };
-  useEffect(() => { load(); }, []);
 
   const upload = async (files) => {
     const file = (files && files[0]) || null;
@@ -2502,11 +2387,13 @@ function HygieneView({ canEdit }) {
   };
 
   const remove = async (id) => {
-    await api("/api/hygiene/" + id, { method: "DELETE" });
-    load();
+    const res = await api("/api/hygiene/" + id, { method: "DELETE" });
+    if (!res.ok) { setMessage("Kunne ikke slette importen."); return; }
+    setData((d) => ({ ...d, imports: d.imports.filter((i) => i.id !== id) }));
   };
 
-  const latest = data && data.latest;
+  const analysed = data ? data.imports.filter((i) => i.analysed) : [];
+  const older = data ? data.imports.filter((i) => !i.analysed) : [];
 
   return (
     <div>
@@ -2528,110 +2415,60 @@ function HygieneView({ canEdit }) {
         </div>
       ) : null}
       {message ? <div className="mut" style={{ marginBottom: 18 }}>{message}</div> : null}
-      {latest ? (
-        <div>
-          <div className="sechead" style={{ marginTop: 10 }}>
-            <span className="eyebrow">Siste logg · {latest.filename}</span>
-            <span className={"tag " + (latest.pass ? "navy" : "gold")}>{latest.pass ? "Godkjent §19" : "Ikke godkjent"}</span>
-          </div>
-          <div className="kpirow" style={{ marginBottom: 26 }}>
-            {latest.channels.map((c) => (
-              <div className="kpi" key={c.ch}>
-                <div className="k">Kanal {c.ch}</div>
-                <div className={"v " + (c.pass ? "" : "gold")}>
-                  {c.maxMinutes}
-                  <span style={{ fontSize: 14, color: "var(--muted)", fontWeight: 500 }}> min</span>
-                </div>
-                <div className="c">
-                  lengste sammenhengende ≥ {latest.minTemp}°C · krav {latest.minMinutes} min
-                  {c.excluded ? " · " + c.excluded + " målinger satt til side" : ""}
-                </div>
-              </div>
-            ))}
-          </div>
-          {latest.together ? (
-            <div className="mut" style={{ marginBottom: 18 }}>
-              Alle sonder samtidig ≥ {latest.minTemp}°C (minst {latest.minProbes}): {latest.together.minutes} min
-              {latest.together.minutes ? " (" + fmtDT(latest.together.from) + " – " + fmtDT(latest.together.to) + ")" : ""} · krav {latest.minMinutes} min.
-              {" "}Én sonde alene kan aldri gi godkjent.
-            </div>
-          ) : null}
-          {latest.spans && latest.spans.length ? (
-            <div style={{ marginBottom: 26 }}>
-              <div className="sechead">
-                <span className="eyebrow">Satt til side som sondefeil</span>
-                <span className="mut">{latest.excluded} målinger</span>
-              </div>
-              <div className="mut" style={{ marginBottom: 10 }}>
-                Sonder loggeren ikke kunne lese (OL, ----), verdier en kompostmasse ikke kan ha (under 0 eller over 85 °C), brå sprang på mer enn 3 °C på ett minutt og de ti minuttene rundt. Etter en feil teller sonden først igjen når den er tilbake på nivået den hadde, eller en annen sonde bekrefter det nye nivået. Minutter der kanalrekkefølgen er usikker settes også til side. Ingenting av dette vises i grafen eller teller i vurderingen. Rådataene ligger urørt i databasen.
-              </div>
-              <table className="dtbl">
-                <tbody>
-                  {latest.spans.map((sp, i) => (
-                    <tr key={i}>
-                      <td>
-                        <span className="sy">Kanal {sp.ch}</span>
-                        <div className="dt">{fmtDT(sp.from)} – {fmtDT(sp.to)} · {sp.reasons.join(", ")}</div>
-                      </td>
-                      <td className="num">{sp.count} målinger</td>
-                      <td className="num rt">{sp.min == null ? "ingen verdi" : String(Math.round(sp.min * 10) / 10).replace(".", ",") + "–" + String(Math.round(sp.max * 10) / 10).replace(".", ",") + " °C"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : null}
-          <div className="charthead">
-            <span className="eyebrow">Temperatur · {fmtDT(latest.from)} – {fmtDT(latest.to)}</span>
-          </div>
-          <HygieneChart series={latest.series} minTemp={latest.minTemp} />
-          <div className="legend">
-            {latest.channels.map((c, i) => (
-              <span className="lg" key={c.ch}>
-                <span className="sw" style={{ background: HYG_STYLES[i % 4].color, opacity: HYG_STYLES[i % 4].dash ? 0.8 : 1 }} />
-                Kanal {c.ch}
-              </span>
-            ))}
-          </div>
-          <div className="rule" />
-          <div className="sechead">
-            <span className="eyebrow">Importhistorikk</span>
-            <span className="mut">{data.imports.length}</span>
-          </div>
-          <table className="dtbl">
-            <tbody>
-              {data.imports.map((imp) => (
-                <tr key={imp.id}>
-                  <td>
-                    <span className="sy">{imp.filename}</span>
-                    <div className="dt">
-                      {(() => {
-                        const d = new Date(imp.imported_at);
-                        return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + d.getFullYear();
-                      })()} · {imp.imported_by}
-                    </div>
-                  </td>
-                  <td className="num">{imp.row_count} punkter</td>
-                  <td className="num rt">
-                    {canEdit ? (
-                      <button className="lnk g" onClick={() => { if (window.confirm("Slette importen «" + imp.filename + "»?")) remove(imp.id); }}>Slett</button>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : loadError ? (
+      {error ? (
         <div className="mut" style={{ marginTop: 10 }}>
           Fikk ikke lastet hygieniseringsdataene.{" "}
           <button className="lnk" style={{ padding: 0 }} onClick={load}>Prøv igjen</button>
         </div>
-      ) : data ? (
+      ) : !data ? null : !data.imports.length ? (
         <div className="mut" style={{ marginTop: 10 }}>
           Ingen logger importert ennå. Koble Center 374 til PC-en, eksporter siste periode, og last opp filen her.
         </div>
-      ) : null}
+      ) : (
+        <>
+          <div className="sechead" style={{ marginTop: 10 }}>
+            <span className="eyebrow">Logger</span>
+            <span className="mut">{data.imports.length} · krav {data.minTemp}°C i {data.minMinutes} min på minst {data.minProbes} sonder</span>
+          </div>
+          {analysed.map((imp) => (
+            <HygieneCard
+              key={imp.id}
+              imp={imp}
+              rules={data}
+              open={openId === imp.id}
+              onToggle={() => setOpenId(openId === imp.id ? null : imp.id)}
+              canEdit={canEdit}
+              onDelete={remove}
+            />
+          ))}
+          {older.length ? (
+            <>
+              <div className="sechead" style={{ marginTop: 26 }}>
+                <span className="eyebrow">Eldre importer</span>
+                <span className="mut">vises uten graf</span>
+              </div>
+              <table className="dtbl">
+                <tbody>
+                  {older.map((imp) => (
+                    <tr key={imp.id}>
+                      <td>
+                        <span className="sy">{imp.filename}</span>
+                        <div className="dt">{fmtDate(String(imp.imported_at).slice(0, 10))} · {imp.imported_by}</div>
+                      </td>
+                      <td className="num">{imp.row_count} punkter</td>
+                      <td className="num rt">
+                        {canEdit ? (
+                          <button className="lnk g" onClick={() => { if (window.confirm("Slette importen «" + imp.filename + "»?")) remove(imp.id); }}>Slett</button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }
@@ -2643,25 +2480,150 @@ function HygieneView({ canEdit }) {
 const FEED_RANGES = [["30", "30D"], ["90", "90D"], ["365", "1 år"]];
 const EMPTY_BATCH = { batch_code: "", system: "", started_at: "", harvested_at: "", volume_l: "", weight_kg: "", moisture_pct: "", notes: "" };
 const BATCH_STATUSES = ["aktiv", "høstet", "arkivert"];
+const EMPTY_FEED = { system: "", date: "", for_l: "", notat: "" };
 
-// Fôring is a REPORT, not a form — feed volume is already captured on the
-// same log entry as pH/temp/moisture (dash.readings_all.for_l), by design,
-// so there is deliberately no separate input here to keep in sync with that.
-// Batcher IS a form: harvest logging doesn't exist anywhere yet, on paper or
-// otherwise, so this is built ahead of the first real batch rather than
-// reverse-engineered from data that isn't there.
-function FeedingBatchesView({ data, canEdit, showToast }) {
+const sysOptions = (systems, blank) => (
+  <>
+    {blank ? <option value="">— velg —</option> : null}
+    {systems.map((x) => <option key={x} value={x}>{x}</option>)}
+  </>
+);
+
+// Fields of a feeding or a batch, laid out the same way in the "new" form
+// and inside an opened card.
+function FeedFields({ f, setF, systems }) {
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  return (
+    <>
+      <div className="f2" style={{ marginBottom: 12 }}>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>System</label>
+          <select className="select" value={f.system} onChange={set("system")}>{sysOptions(systems, true)}</select>
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Dato</label>
+          <input className="input" type="date" max={isoDaysAgo(0)} value={f.date} onChange={set("date")} />
+        </div>
+      </div>
+      <div className="f2" style={{ marginBottom: 12 }}>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Fôr (liter)</label>
+          <input className="input" type="number" min="0" step="0.5" value={f.for_l} onChange={set("for_l")} />
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Notat</label>
+          <input className="input" placeholder="Valgfritt" value={f.notat} onChange={set("notat")} />
+        </div>
+      </div>
+    </>
+  );
+}
+
+function BatchFields({ f, setF, systems, withStatus }) {
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
+  return (
+    <>
+      <div className="f2" style={{ marginBottom: 12 }}>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>System</label>
+          <select className="select" value={f.system} onChange={set("system")}>{sysOptions(systems, !withStatus)}</select>
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Batch-kode</label>
+          <input className="input" placeholder="Valgfritt, f.eks. B-2026-01" value={f.batch_code} onChange={set("batch_code")} />
+        </div>
+      </div>
+      <div className="f2" style={{ marginBottom: 12 }}>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Startet</label>
+          <input className="input" type="date" value={f.started_at} onChange={set("started_at")} />
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Høstet (valgfritt)</label>
+          <input className="input" type="date" value={f.harvested_at} onChange={set("harvested_at")} />
+        </div>
+      </div>
+      <div className="f2" style={{ marginBottom: 12 }}>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Volum (L)</label>
+          <input className="input" type="number" value={f.volume_l} onChange={set("volume_l")} />
+        </div>
+        <div className="field" style={{ marginBottom: 0 }}>
+          <label>Vekt (kg)</label>
+          <input className="input" type="number" value={f.weight_kg} onChange={set("weight_kg")} />
+        </div>
+      </div>
+      {withStatus ? (
+        <div className="field" style={{ marginBottom: 12, maxWidth: 240 }}>
+          <label>Status</label>
+          <select className="select" value={f.status} onChange={set("status")}>{sysOptions(BATCH_STATUSES, false)}</select>
+        </div>
+      ) : null}
+      <div className="field" style={{ marginBottom: 12 }}>
+        <label>Notater</label>
+        <textarea className="ta" style={{ minHeight: 60 }} value={f.notes} onChange={set("notes")} />
+      </div>
+    </>
+  );
+}
+
+// A card that opens into its own edit form. `summary` is the closed view;
+// `form` renders the fields with (draft, setDraft); save/remove are async.
+function EntryCard({ id, open, onToggle, title, sub, right, canEdit, initial, form, onSave, onDelete, readOnlyNote }) {
+  const [draft, setDraft] = useState(initial);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { if (open) setDraft(initial); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const save = async () => {
+    setBusy(true);
+    const ok = await onSave(draft);
+    setBusy(false);
+    if (ok) onToggle();
+  };
+  return (
+    <div className={"ecard" + (open ? " open" : "")}>
+      <button type="button" className="ecard-head" onClick={onToggle} aria-expanded={open}>
+        <span>
+          <span className="ecard-title">{title}</span>
+          {sub ? <span className="ecard-sub">{sub}</span> : null}
+        </span>
+        <span className="ecard-right">
+          {right}
+          <span className="ecard-chev" aria-hidden="true">{open ? "–" : "+"}</span>
+        </span>
+      </button>
+      {open ? (
+        <div className="ecard-body">
+          {canEdit && onSave ? (
+            <>
+              {form(draft, setDraft)}
+              <button className="btn sm" disabled={busy} onClick={save}>Lagre</button>{" "}
+              <button className="lnk" onClick={onToggle}>Avbryt</button>
+              {onDelete ? (
+                <button className="lnk g" style={{ float: "right" }} onClick={() => { if (window.confirm("Slette " + title + "?")) onDelete(id); }}>Slett</button>
+              ) : null}
+            </>
+          ) : (
+            <div className="mut">{canEdit ? readOnlyNote : "Kun lesing — du kan ikke endre."}</div>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function FeedingBatchesView({ data, canEdit, showToast, refreshAll }) {
   const [tab, setTab] = useState("foring");
   const [feed, setFeed] = useState(null);
   const [feedDays, setFeedDays] = useState("30");
   const [feedLoading, setFeedLoading] = useState(true);
+  const [feedForm, setFeedForm] = useState(EMPTY_FEED);
+  const [addingFeed, setAddingFeed] = useState(false);
 
   const [batches, setBatches] = useState(null);
   const [form, setForm] = useState(EMPTY_BATCH);
   const [adding, setAdding] = useState(false);
-  const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState(EMPTY_BATCH);
   const [busy, setBusy] = useState(false);
+  const [openKey, setOpenKey] = useState(null);
 
   const loadFeed = async (days) => {
     setFeedLoading(true);
@@ -2678,51 +2640,85 @@ function FeedingBatchesView({ data, canEdit, showToast }) {
   useEffect(() => { if (tab === "batcher" && batches === null) loadBatches(); }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const systems = data.systems.map((s) => s.id);
+  const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
+  const toggle = (key) => setOpenKey(openKey === key ? null : key);
+  const fail = async (res, msg) => { if (showToast) showToast(await failMsg(res, msg)); return false; };
+
+  // Feedings live in dash.readings like every other dashboard entry, so
+  // they show up in the Logg history and the Brief too.
+  const feedPayload = (f, base = {}) => ({
+    system: f.system, date: f.date, for_l: f.for_l, notat: f.notat,
+    temp: base.temp ?? "", ph: base.ph ?? "", fukt: base.fukt ?? "", avvik: !!base.avvik,
+  });
+  const submitFeed = async () => {
+    if (!feedForm.system || !feedForm.date || !(Number(feedForm.for_l) > 0) || busy) return;
+    setBusy(true);
+    const res = await api("/api/readings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(feedPayload(feedForm)) });
+    setBusy(false);
+    if (!res.ok) return fail(res, "Kunne ikke lagre fôringen.");
+    setFeedForm(EMPTY_FEED);
+    setAddingFeed(false);
+    if (showToast) showToast("Fôring loggført · " + feedForm.system + " · " + fmtDate(feedForm.date));
+    // A backdated feeding must not vanish behind the range buttons.
+    const age = Math.round((Date.parse(isoDaysAgo(0)) - Date.parse(feedForm.date)) / 86400e3);
+    const range = FEED_RANGES.find(([v]) => Number(v) >= age) || FEED_RANGES[FEED_RANGES.length - 1];
+    if (range[0] !== feedDays) setFeedDays(range[0]);
+    else loadFeed(feedDays);
+    refreshAll();
+  };
+  const saveFeed = (r) => async (f) => {
+    if (!f.system || !f.date || !(Number(f.for_l) > 0)) return false;
+    const res = await api("/api/readings/" + r.rid, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(feedPayload(f, r)) });
+    if (!res.ok) return fail(res, "Kunne ikke lagre.");
+    loadFeed(feedDays);
+    refreshAll();
+    return true;
+  };
+  // A feeding that sits on a log entry with a pH is just zeroed, so the
+  // measurement survives; an entry that was only a feeding is deleted.
+  const removeFeed = async (rid) => {
+    const r = feed.rows.find((x) => x.rid === rid);
+    const alone = !r || (r.temp == null && r.ph == null && r.fukt == null);
+    const res = alone
+      ? await api("/api/readings/" + rid, { method: "DELETE" })
+      : await api("/api/readings/" + rid, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(feedPayload({ ...r, for_l: 0 }, r)) });
+    if (!res.ok) return fail(res, "Kunne ikke slette.");
+    setOpenKey(null);
+    loadFeed(feedDays);
+    refreshAll();
+  };
 
   const submitBatch = async () => {
     if (!form.system || busy) return;
     setBusy(true);
-    const res = await api("/api/batches", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
-    });
+    const res = await api("/api/batches", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(form) });
     setBusy(false);
-    if (!res.ok) { if (showToast) showToast(await failMsg(res, "Kunne ikke lagre batchen.")); return; }
+    if (!res.ok) return fail(res, "Kunne ikke lagre batchen.");
     const created = await res.json();
     setBatches((b) => [created, ...(b || [])]);
     setForm(EMPTY_BATCH);
     setAdding(false);
   };
-
-  const startEdit = (b) => {
-    setEditingId(b.id);
-    setEditForm({
-      batch_code: b.batch_code || "", system: b.system,
-      started_at: b.started_at || "", harvested_at: b.harvested_at || "",
-      volume_l: b.volume_l ?? "", weight_kg: b.weight_kg ?? "", moisture_pct: b.moisture_pct ?? "",
-      notes: b.notes || "", status: b.status,
-    });
-  };
-
-  const saveEdit = async (id) => {
-    const res = await api("/api/batches", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, ...editForm }),
-    });
-    if (!res.ok) { if (showToast) showToast(await failMsg(res, "Kunne ikke lagre.")); return; }
+  const saveBatch = (b) => async (f) => {
+    const res = await api("/api/batches", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: b.id, ...f }) });
+    if (!res.ok) return fail(res, "Kunne ikke lagre.");
     const updated = await res.json();
-    setBatches((b) => b.map((x) => (x.id === id ? updated : x)));
-    setEditingId(null);
+    setBatches((list) => list.map((x) => (x.id === b.id ? updated : x)));
+    return true;
   };
-
   const removeBatch = async (id) => {
-    if (!window.confirm("Slette denne batchen?")) return;
+    setOpenKey(null);
     setBatches((b) => b.filter((x) => x.id !== id));
     const res = await api("/api/batches?id=" + id, { method: "DELETE" });
     if (!res.ok && showToast) showToast("Kunne ikke slette — last siden på nytt.");
   };
+
+  const batchDraft = (b) => ({
+    batch_code: b.batch_code || "", system: b.system,
+    started_at: b.started_at || "", harvested_at: b.harvested_at || "",
+    volume_l: b.volume_l ?? "", weight_kg: b.weight_kg ?? "", moisture_pct: b.moisture_pct ?? "",
+    notes: b.notes || "", status: b.status,
+  });
 
   return (
     <div>
@@ -2736,10 +2732,25 @@ function FeedingBatchesView({ data, canEdit, showToast }) {
           <button className={"tbtn " + (tab === "foring" ? "on" : "")} onClick={() => setTab("foring")}>Fôring</button>
           <button className={"tbtn " + (tab === "batcher" ? "on" : "")} onClick={() => setTab("batcher")}>Batcher</button>
         </div>
+        {canEdit ? (
+          tab === "foring" ? (
+            <button className="btn ghost sm" onClick={() => { setAddingFeed(!addingFeed); setFeedForm({ ...EMPTY_FEED, system: active[0] || "", date: isoDaysAgo(0) }); }}>
+              {addingFeed ? "Avbryt" : "+ Fôring"}
+            </button>
+          ) : (
+            <button className="btn ghost sm" onClick={() => setAdding(!adding)}>{adding ? "Avbryt" : "+ Ny batch"}</button>
+          )
+        ) : null}
       </div>
 
       {tab === "foring" ? (
         <>
+          {addingFeed ? (
+            <div className="card" style={{ padding: 18, marginBottom: 20 }}>
+              <FeedFields f={feedForm} setF={setFeedForm} systems={active} />
+              <button className="btn sm" disabled={!feedForm.system || !(Number(feedForm.for_l) > 0) || busy} onClick={submitFeed}>Lagre fôring</button>
+            </div>
+          ) : null}
           <div className="sechead">
             <span className="eyebrow">Fôringshistorikk</span>
             <div className="toggle">
@@ -2749,7 +2760,7 @@ function FeedingBatchesView({ data, canEdit, showToast }) {
             </div>
           </div>
 
-          {feedLoading ? (
+          {feedLoading && !feed ? (
             <p className="mut">Laster …</p>
           ) : !feed || !feed.totals.total_entries ? (
             <div style={{ padding: "32px 0", textAlign: "center" }}>
@@ -2761,102 +2772,48 @@ function FeedingBatchesView({ data, canEdit, showToast }) {
                 <div className="kpi">
                   <div className="k">Totalt fôret</div>
                   <div className="v">{Math.round(feed.totals.total_liters)} L</div>
-                  <div className="c">{feed.totals.total_entries} loggføringer</div>
+                  <div className="c">{feed.totals.total_entries} fôringer</div>
                 </div>
                 <div className="kpi">
                   <div className="k">Siste fôring</div>
                   <div className="v" style={{ fontSize: 20 }}>{feed.totals.siste_foring ? fmtDate(feed.totals.siste_foring) : "—"}</div>
                 </div>
-                {feed.bySystem.slice(0, 2).map((s) => (
-                  <div className="kpi" key={s.system}>
-                    <div className="k">{s.system}</div>
-                    <div className="v">{Math.round(s.liters)} L</div>
-                    <div className="c">siste: {fmtDate(s.siste)}</div>
+                {feed.bySystem.slice(0, 2).map((x) => (
+                  <div className="kpi" key={x.system}>
+                    <div className="k">{x.system}</div>
+                    <div className="v">{Math.round(x.liters)} L</div>
+                    <div className="c">siste: {fmtDate(x.siste)}</div>
                   </div>
                 ))}
               </div>
-
-              {feed.bySystem.length > 2 ? (
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: 16, marginBottom: 24 }}>
-                  {feed.bySystem.map((s) => (
-                    <div className="setrow" key={s.system} style={{ padding: "8px 0" }}>
-                      <div className="sl">{s.system}</div>
-                      <span className="trange"><span className="pill">{Math.round(s.liters)} L</span></span>
-                    </div>
-                  ))}
-                </div>
-              ) : null}
-
-              <div className="tscroll">
-                <table>
-                  <thead><tr><th>Dato</th><th>System</th><th>Liter</th><th>Loggføringer</th></tr></thead>
-                  <tbody>
-                    {feed.rows.map((r, i) => (
-                      <tr key={r.date + r.system + i}>
-                        <td>{fmtDate(r.date)}</td>
-                        <td>{r.system}</td>
-                        <td>{Math.round(r.liters * 10) / 10} L</td>
-                        <td className="mut">{r.entries}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {feed.rows.map((r) => (
+                <EntryCard
+                  key={r.id}
+                  id={r.rid}
+                  open={openKey === r.id}
+                  onToggle={() => toggle(r.id)}
+                  title={fmtDate(r.date) + " · " + r.system}
+                  sub={[r.notat, r.logged_by].filter(Boolean).join(" · ")}
+                  right={<span className="ecard-title" style={{ fontVariantNumeric: "tabular-nums" }}>{Math.round(r.for_l * 10) / 10} L</span>}
+                  canEdit={canEdit}
+                  initial={{ system: r.system, date: r.date, for_l: r.for_l, notat: r.notat || "" }}
+                  form={(d, setD) => <FeedFields f={d} setF={setD} systems={systems} />}
+                  onSave={r.editable ? saveFeed(r) : null}
+                  onDelete={r.editable ? removeFeed : null}
+                  readOnlyNote={r.source === "app" ? "Loggført fra appen. Kan ikke endres her." : "Fra Sheets. Kan ikke endres."}
+                />
+              ))}
             </>
           )}
         </>
       ) : (
         <>
-          <div className="sechead">
-            <span className="eyebrow">Batcher</span>
-            {canEdit ? (
-              <button className="btn ghost sm" onClick={() => setAdding(!adding)}>{adding ? "Avbryt" : "+ Ny batch"}</button>
-            ) : null}
-          </div>
-
           {adding ? (
-            <div style={{ border: "1px solid var(--line)", padding: 18, marginBottom: 20, background: "#fff" }}>
-              <div className="f2" style={{ marginBottom: 12 }}>
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label>System</label>
-                  <select className="select" value={form.system} onChange={(e) => setForm({ ...form, system: e.target.value })}>
-                    <option value="">— velg —</option>
-                    {systems.map((s) => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                </div>
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label>Batch-kode</label>
-                  <input className="input" placeholder="Valgfritt, f.eks. B-2026-01" value={form.batch_code} onChange={(e) => setForm({ ...form, batch_code: e.target.value })} />
-                </div>
-              </div>
-              <div className="f2" style={{ marginBottom: 12 }}>
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label>Startet</label>
-                  <input className="input" type="date" value={form.started_at} onChange={(e) => setForm({ ...form, started_at: e.target.value })} />
-                </div>
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label>Høstet (valgfritt)</label>
-                  <input className="input" type="date" value={form.harvested_at} onChange={(e) => setForm({ ...form, harvested_at: e.target.value })} />
-                </div>
-              </div>
-              <div className="f2" style={{ marginBottom: 12 }}>
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label>Volum (L)</label>
-                  <input className="input" type="number" value={form.volume_l} onChange={(e) => setForm({ ...form, volume_l: e.target.value })} />
-                </div>
-                <div className="field" style={{ marginBottom: 0 }}>
-                  <label>Vekt (kg)</label>
-                  <input className="input" type="number" value={form.weight_kg} onChange={(e) => setForm({ ...form, weight_kg: e.target.value })} />
-                </div>
-              </div>
-              <div className="field" style={{ marginBottom: 12 }}>
-                <label>Notater</label>
-                <textarea className="ta" style={{ minHeight: 60 }} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-              </div>
+            <div className="card" style={{ padding: 18, marginBottom: 20 }}>
+              <BatchFields f={form} setF={setForm} systems={systems} />
               <button className="btn sm" disabled={!form.system || busy} onClick={submitBatch}>Lagre batch</button>
             </div>
           ) : null}
-
           {batches === null ? (
             <p className="mut">Laster …</p>
           ) : batches.length === 0 ? (
@@ -2864,76 +2821,26 @@ function FeedingBatchesView({ data, canEdit, showToast }) {
               <span className="mut">Ingen batcher registrert ennå. Loggingen starter når høstesystemet er klart.</span>
             </div>
           ) : (
-            <div className="tscroll">
-              <table>
-                <thead><tr><th>Batch</th><th>System</th><th>Startet</th><th>Høstet</th><th>Volum / vekt</th><th>Status</th><th /></tr></thead>
-                <tbody>
-                  {batches.map((b) => editingId === b.id ? (
-                    <tr key={b.id}>
-                      <td colSpan={7} style={{ paddingRight: 0 }}>
-                        <div className="f2" style={{ marginBottom: 12 }}>
-                          <div className="field" style={{ marginBottom: 0 }}>
-                            <label>Batch-kode</label>
-                            <input className="input" value={editForm.batch_code} onChange={(e) => setEditForm({ ...editForm, batch_code: e.target.value })} />
-                          </div>
-                          <div className="field" style={{ marginBottom: 0 }}>
-                            <label>System</label>
-                            <select className="select" value={editForm.system} onChange={(e) => setEditForm({ ...editForm, system: e.target.value })}>
-                              {systems.map((s) => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                        <div className="f2" style={{ marginBottom: 12 }}>
-                          <div className="field" style={{ marginBottom: 0 }}>
-                            <label>Startet</label>
-                            <input className="input" type="date" value={editForm.started_at} onChange={(e) => setEditForm({ ...editForm, started_at: e.target.value })} />
-                          </div>
-                          <div className="field" style={{ marginBottom: 0 }}>
-                            <label>Høstet</label>
-                            <input className="input" type="date" value={editForm.harvested_at} onChange={(e) => setEditForm({ ...editForm, harvested_at: e.target.value })} />
-                          </div>
-                        </div>
-                        <div className="f2" style={{ marginBottom: 12 }}>
-                          <div className="field" style={{ marginBottom: 0 }}>
-                            <label>Volum (L)</label>
-                            <input className="input" type="number" value={editForm.volume_l} onChange={(e) => setEditForm({ ...editForm, volume_l: e.target.value })} />
-                          </div>
-                          <div className="field" style={{ marginBottom: 0 }}>
-                            <label>Vekt (kg)</label>
-                            <input className="input" type="number" value={editForm.weight_kg} onChange={(e) => setEditForm({ ...editForm, weight_kg: e.target.value })} />
-                          </div>
-                          <div className="field" style={{ marginBottom: 0 }}>
-                            <label>Status</label>
-                            <select className="select" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
-                              {BATCH_STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
-                            </select>
-                          </div>
-                        </div>
-                        <button className="btn sm" onClick={() => saveEdit(b.id)}>Lagre</button>{" "}
-                        <button className="lnk" onClick={() => setEditingId(null)}>Avbryt</button>
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr key={b.id}>
-                      <td>{b.batch_code || <span className="mut">—</span>}</td>
-                      <td>{b.system}</td>
-                      <td>{b.started_at ? fmtDate(b.started_at) : "—"}</td>
-                      <td>{b.harvested_at ? fmtDate(b.harvested_at) : "—"}</td>
-                      <td className="mut">{[b.volume_l ? Math.round(b.volume_l) + " L" : null, b.weight_kg ? Math.round(b.weight_kg) + " kg" : null].filter(Boolean).join(" · ") || "—"}</td>
-                      <td><span className={"tag " + (b.status === "høstet" ? "navy" : "")}>{b.status}</span></td>
-                      <td className="rt">
-                        {canEdit ? (
-                          <>
-                            <button className="lnk" onClick={() => startEdit(b)}>Endre</button>{" "}
-                            <button className="lnk g" onClick={() => removeBatch(b.id)}>Slett</button>
-                          </>
-                        ) : null}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            batches.map((b) => (
+              <EntryCard
+                key={b.id}
+                id={b.id}
+                open={openKey === "b" + b.id}
+                onToggle={() => toggle("b" + b.id)}
+                title={(b.batch_code || "Batch #" + b.id) + " · " + b.system}
+                sub={[
+                  (b.started_at ? fmtDate(b.started_at) : "—") + " – " + (b.harvested_at ? fmtDate(b.harvested_at) : "pågår"),
+                  [b.volume_l ? Math.round(b.volume_l) + " L" : null, b.weight_kg ? Math.round(b.weight_kg) + " kg" : null].filter(Boolean).join(" · "),
+                  b.notes,
+                ].filter(Boolean).join(" · ")}
+                right={<span className={"tag " + (b.status === "høstet" ? "navy" : "")}>{b.status}</span>}
+                canEdit={canEdit}
+                initial={batchDraft(b)}
+                form={(d, setD) => <BatchFields f={d} setF={setD} systems={systems} withStatus />}
+                onSave={saveBatch(b)}
+                onDelete={removeBatch}
+              />
+            ))
           )}
         </>
       )}
@@ -2944,6 +2851,107 @@ function FeedingBatchesView({ data, canEdit, showToast }) {
 /* ------------------------------------------------------------------ */
 /* Innstillinger                                                       */
 /* ------------------------------------------------------------------ */
+
+// Which Ecowitt probe sits in which bed. Saved as one map, the way the
+// API wants it, right when a row changes.
+function KanalerPanel({ canEdit }) {
+  const [d, setD] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const load = async () => {
+    const r = await api("/api/v2/kanaler");
+    const body = r.ok ? await r.json().catch(() => null) : null;
+    if (body && !body.error) setD(body);
+    else setMsg("Fikk ikke lastet kanalene.");
+  };
+  useEffect(() => { load(); }, []);
+
+  const targetOf = (c) => (c.role === "bed" ? c.system_id : c.role === "hygiene" ? "hygiene" : c.role === "room" ? "room" : "none");
+  const change = async (channel, target) => {
+    const channels = d.channels.map((c) => ({ channel: c.channel, label: c.label, target: c.channel === channel ? target : targetOf(c) }));
+    setBusy(true);
+    const r = await api("/api/v2/kanaler", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ channels }) });
+    const body = await r.json().catch(() => null);
+    setBusy(false);
+    if (!r.ok || !body || body.error) { setMsg((body && body.error) || "Kunne ikke lagre kanalen."); return; }
+    setD(body);
+    setMsg("Lagret.");
+  };
+  const ago = (ts) => {
+    const m = Math.round((Date.now() - new Date(ts).getTime()) / 60000);
+    return m < 60 ? m + " min siden" : Math.round(m / 60) + " t siden";
+  };
+
+  return (
+    <>
+      <div className="sechead" style={{ marginTop: 36 }}>
+        <span className="eyebrow">Sensorer</span>
+        <span className="mut" style={{ fontSize: 11 }}>{msg || "Ecowitt · kanal → system"}</span>
+      </div>
+      {!d ? (
+        <div className="mut" style={{ padding: "12px 0" }}>{msg || "Laster …"}</div>
+      ) : !d.channels.length ? (
+        <div className="mut" style={{ fontSize: 12, padding: "12px 0" }}>Ingen sensorer har meldt seg ennå. Kanaler dukker opp her av seg selv så snart gatewayen sender sin første måling.</div>
+      ) : (
+        d.channels.map((c) => {
+          const name = c.role === "room" ? "Rom (GW1200)" : c.role === "bed" ? c.system_name : c.label || c.hint || "";
+          // A bed taken out of service keeps its probe until someone moves it.
+          const retired = c.role === "bed" && !d.systems.some((x) => x.id === c.system_id);
+          const l = c.latest;
+          const reading = c.role === "room"
+            ? (l && l.indoor_temp != null ? fmtVal(l.indoor_temp, "°") + " · " + fmtVal(l.indoor_rh, "%") + " RH" : "ingen målinger ennå")
+            : (l && l.temp != null ? fmtVal(l.temp, "°") + " · " + fmtVal(l.moisture, "%") + " fukt" : "ingen målinger ennå");
+          return (
+            <div className="setrow" key={c.channel}>
+              <div>
+                <div className={"sl" + (c.role === "unassigned" ? " mut" : "")}>CH{c.channel}{name ? " · " + name : ""}</div>
+                <div className="ss">{reading}{l ? " · " + ago(l.ts) : ""}</div>
+              </div>
+              {c.channel === 0 ? (
+                <span className="pill">Romklima</span>
+              ) : (
+                <select
+                  className="select"
+                  style={{ width: "auto", padding: "9px 11px", fontSize: 12 }}
+                  value={targetOf(c)}
+                  disabled={!canEdit || busy}
+                  onChange={(e) => change(c.channel, e.target.value)}
+                >
+                  <option value="none">Ikke tildelt</option>
+                  <option value="hygiene">Hygienisering</option>
+                  {d.systems.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
+                  {retired ? <option value={c.system_id}>{c.system_name} (tatt ut)</option> : null}
+                </select>
+              )}
+            </div>
+          );
+        })
+      )}
+    </>
+  );
+}
+
+// Everything the sensors and the log hold, as files, for a period.
+function EksportPanel() {
+  const [from, setFrom] = useState(isoDaysAgo(30));
+  const [to, setTo] = useState(isoDaysAgo(0));
+  const q = "&from=" + from + "&to=" + to;
+  return (
+    <>
+      <div className="sechead" style={{ marginTop: 36 }}>
+        <span className="eyebrow">Eksport</span>
+        <span className="mut" style={{ fontSize: 11 }}>CSV · norsk tid · desimalkomma</span>
+      </div>
+      <div className="chips" style={{ alignItems: "center", gap: 10 }}>
+        <input className="input" type="date" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+        <span className="mut">–</span>
+        <input className="input" type="date" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+        <a className="btn ghost sm" style={{ textDecoration: "none" }} href={"/api/v2/csv?kind=sensor" + q}>Sensordata</a>
+        <a className="btn ghost sm" style={{ textDecoration: "none" }} href={"/api/v2/csv?kind=logg" + q}>Logg</a>
+      </div>
+    </>
+  );
+}
 
 function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSystem, updateSystem, deleteSystem, addMember, updateMember, deleteMember }) {
   const isAdmin = data.user?.access === "Admin";
@@ -3020,19 +3028,6 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
     />
   );
 
-  // A channel is listed if it has been mapped OR has ever reported a reading.
-  // Driving it off actual traffic means a newly paired sensor appears here on
-  // its own, rather than waiting for someone to know it exists and add it.
-  const sensorChannels = (() => {
-    const byCh = new Map();
-    for (const m of data.sensorMap || []) byCh.set(m.channel, { channel: m.channel, system: m.system });
-    for (const r of data.sensorLatest || []) {
-      const e = byCh.get(r.channel) || { channel: r.channel, system: "" };
-      byCh.set(r.channel, { ...e, reading: r });
-    }
-    return [...byCh.values()].sort((a, b) => a.channel - b.channel);
-  })();
-
   return (
     <div>
       <span className="eyebrow">Konto</span>
@@ -3088,33 +3083,8 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
               </div>
             );
           })}
-          <div className="sechead" style={{ marginTop: 36 }}>
-            <span className="eyebrow">Sensorer</span>
-            <a className="lnk" href="/mer/kanaler" style={{ fontSize: 12 }}>Endre under Kanaler →</a>
-          </div>
-          {sensorChannels.length === 0 ? (
-            <div className="mut" style={{ fontSize: 12, padding: "12px 0" }}>
-              Ingen sensorer har meldt seg ennå.
-            </div>
-          ) : (
-            sensorChannels.map((ch) => {
-              const r = ch.reading;
-              const mins = r ? Math.round((Date.now() - new Date(r.measured_at).getTime()) / 60000) : null;
-              return (
-                <div className="setrow" key={ch.channel}>
-                  <div>
-                    <div className={"sl" + (r && r.assigned ? "" : " mut")}>CH{ch.channel} · {r ? r.system : "ukjent"}</div>
-                    <div className="ss">
-                      {r
-                        ? fmtVal(r.temp, "°") + " · " + fmtVal(r.moisture, "%") + " fukt · " +
-                          (mins < 60 ? mins + " min siden" : Math.round(mins / 60) + " t siden")
-                        : "ingen målinger ennå"}
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
+          <KanalerPanel canEdit={canEdit} />
+          <EksportPanel />
           <div className="sechead" style={{ marginTop: 36 }}>
             <span className="eyebrow">Team</span>
             {isAdmin ? (
@@ -4817,15 +4787,6 @@ const NAV_ARBEID = [
   ["innstillinger", "Innstillinger"],
 ];
 
-// The sensor pages from the new app (full page loads: the two apps never
-// share a page). On a computer this old app is the home page; these are the
-// way across.
-const NAV_NY = [
-  ["/anlegg", "Anlegg"],
-  ["/data", "Data og eksport"],
-  ["/mer/kanaler", "Kanaler"],
-];
-
 function todayLine() {
   const now = new Date();
   const weekday = now.toLocaleDateString("nb-NO", { weekday: "long" });
@@ -4838,7 +4799,9 @@ function todayLine() {
 
 // Computed per call: a module-level constant froze "today" at page load, so a
 // tab left open overnight silently logged readings on yesterday's date.
-const emptyReading = (system = "CFT1") => ({ system, date: isoDaysAgo(0), temp: 22, ph: 7.5, fukt: 65, for_l: 0, notat: "", avvik: false });
+// Temperature and moisture come from the Ecowitt probes now; a blank field
+// is stored as "not measured", never as a made-up number.
+const emptyReading = (system = "CFT1") => ({ system, date: isoDaysAgo(0), temp: "", ph: "", fukt: "", for_l: "", notat: "", avvik: false });
 
 export default function App() {
   const [data, setData] = useState(null);
@@ -4958,6 +4921,7 @@ export default function App() {
       const updated = await res.json();
       setData((d) => ({ ...d, readings: sortReadings(d.readings.map((r) => (r.id === updated.id ? updated : r))) }));
       setEditingReadingId(null);
+      setForm(emptyReading(form.system));
       showToast("Måling oppdatert for " + form.system + " · " + fmtDate(form.date));
       return;
     }
@@ -5267,10 +5231,6 @@ export default function App() {
           {NAV_DRIFT.map(navButton)}
           <div className="navk">Arbeid</div>
           {NAV_ARBEID.map(navButton)}
-          <div className="navk">Sensorer</div>
-          {NAV_NY.map(([href, label]) => (
-            <a key={href} className="navItem" href={href} style={{ textDecoration: "none" }}>{label}</a>
-          ))}
         </nav>
         <div className="sidefoot">
           <b>{user.name} · {user.access}</b>
@@ -5294,7 +5254,7 @@ export default function App() {
             </span>
           </div>
           {view === "brief" && (
-            <BriefView data={data} range={briefRange} setRange={setBriefRange} metric={briefMetric} setMetric={setBriefMetric} canEdit={editable} goToInbox={() => setView("innboks")} goToSeo={() => setView("seo")} />
+            <BriefView data={data} range={briefRange} setRange={setBriefRange} metric={briefMetric} setMetric={setBriefMetric} goToInbox={() => setView("innboks")} goToSeo={() => setView("seo")} goToHygiene={() => setView("hygienisering")} />
           )}
           {view === "innboks" && (
             <InboxView data={data} canEdit={editable} addTask={addTask} setView={setView} showToast={showToast} />
@@ -5319,7 +5279,7 @@ export default function App() {
             />
           )}
           {view === "systemer" && <SystemsView data={data} activeSystem={activeSystem} setActiveSystem={setActiveSystem} />}
-          {view === "foring" && <FeedingBatchesView data={data} canEdit={editable} showToast={showToast} />}
+          {view === "foring" && <FeedingBatchesView data={data} canEdit={editable} showToast={showToast} refreshAll={boot} />}
           {view === "hygienisering" && <HygieneView canEdit={editable} />}
           {view === "seo" && <SeoView canEdit={editable} showToast={showToast} />}
           {view === "sop" && <FilesView data={data} uploadFiles={uploadFiles} removeFile={removeFile} updateFile={updateFile} canEdit={editable} />}

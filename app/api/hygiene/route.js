@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import { json, err, guarded } from "@/lib/http";
-import { parseLoggerExport, evaluate, MIN_PROBES, FAULT, R_FAULT } from "@/lib/hygiene";
+import { parseLoggerExport, evaluate, MIN_PROBES, MAX_GAP_MIN, FAULT, R_FAULT } from "@/lib/hygiene";
 
 export const runtime = "nodejs";
 export const maxDuration = 25;
@@ -10,54 +10,79 @@ async function hygieneTargets(sql) {
   return { minTemp: t ? Number(t.min) : 70, minMinutes: t ? Number(t.max) : 60 };
 }
 
-async function latestPayload(sql) {
-  const imports = await sql`select id, filename, imported_at, imported_by, row_count, note
-    from dash.hygiene_imports order by id desc`;
-  if (!imports.length) return { latest: null, imports: [] };
-  const imp = imports[0];
+// How many imports get the full minute-by-minute evaluation per page load.
+// Each one is a query of up to ~40k rows; older imports are listed without
+// a chart so the page stays well inside the watchdog.
+const EVAL_MAX = 8;
+// Chart resolution: about this many points per channel, whatever the span.
+const TARGET_POINTS = 600;
+
+async function evaluateImport(sql, imp, minTemp, minMinutes) {
   const rows = await sql`select extract(epoch from ts) * 1000 as ts, ch, temp, excluded
     from dash.hygiene_readings where import_id = ${imp.id} order by ts, ch`;
   const readings = rows.map((r) => ({ ts: Number(r.ts), ch: Number(r.ch), temp: r.temp == null ? null : Number(r.temp), excluded: r.excluded || null }));
-  const { minTemp, minMinutes } = await hygieneTargets(sql);
   const { channels, pass, together, excluded, spans, screened } = evaluate(readings, minTemp, minMinutes);
 
-  // Series for the chart: one point per timestamp with temps indexed by
-  // channel. Readings set aside as probe faults are left out (null), so the
-  // chart shows what the verdict was computed from; the spans list says what
-  // was removed and why.
+  // Series for the chart, bucketed so a week of minute data is a few
+  // hundred points per channel. A bucket shows the LOWEST valid reading in
+  // it, because the question the chart answers is "did it hold": a dip the
+  // verdict counted as a break must not be averaged away. A bucket where a
+  // channel has nothing valid, or a hole longer than MAX_GAP_MIN, is null,
+  // a gap in the line.
   const chs = channels.map((c) => c.ch);
-  const byTs = new Map();
-  for (const r of screened) {
-    if (!byTs.has(r.ts)) byTs.set(r.ts, {});
-    byTs.get(r.ts)[r.ch] = r.reason ? null : r.temp;
+  let t0 = Infinity;
+  let t1 = -Infinity;
+  for (const r of screened) { if (r.ts < t0) t0 = r.ts; if (r.ts > t1) t1 = r.ts; }
+  const bucketMinutes = screened.length ? Math.max(1, Math.ceil((t1 - t0) / 60000 / TARGET_POINTS)) : 1;
+  const bucketMs = bucketMinutes * 60000;
+  const buckets = new Map();
+  const prevTs = {};
+  for (const r of [...screened].sort((a, b) => a.ts - b.ts)) {
+    const k = Math.floor(r.ts / bucketMs) * bucketMs;
+    if (!buckets.has(k)) buckets.set(k, { min: {}, broken: {} });
+    const b = buckets.get(k);
+    if (!(r.ch in b.min)) b.min[r.ch] = null;
+    if (r.reason || !Number.isFinite(r.temp)) continue;
+    if (prevTs[r.ch] !== undefined && r.ts - prevTs[r.ch] > MAX_GAP_MIN * 60000) b.broken[r.ch] = true;
+    prevTs[r.ch] = r.ts;
+    b.min[r.ch] = b.min[r.ch] === null ? r.temp : Math.min(b.min[r.ch], r.temp);
   }
-  const series = [...byTs.entries()]
+  const series = [...buckets.entries()]
     .sort((a, b) => a[0] - b[0])
-    .map(([t, temps]) => ({ t, temps: chs.map((c) => (temps[c] !== undefined ? temps[c] : null)) }));
+    .map(([t, b]) => ({ t, temps: chs.map((c) => (b.broken[c] || b.min[c] == null ? null : Math.round(b.min[c] * 10) / 10)) }));
 
   return {
-    latest: {
-      id: imp.id,
-      filename: imp.filename,
-      from: series.length ? series[0].t : null,
-      to: series.length ? series[series.length - 1].t : null,
-      channels,
-      pass,
-      together,
-      excluded,
-      spans: spans.map((s) => ({ ch: s.ch, from: s.from, to: s.to, count: s.count, min: s.min, max: s.max, reasons: s.reasons })),
-      minTemp,
-      minMinutes,
-      minProbes: MIN_PROBES,
-      series,
-    },
-    imports,
+    ...imp,
+    analysed: true,
+    from: screened.length ? t0 : null,
+    to: screened.length ? t1 : null,
+    channels,
+    pass,
+    together,
+    excluded,
+    spans: spans.map((s) => ({ ch: s.ch, from: s.from, to: s.to, count: s.count, min: s.min, max: s.max, reasons: s.reasons })),
+    bucketMinutes,
+    series,
   };
 }
 
-export const GET = guarded(async () => {
+// Every import, newest first, the newest `limit` of them evaluated (the
+// Brief asks for one).
+async function payload(sql, limit) {
+  const imports = await sql`select id, filename, imported_at, imported_by, row_count, note
+    from dash.hygiene_imports order by id desc`;
+  const { minTemp, minMinutes } = await hygieneTargets(sql);
+  const out = [];
+  for (const imp of imports) {
+    out.push(out.length < limit ? await evaluateImport(sql, imp, minTemp, minMinutes) : { ...imp, analysed: false });
+  }
+  return { minTemp, minMinutes, minProbes: MIN_PROBES, imports: out };
+}
+
+export const GET = guarded(async (req) => {
   const sql = db();
-  return json(await latestPayload(sql));
+  const limit = Math.min(EVAL_MAX, Math.max(1, Math.round(Number(new URL(req.url).searchParams.get("limit"))) || EVAL_MAX));
+  return json(await payload(sql, limit));
 });
 
 export const POST = guarded(

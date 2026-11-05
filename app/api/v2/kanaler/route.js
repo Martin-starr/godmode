@@ -54,6 +54,7 @@ async function payload(sql) {
       channel: c.channel,
       role: c.role,
       system_id: c.system_id || null,
+      system_name: c.system_name || null,
       label: c.label || null,
       hint: ecowittName(rawBy.get(c.channel)),
       latest: l ? { ts: l.ts, temp: l.temp, ec: l.ec, moisture: l.moisture, indoor_temp: l.indoor_temp, indoor_rh: l.indoor_rh } : null,
