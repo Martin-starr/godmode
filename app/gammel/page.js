@@ -2931,6 +2931,83 @@ function KanalerPanel({ canEdit }) {
   );
 }
 
+// Links to the public status page: one per recipient, revocable, with a
+// count of visits so Martin sees who looked.
+function StatusLinksPanel({ canEdit }) {
+  const [links, setLinks] = useState(null);
+  const [label, setLabel] = useState("");
+  const [msg, setMsg] = useState("");
+  const apply = async (res, fallback) => {
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body || body.error) { setMsg((body && body.error) || fallback); return; }
+    setLinks(body.links);
+    setMsg("");
+  };
+  useEffect(() => { api("/api/status-links").then((r) => apply(r, "Fikk ikke lastet lenkene.")); }, []);
+  const create = async () => {
+    if (!label.trim()) return;
+    await apply(await api("/api/status-links", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label }) }), "Kunne ikke lage lenken.");
+    setLabel("");
+  };
+  const revoke = async (l) => {
+    if (!window.confirm("Trekke tilbake lenken til " + l.label + "? Siden slutter å virke for dem med én gang.")) return;
+    await apply(await api("/api/status-links?token=" + encodeURIComponent(l.token), { method: "DELETE" }), "Kunne ikke trekke tilbake.");
+  };
+  const url = (l) => window.location.origin + "/status/" + l.token;
+  const copy = async (l) => {
+    try { await navigator.clipboard.writeText(url(l)); setMsg("Lenken til " + l.label + " er kopiert."); }
+    catch { setMsg(url(l)); }
+  };
+  const open = (links || []).filter((l) => !l.revoked_at);
+  const gone = (links || []).filter((l) => l.revoked_at);
+  return (
+    <>
+      <div className="sechead" style={{ marginTop: 36 }}>
+        <span className="eyebrow">Offentlig status</span>
+        <span className="mut" style={{ fontSize: 11 }}>{msg || "Innsyn for NIBIO, Mattilsynet og andre · bare med lenke"}</span>
+      </div>
+      {canEdit ? (
+        <div className="chips" style={{ alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <input className="input" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} placeholder="Hvem er lenken til, f.eks. NIBIO" value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") create(); }} />
+          <button className="btn ghost sm" onClick={create} disabled={!label.trim()}>+ Ny lenke</button>
+        </div>
+      ) : null}
+      {links === null ? (
+        <div className="mut" style={{ padding: "12px 0" }}>Laster …</div>
+      ) : !links.length ? (
+        <div className="mut" style={{ fontSize: 12, padding: "12px 0" }}>Ingen lenker ennå. Lag én per mottaker, så kan du trekke tilbake én uten å ta de andre.</div>
+      ) : (
+        <>
+          {open.map((l) => (
+            <div className="setrow" key={l.token}>
+              <div>
+                <div className="sl">{l.label}</div>
+                <div className="ss">
+                  {l.views} {l.views === 1 ? "visning" : "visninger"}
+                  {l.last_seen_at ? " · sist " + fmtReceived(l.last_seen_at) : " · ikke åpnet ennå"} · laget {fmtDate(String(l.created_at).slice(0, 10))}
+                </div>
+              </div>
+              <span className="trange">
+                <a className="lnk" href={"/status/" + l.token} target="_blank" rel="noreferrer">Åpne</a>
+                <button className="lnk" onClick={() => copy(l)}>Kopier lenke</button>
+                {canEdit ? <button className="lnk g" onClick={() => revoke(l)}>Trekk tilbake</button> : null}
+              </span>
+            </div>
+          ))}
+          {gone.map((l) => (
+            <div className="setrow" key={l.token} style={{ opacity: 0.55 }}>
+              <div>
+                <div className="sl">{l.label}</div>
+                <div className="ss">trukket tilbake {fmtDate(String(l.revoked_at).slice(0, 10))} · {l.views} {l.views === 1 ? "visning" : "visninger"}</div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
 // Everything the sensors and the log hold, as files, for a period.
 function EksportPanel() {
   const [from, setFrom] = useState(isoDaysAgo(30));
@@ -3084,6 +3161,7 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
             );
           })}
           <KanalerPanel canEdit={canEdit} />
+          <StatusLinksPanel canEdit={canEdit} />
           <EksportPanel />
           <div className="sechead" style={{ marginTop: 36 }}>
             <span className="eyebrow">Team</span>
