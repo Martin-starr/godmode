@@ -43,7 +43,8 @@ function LineChart({ series, from, to, band, line, base, gapMs }) {
   if (!Number.isFinite(lo)) { lo = 0; hi = 1; }
   lo = Math.floor(lo) - 2;
   hi = Math.ceil(hi) + 2;
-  const x = (t) => ((t - from) / Math.max(1, to - from)) * 1000;
+  // A bucket that straddles `from` starts a little before it; keep it inside.
+  const x = (t) => Math.min(1000, Math.max(0, ((t - from) / Math.max(1, to - from)) * 1000));
   const y = (v) => h - ((v - lo) / (hi - lo)) * h;
   const ticks = [0, 1, 2, 3, 4].map((i) => lo + ((hi - lo) * i) / 4);
   const lines = [];
