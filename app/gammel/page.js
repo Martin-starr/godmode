@@ -2603,7 +2603,7 @@ function EntryCard({ id, open, onToggle, title, sub, right, canEdit, initial, fo
               ) : null}
             </>
           ) : (
-            <div className="mut">{readOnlyNote || "Kun lesing."}</div>
+            <div className="mut">{canEdit ? readOnlyNote : "Kun lesing — du kan ikke endre."}</div>
           )}
         </div>
       ) : null}
@@ -2670,8 +2670,14 @@ function FeedingBatchesView({ data, canEdit, showToast, refreshAll }) {
     refreshAll();
     return true;
   };
+  // A feeding that sits on a log entry with a pH is just zeroed, so the
+  // measurement survives; an entry that was only a feeding is deleted.
   const removeFeed = async (rid) => {
-    const res = await api("/api/readings/" + rid, { method: "DELETE" });
+    const r = feed.rows.find((x) => x.rid === rid);
+    const alone = !r || (r.temp == null && r.ph == null && r.fukt == null);
+    const res = alone
+      ? await api("/api/readings/" + rid, { method: "DELETE" })
+      : await api("/api/readings/" + rid, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(feedPayload({ ...r, for_l: 0 }, r)) });
     if (!res.ok) return fail(res, "Kunne ikke slette.");
     setOpenKey(null);
     loadFeed(feedDays);
@@ -4905,6 +4911,7 @@ export default function App() {
       const updated = await res.json();
       setData((d) => ({ ...d, readings: sortReadings(d.readings.map((r) => (r.id === updated.id ? updated : r))) }));
       setEditingReadingId(null);
+      setForm(emptyReading(form.system));
       showToast("Måling oppdatert for " + form.system + " · " + fmtDate(form.date));
       return;
     }
