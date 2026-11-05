@@ -2226,6 +2226,8 @@ const fmtD = (ms) => {
   return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getFullYear()).slice(2);
 };
 const nbT = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
+// A timestamp's calendar day where the reader sits, dd.mm.yy.
+const fmtLocalDay = (ts) => { const d = new Date(ts); return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getFullYear()).slice(2); };
 
 function useHygiene(limit) {
   const [data, setData] = useState(null);
@@ -2325,7 +2327,7 @@ function HygieneCard({ imp, rules, open, onToggle, canEdit, onDelete }) {
           <div className="setrow" style={{ borderBottom: 0, paddingBottom: 0 }}>
             <div>
               <div className="sl">{imp.filename}</div>
-              <div className="ss">Importert {fmtDate(String(imp.imported_at).slice(0, 10))} · {imp.imported_by} · {imp.row_count} punkter</div>
+              <div className="ss">Importert {fmtLocalDay(imp.imported_at)} · {imp.imported_by} · {imp.row_count} punkter</div>
             </div>
             {canEdit ? (
               <button className="lnk g" onClick={() => { if (window.confirm("Slette importen «" + imp.filename + "»?")) onDelete(imp.id); }}>Slett</button>
@@ -2453,7 +2455,7 @@ function HygieneView({ canEdit }) {
                     <tr key={imp.id}>
                       <td>
                         <span className="sy">{imp.filename}</span>
-                        <div className="dt">{fmtDate(String(imp.imported_at).slice(0, 10))} · {imp.imported_by}</div>
+                        <div className="dt">{fmtLocalDay(imp.imported_at)} · {imp.imported_by}</div>
                       </td>
                       <td className="num">{imp.row_count} punkter</td>
                       <td className="num rt">
@@ -2491,14 +2493,19 @@ const sysOptions = (systems, blank) => (
 
 // Fields of a feeding or a batch, laid out the same way in the "new" form
 // and inside an opened card.
-function FeedFields({ f, setF, systems }) {
+const ALLE = "__alle__";
+
+function FeedFields({ f, setF, systems, allowAll }) {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return (
     <>
       <div className="f2" style={{ marginBottom: 12 }}>
         <div className="field" style={{ marginBottom: 0 }}>
           <label>System</label>
-          <select className="select" value={f.system} onChange={set("system")}>{sysOptions(systems, true)}</select>
+          <select className="select" value={f.system} onChange={set("system")}>
+            {allowAll ? <option value={ALLE}>Alle i drift ({systems.length}) · samme mengde til hvert</option> : null}
+            {sysOptions(systems, true)}
+          </select>
         </div>
         <div className="field" style={{ marginBottom: 0 }}>
           <label>Dato</label>
@@ -2650,15 +2657,26 @@ function FeedingBatchesView({ data, canEdit, showToast, refreshAll }) {
     system: f.system, date: f.date, for_l: f.for_l, notat: f.notat,
     temp: base.temp ?? "", ph: base.ph ?? "", fukt: base.fukt ?? "", avvik: !!base.avvik,
   });
+  // "Alle i drift" is one entry per active system with the same amount,
+  // written one after another; the first failure stops and says so.
   const submitFeed = async () => {
     if (!feedForm.system || !feedForm.date || !(Number(feedForm.for_l) > 0) || busy) return;
     setBusy(true);
-    const res = await api("/api/readings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(feedPayload(feedForm)) });
+    const targets = feedForm.system === ALLE ? active : [feedForm.system];
+    let done = 0;
+    for (const system of targets) {
+      const res = await api("/api/readings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(feedPayload({ ...feedForm, system })) });
+      if (!res.ok) {
+        setBusy(false);
+        if (done) loadFeed(feedDays);
+        return fail(res, "Kunne ikke lagre fôringen for " + system + (done ? " (" + done + " lagret)" : "") + ".");
+      }
+      done++;
+    }
     setBusy(false);
-    if (!res.ok) return fail(res, "Kunne ikke lagre fôringen.");
     setFeedForm(EMPTY_FEED);
     setAddingFeed(false);
-    if (showToast) showToast("Fôring loggført · " + feedForm.system + " · " + fmtDate(feedForm.date));
+    if (showToast) showToast("Fôring loggført · " + (targets.length > 1 ? targets.length + " systemer" : targets[0]) + " · " + fmtDate(feedForm.date));
     // A backdated feeding must not vanish behind the range buttons.
     const age = Math.round((Date.parse(isoDaysAgo(0)) - Date.parse(feedForm.date)) / 86400e3);
     const range = FEED_RANGES.find(([v]) => Number(v) >= age) || FEED_RANGES[FEED_RANGES.length - 1];
@@ -2747,7 +2765,7 @@ function FeedingBatchesView({ data, canEdit, showToast, refreshAll }) {
         <>
           {addingFeed ? (
             <div className="card" style={{ padding: 18, marginBottom: 20 }}>
-              <FeedFields f={feedForm} setF={setFeedForm} systems={active} />
+              <FeedFields f={feedForm} setF={setFeedForm} systems={active} allowAll />
               <button className="btn sm" disabled={!feedForm.system || !(Number(feedForm.for_l) > 0) || busy} onClick={submitFeed}>Lagre fôring</button>
             </div>
           ) : null}
@@ -2931,6 +2949,83 @@ function KanalerPanel({ canEdit }) {
   );
 }
 
+// Links to the public status page: one per recipient, revocable, with a
+// count of visits so Martin sees who looked.
+function StatusLinksPanel({ canEdit }) {
+  const [links, setLinks] = useState(null);
+  const [label, setLabel] = useState("");
+  const [msg, setMsg] = useState("");
+  const apply = async (res, fallback) => {
+    const body = await res.json().catch(() => null);
+    if (!res.ok || !body || body.error) { setMsg((body && body.error) || fallback); return; }
+    setLinks(body.links);
+    setMsg("");
+  };
+  useEffect(() => { api("/api/status-links").then((r) => apply(r, "Fikk ikke lastet lenkene.")); }, []);
+  const create = async () => {
+    if (!label.trim()) return;
+    await apply(await api("/api/status-links", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ label }) }), "Kunne ikke lage lenken.");
+    setLabel("");
+  };
+  const revoke = async (l) => {
+    if (!window.confirm("Trekke tilbake lenken til " + l.label + "? Siden slutter å virke for dem med én gang.")) return;
+    await apply(await api("/api/status-links?token=" + encodeURIComponent(l.token), { method: "DELETE" }), "Kunne ikke trekke tilbake.");
+  };
+  const url = (l) => window.location.origin + "/status/" + l.token;
+  const copy = async (l) => {
+    try { await navigator.clipboard.writeText(url(l)); setMsg("Lenken til " + l.label + " er kopiert."); }
+    catch { setMsg(url(l)); }
+  };
+  const open = (links || []).filter((l) => !l.revoked_at);
+  const gone = (links || []).filter((l) => l.revoked_at);
+  return (
+    <>
+      <div className="sechead" style={{ marginTop: 36 }}>
+        <span className="eyebrow">Offentlig status</span>
+        <span className="mut" style={{ fontSize: 11 }}>{msg || "Innsyn for NIBIO, Mattilsynet og andre · bare med lenke"}</span>
+      </div>
+      {canEdit ? (
+        <div className="chips" style={{ alignItems: "center", gap: 10, marginBottom: 6 }}>
+          <input className="input" style={{ width: "auto", padding: "9px 11px", fontSize: 12 }} placeholder="Hvem er lenken til, f.eks. NIBIO" value={label} onChange={(e) => setLabel(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") create(); }} />
+          <button className="btn ghost sm" onClick={create} disabled={!label.trim()}>+ Ny lenke</button>
+        </div>
+      ) : null}
+      {links === null ? (
+        <div className="mut" style={{ padding: "12px 0" }}>Laster …</div>
+      ) : !links.length ? (
+        <div className="mut" style={{ fontSize: 12, padding: "12px 0" }}>Ingen lenker ennå. Lag én per mottaker, så kan du trekke tilbake én uten å ta de andre.</div>
+      ) : (
+        <>
+          {open.map((l) => (
+            <div className="setrow" key={l.token}>
+              <div>
+                <div className="sl">{l.label}</div>
+                <div className="ss">
+                  {l.views} {l.views === 1 ? "visning" : "visninger"}
+                  {l.last_seen_at ? " · sist " + fmtReceived(l.last_seen_at) : " · ikke åpnet ennå"} · laget {fmtLocalDay(l.created_at)}
+                </div>
+              </div>
+              <span className="trange">
+                <a className="lnk" href={"/status/" + l.token} target="_blank" rel="noreferrer">Åpne</a>
+                <button className="lnk" onClick={() => copy(l)}>Kopier lenke</button>
+                {canEdit ? <button className="lnk g" onClick={() => revoke(l)}>Trekk tilbake</button> : null}
+              </span>
+            </div>
+          ))}
+          {gone.map((l) => (
+            <div className="setrow" key={l.token} style={{ opacity: 0.55 }}>
+              <div>
+                <div className="sl">{l.label}</div>
+                <div className="ss">trukket tilbake {fmtLocalDay(l.revoked_at)} · {l.views} {l.views === 1 ? "visning" : "visninger"}</div>
+              </div>
+            </div>
+          ))}
+        </>
+      )}
+    </>
+  );
+}
+
 // Everything the sensors and the log hold, as files, for a period.
 function EksportPanel() {
   const [from, setFrom] = useState(isoDaysAgo(30));
@@ -3084,6 +3179,7 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
             );
           })}
           <KanalerPanel canEdit={canEdit} />
+          {canEdit ? <StatusLinksPanel canEdit={canEdit} /> : null}
           <EksportPanel />
           <div className="sechead" style={{ marginTop: 36 }}>
             <span className="eyebrow">Team</span>
