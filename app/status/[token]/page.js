@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { statusPayload } from "@/lib/status";
+import { statusPayload, chartChoice, chartData } from "@/lib/status";
+import { RANGES, RANGE_LABEL } from "@/lib/curves";
 import { validToken, noteVisit } from "@/lib/status-link";
 import { osloStamp } from "@/lib/time";
 import StatusTools from "../StatusTools";
@@ -108,6 +109,8 @@ export default async function StatusPage({ params, searchParams }) {
   // A wall screen reloading every five minutes is not a visit.
   if (!tv) await noteVisit(sql, params.token);
   const d = await statusPayload(sql);
+  const choice = chartChoice(searchParams);
+  const chart = await chartData(sql, choice, d.beds.map((b) => b.name));
 
   const t = d.targets;
   const rules = d.hygiene.rules;
@@ -129,7 +132,35 @@ export default async function StatusPage({ params, searchParams }) {
         ? `Alle ${live.length} bed med sensor innenfor ${range}.`
         : `${outside} av ${live.length} bed utenfor ${range}.`;
 
-  const curveSeries = withSensor.map((b, i) => ({ name: b.name, color: COLORS[i % 8], dash: DASH[i % 8], points: b.curve }));
+  // The chart's buttons are links: the page has no login and must print,
+  // so nothing depends on a script. Each keeps the other two choices.
+  const href = (patch) => {
+    const q = { range: choice.range, source: choice.source, metric: choice.metric, ...patch };
+    if (q.metric === "ph") q.source = "manuell";
+    return `/status/${params.token}?range=${q.range}&source=${q.source}&metric=${q.metric}${tv ? "&tv=1" : ""}#graf`;
+  };
+  const Toggle = ({ items, on, patchKey }) => (
+    <span className="st-toggle">
+      {items.map(([key, label, off]) => (
+        off
+          ? <span key={key} className="st-tbtn off" title="pH måles bare manuelt">{label}</span>
+          : <a key={key} className={"st-tbtn" + (on === key ? " on" : "")} href={href({ [patchKey]: key })}>{label}</a>
+      ))}
+    </span>
+  );
+  const sensor = choice.source === "sensor";
+  const order = new Map(d.beds.map((b, i) => [b.name, i]));
+  const curveSeries = chart.series
+    .slice()
+    .sort((a, b) => (order.get(a.name) ?? 99) - (order.get(b.name) ?? 99))
+    .map((ser, i) => ({ name: ser.name, color: COLORS[i % 8], dash: DASH[i % 8], points: ser.points }));
+  const vals = curveSeries.flatMap((ser) => ser.points.map((p) => p[1]));
+  const unit = choice.metric === "temp" ? " °C" : choice.metric === "fukt" ? " %" : "";
+  const fmtStat = (v) => (choice.metric === "ph" ? nb(v, 1) : nb(v, 0)) + unit;
+  const stats = vals.length ? { min: fmtStat(Math.min(...vals)), max: fmtStat(Math.max(...vals)), avg: fmtStat(vals.reduce((a, b) => a + b, 0) / vals.length) } : null;
+  const bucketLabel = chart.bucketMinutes === 60 ? "snitt per time" : chart.bucketMinutes === 360 ? "snitt per 6 timer" : sensor ? "snitt per døgn" : "én verdi per loggført dag";
+  const bandFor = choice.metric === "temp" ? t.temp : choice.metric === "ph" ? t.ph : sensor ? null : t.fukt;
+  const base = choice.metric === "temp" ? [15, 30] : choice.metric === "ph" ? [6.5, 8.5] : sensor ? null : [55, 90];
   const hygSeries = hyg ? hyg.channels.map((c, i) => ({ name: "Sonde " + c.ch, color: COLORS[i % 8], dash: i >= 3 ? "5 4" : "", points: hyg.series.map((p) => [p.t, p.temps[i]]) })) : [];
   const ruleText = `alle sonder som logger må holde ${rules.minTemp} °C i ${rules.minMinutes} min samtidig, og minst to`;
   const val = (b, v, unit, dec) => (b.channel == null ? "–" : b.stale ? "–" : nb(v, dec) + unit);
@@ -186,14 +217,26 @@ export default async function StatusPage({ params, searchParams }) {
         </table>
       </section>
 
-      <section>
-        <div className="st-sechead"><span className="st-eyebrow">Temperatur · siste {d.curve.days} dager · snitt per time</span><span className="st-mut">{t.temp ? "stiplet: mål " + range : ""}</span></div>
-        {curveSeries.some((s) => s.points.length) ? (
+      <section id="graf">
+        <div className="st-sechead st-wrap">
+          <span className="st-eyebrow">{sensor ? "Sensorer" : "Produksjonslogger"} · {bucketLabel} · {RANGE_LABEL[choice.range]}</span>
+          <Toggle items={RANGES.map((r) => [r, r])} on={choice.range} patchKey="range" />
+        </div>
+        <div className="st-sechead st-wrap">
+          <span className="st-mut">
+            {sensor && choice.metric === "fukt" ? "Sensorfukt er ukalibrert for kompost · følg trenden, ikke tallet" : bandFor ? `stiplet: mål ${nb(bandFor.min, choice.metric === "ph" ? 1 : 0)}–${nb(bandFor.max, choice.metric === "ph" ? 1 : 0)}${unit}` : ""}
+          </span>
+          <span className="st-wrap">
+            <Toggle items={[["manuell", "Manuell"], ["sensor", "Sensor", choice.metric === "ph"]]} on={choice.source} patchKey="source" />
+            <Toggle items={[["temp", "Temp"], ["ph", "pH"], ["fukt", "Fukt"]]} on={choice.metric} patchKey="metric" />
+          </span>
+        </div>
+        {curveSeries.some((ser) => ser.points.length) ? (
           <>
-            <LineChart series={curveSeries} from={d.curve.from} to={d.curve.to} band={t.temp ? [t.temp.min, t.temp.max] : null} base={[15, 30]} gapMs={2 * 3600e3} />
-            <Legend items={curveSeries} />
+            <LineChart series={curveSeries} from={chart.from} to={chart.to} band={bandFor ? [bandFor.min, bandFor.max] : null} base={base} gapMs={sensor ? Math.max(2 * 3600e3, 2 * chart.bucketMinutes * 60000) : 8 * 86400e3} />
+            <Legend items={curveSeries} right={stats ? `Min ${stats.min} · Snitt ${stats.avg} · Maks ${stats.max}` : ""} />
           </>
-        ) : <p className="st-mut">Ingen sensordata i perioden.</p>}
+        ) : <p className="st-mut">{sensor ? "Ingen sensordata i perioden. Sensorene startet 15. september 2026." : "Ingen loggførte verdier i perioden."}</p>}
       </section>
 
       <section>

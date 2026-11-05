@@ -55,6 +55,13 @@ section { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 22px
 .st-ylab { position: absolute; left: 0; top: 0; bottom: 20px; width: 30px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .st-ylab span { position: absolute; right: 0; transform: translateY(-50%); }
 .st-xlab { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.st-toggle { display: inline-flex; border: 1px solid var(--line); border-radius: 2px; overflow: hidden; }
+.st-tbtn { padding: 7px 13px; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: var(--muted); border-right: 1px solid var(--line2); text-decoration: none; }
+.st-tbtn:last-child { border-right: 0; }
+.st-tbtn.on { background: var(--navy); color: #fff; }
+.st-tbtn.off { opacity: 0.4; }
+.st-wrap { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.st-sechead.st-wrap { justify-content: space-between; margin-bottom: 12px; }
 .st-legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; font-size: 11px; color: var(--muted); }
 .st-lg { display: flex; align-items: center; gap: 7px; }
 .st-sw { display: inline-block; width: 18px; height: 2px; }
@@ -91,12 +98,13 @@ section { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 22px
   .st-headmeta { text-align: left; }
   .st-tbl { font-size: 12px; }
   .st-tbl .ec { display: none; }
+  .st-tbtn { padding: 9px 10px; }
   .st-chart svg { height: 200px; }
 }
 @media print {
   body { background: #fff; }
   .st { max-width: none; padding: 0; }
-  .st-btn, .st-footlinks { display: none; }
+  .st-btn, .st-footlinks, .st-toggle { display: none; }
   .st-tbl tr.stale td { font-style: italic; }
   section { break-inside: avoid; }
 }
