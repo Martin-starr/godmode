@@ -12,6 +12,6 @@ export const GET = guarded(async (req) => {
   const metric = sp.get("metric") || "temp";
   if (metric !== "temp" && metric !== "fukt") return err("Ugyldig måling.", 400);
   const days = Math.round(Number(sp.get("days")));
-  if (!Number.isFinite(days) || days < 1 || days > 800) return err("Ugyldig periode.", 400);
+  if (!Number.isFinite(days) || days < 1 || days > 2000) return err("Ugyldig periode.", 400);
   return json(await bedCurves(db(), { days, metric }));
 });

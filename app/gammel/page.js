@@ -56,7 +56,8 @@ function rangeDays(range) {
     const jan1 = new Date(now.getFullYear(), 0, 1);
     return Math.max(7, Math.round((now - jan1) / 864e5) + 1);
   }
-  return 365;
+  // ALL reaches the first log, 7 July 2025 (same constant as lib/v2).
+  return Math.max(365, Math.round((Date.now() - Date.parse("2025-07-07")) / 864e5) + 1);
 }
 
 // Local (Norwegian) calendar date — toISOString() is UTC and puts 00:00–02:00
