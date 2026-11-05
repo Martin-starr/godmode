@@ -4771,6 +4771,15 @@ const NAV_ARBEID = [
   ["innstillinger", "Innstillinger"],
 ];
 
+// The sensor pages from the new app (full page loads: the two apps never
+// share a page). On a computer this old app is the home page; these are the
+// way across.
+const NAV_NY = [
+  ["/anlegg", "Anlegg"],
+  ["/data", "Data og eksport"],
+  ["/mer/kanaler", "Kanaler"],
+];
+
 function todayLine() {
   const now = new Date();
   const weekday = now.toLocaleDateString("nb-NO", { weekday: "long" });
@@ -5214,6 +5223,10 @@ export default function App() {
           {NAV_DRIFT.map(navButton)}
           <div className="navk">Arbeid</div>
           {NAV_ARBEID.map(navButton)}
+          <div className="navk">Sensorer</div>
+          {NAV_NY.map(([href, label]) => (
+            <a key={href} className="navItem" href={href} style={{ textDecoration: "none" }}>{label}</a>
+          ))}
         </nav>
         <div className="sidefoot">
           <b>{user.name} · {user.access}</b>
