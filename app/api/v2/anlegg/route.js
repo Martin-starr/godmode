@@ -14,6 +14,10 @@ export const dynamic = "force-dynamic";
 //  - extra cards for the hygienisering channel and for channels nobody has
 //    assigned yet, so a live sensor is never invisible
 //  - the room line from channel 0
+// The SOP's hygienisation gate (55 °C for three days); the Center 374 record
+// is judged separately by lib/hygiene, this is only the live tank.
+const HYG_MIN = 55;
+
 export const GET = guarded(async () => {
   const sql = db();
   const now = new Date();
@@ -30,6 +34,24 @@ export const GET = guarded(async () => {
     from public.logs where ph is not null
     order by system, logged_at desc nulls last, created_at desc`;
   const [{ total }] = await sql`select count(*)::int as total from public.sensor_readings`;
+  // The hygiene tank: how long the current stretch at or above the SOP's
+  // 55 °C has lasted, from the newest reading backwards. Gaps over two
+  // hours end it; so does the first reading below.
+  const runs = new Map();
+  for (const ch of channels.filter((c) => c.role === "hygiene")) {
+    const rows = await sql`select ts, soil_temp_c from public.sensor_readings
+      where channel = ${ch.channel} and soil_temp_c is not null and ts > now() - interval '10 days'
+      order by ts desc limit 2000`;
+    let since = null;
+    let prev = null;
+    for (const r of rows) {
+      const t = new Date(r.ts).getTime();
+      if (Number(r.soil_temp_c) < HYG_MIN || (prev !== null && prev - t > 2 * 3600e3)) break;
+      since = t;
+      prev = t;
+    }
+    runs.set(ch.channel, since ? { since: new Date(since).toISOString(), hours: Math.round((now.getTime() - since) / 3600e3), min_temp: HYG_MIN } : null);
+  }
 
   const latestBy = new Map(latest.map((r) => [r.channel, r]));
   const sparkBy = new Map();
@@ -76,7 +98,7 @@ export const GET = guarded(async () => {
     }
   }
   for (const ch of channels) {
-    if (ch.role === "hygiene") cards.push({ key: "kanal-" + ch.channel, kind: "hygiene", name: channelTitle(ch), category: null, ...cardFor(ch), ph: null });
+    if (ch.role === "hygiene") cards.push({ key: "kanal-" + ch.channel, kind: "hygiene", name: channelTitle(ch), category: null, ...cardFor(ch), ph: null, run: runs.get(ch.channel) || null });
   }
   for (const ch of channels) {
     if (ch.role === "unassigned" && ch.channel > 0) {

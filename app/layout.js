@@ -2,6 +2,10 @@ export const metadata = {
   title: "Verminord",
   description: "Drift · Verminord AS",
   applicationName: "Verminord",
+  // The phone app installs to the home screen and opens full screen.
+  manifest: "/manifest.webmanifest",
+  appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "Verminord" },
+  icons: { apple: "/icons/apple-touch-icon.png" },
 };
 
 export const viewport = {

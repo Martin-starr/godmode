@@ -72,44 +72,27 @@ export default function AnleggView() {
         ? `Alle ${measured} bed med sensor innenfor 15–25 °C.`
         : `${outside} bed utenfor 15–25 °C.`;
 
+  const hygiene = d.cards.filter((c) => c.kind === "hygiene");
+
   return (
     <div className="stack-l">
       <header className="stack">
-        <div className="topline">
-          <h1 className="h1">
-            <span className="eyebrow" aria-hidden="true">Oversikt · Anlegg</span>
-            Anlegg<span className="desk-only">.</span><span className="li desk-only"> {tail}</span>
-          </h1>
-          <span className="small num phone-only">{d.updated_at ? "Oppdatert " + fmtWhen(d.updated_at) : "Ingen måling ennå"}</span>
-        </div>
-        <p className="herosub desk-only num">
-          Aktive: {systems.length} systemer · {reporting} av {probes.length} sensorer rapporterer
+        <h1 className={"h1" + (outside > 0 || (bedsWithSensor && !measured) ? " warn" : "")}>
+          <span className="eyebrow" aria-hidden="true">Oversikt · Nå</span>
+          {tail}
+        </h1>
+        <p className="lead num">
+          {d.updated_at ? "Sist målt " + fmtWhen(d.updated_at) : "Ingen måling ennå"}
+          {d.room ? ` · Rom ${fmtNum(d.room.temp, 1)} °C · ${fmtNum(d.room.rh, 0)} % RH` : ""}
+          {" · "}{reporting} av {probes.length} sonder rapporterer
         </p>
-        <p className="lead num phone-only">
-          {d.room
-            ? `Rom ${fmtNum(d.room.temp, 1)} °C · ${fmtNum(d.room.rh, 0)} % RH · ${fmtWhen(d.room.ts)}`
-            : "Rom — ingen måling"}
-        </p>
-        <hr className="rule desk-only" />
-        <div className="kpis">
-          <Kpi k="Sensorer" v={String(reporting)} c={`av ${probes.length} rapporterer`} />
-          <Kpi
-            k="Utenfor 15–25 °C"
-            v={measured ? String(outside) : "—"}
-            gold={outside > 0}
-            c={measured ? `av ${measured} bed med fersk måling` : bedsWithSensor ? "ingen fersk måling" : "ingen bed tildelt ennå"}
-          />
-          <Kpi
-            k="Rom"
-            v={d.room ? fmtNum(d.room.temp, 1) + " °C" : "—"}
-            c={d.room ? `${fmtNum(d.room.rh, 0)} % RH · auto` : "ingen måling"}
-          />
-          <Kpi
-            k="Sist målt"
-            v={d.updated_at ? fmtTime(d.updated_at).replace("kl ", "") : "—"}
-            c={d.updated_at ? `${fmtDay(d.updated_at)} · auto` : "ingen måling"}
-          />
-        </div>
+        {hygiene.map((h) => (
+          <p key={h.key} className="lead num">
+            {h.name}: {h.run
+              ? `kjøring pågår · ${h.run.hours} t over ${h.run.min_temp} °C · nå ${fmtNum(h.temp, 1)} °C`
+              : h.temp != null ? `ingen kjøring · ${fmtNum(h.temp, 1)} °C` : "ingen måling"}
+          </p>
+        ))}
         {!d.configured ? <p className="notice">{d.message}</p> : null}
         <div className="row">
           <button className="btn ghost" onClick={refresh} disabled={busy} aria-busy={busy}>
@@ -117,7 +100,6 @@ export default function AnleggView() {
           </button>
         </div>
       </header>
-
       <section className="cards" aria-label="Systemer">
         {d.cards.map((c) => <SystemCard key={c.key} card={c} />)}
       </section>
@@ -125,18 +107,8 @@ export default function AnleggView() {
   );
 }
 
-function Kpi({ k, v, c, gold }) {
-  return (
-    <div className="kpi">
-      <div className="k">{k}</div>
-      <div className={"v" + (gold ? " gold" : "")}>{v}</div>
-      <div className="c">{c}</div>
-    </div>
-  );
-}
-
 function SystemCard({ card }) {
-  const href = card.kind === "unassigned" ? "/mer/kanaler" : "/anlegg/" + card.key;
+  const href = "/anlegg/" + card.key;
   const dot = (card.kind === "system" || card.kind === "extra") && card.temp != null
     ? (card.temp >= TEMP_OK[0] && card.temp <= TEMP_OK[1] ? "ok" : "warn")
     : null;
@@ -146,7 +118,7 @@ function SystemCard({ card }) {
     <Link href={href} className="card">
       <div className="card-h">
         <span className="name">{card.name}</span>
-        {card.kind === "unassigned" && !card.label ? <span className="small">Velg bed under Kanaler</span>
+        {card.kind === "unassigned" && !card.label ? <span className="small">Velg bed på PC, Innstillinger</span>
           : card.category === "precompost" ? <span className="small">prekompost</span>
           : card.label && card.kind === "hygiene" ? null : null}
       </div>
@@ -164,7 +136,7 @@ function SystemCard({ card }) {
           <span className="small num">
             {card.kind === "system"
               ? (card.ph ? `pH ${fmtNum(card.ph.value, 1)} · manuell${card.ph.handheld ? " · pinnemåler" : ""} · ${fmtDay(card.ph.at)}` : "pH — ingen måling")
-              : "7 dager"}
+              : card.kind === "hygiene" && card.run ? `kjøring · ${card.run.hours} t over ${card.run.min_temp} °C` : "7 dager"}
           </span>
           <Sparkline points={card.spark} ariaLabel="Temperatur siste 7 dager" />
         </div>

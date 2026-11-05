@@ -14,7 +14,7 @@ export default function SystemView({ keyId }) {
   if (api.status === "error" && !api.data) {
     return (
       <div className="stack">
-        <Link href="/" className="link">Anlegg</Link>
+        <Link href="/" className="link">Nå</Link>
         <p className="notice error">{api.error}</p>
       </div>
     );
@@ -25,10 +25,10 @@ export default function SystemView({ keyId }) {
   return (
     <div className="stack-l">
       <header className="stack">
-        <Link href="/" className="link phone-only">Anlegg</Link>
+        <Link href="/" className="link phone-only">Nå</Link>
         <h1 className="h1"><span className="eyebrow" aria-hidden="true">Anlegg · Detalj</span>{d.title}</h1>
         {d.channel == null ? (
-          <p className="lead">Ingen sensor tildelt. Velg kanal under Mer, Kanaler.</p>
+          <p className="lead">Ingen sensor tildelt. Velg kanal på PC under Innstillinger, Sensorer.</p>
         ) : l ? (
           <p className="lead num">
             {`Temp ${fmtNum(l.temp, 1)} °C · EC ${fmtNum(l.ec, 0)} µS/cm · Fukt ${fmtNum(l.moisture, 0)} % · auto · ${fmtWhen(l.ts)}`}
@@ -80,7 +80,7 @@ function LogRow({ e }) {
   if (e.ph != null) parts.push(`pH ${fmtNum(e.ph, 1)} · manuell`);
   if (e.moisture_handheld != null) parts.push(`fukt ${fmtNum(e.moisture_handheld, 0)} % håndholdt`);
   if (e.temperature != null) parts.push(`temp ${fmtNum(e.temperature, 1)} °C håndholdt`);
-  if (e.feed_liters != null) parts.push(`fôring ${fmtNum(e.feed_liters, 0)} l`);
+  if (e.feed_liters != null) parts.push(`fôring ${fmtNum(e.feed_liters, 1)} l`);
   if (e.harvest_liters != null) parts.push(`høsting ${fmtNum(e.harvest_liters, 0)} l`);
   const when = e.source === "mobil-v2" && e.logged_at ? fmtIsoDay(e.date) + " " + fmtTime(e.logged_at) : fmtIsoDay(e.date);
   const handheld = e.source !== "mobil-v2";
