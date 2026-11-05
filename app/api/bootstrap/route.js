@@ -61,15 +61,6 @@ export const GET = guarded(async (req, ctx, user) => {
     count(*) filter (where priority = 'høy')::int as high_priority
     from dash.inbox where status = 'open'`;
   const inboxLastSync = (await sql`select value from dash.meta where key = 'inbox_last_sync'`)[0]?.value || null;
-  // UKEPLAN SOLO DRIFT + faste regler. Ordered so the client can render
-  // without re-sorting: daily frame by clock, weekly by day then position.
-  const routineItems = await sql`select i.id, i.block, i.text, i.detail, i.weekday,
-      i.start_min, i.end_min, i.drop_rank, i.never_drop, r.cadence
-    from dash.routine_items i join dash.routines r on r.id = i.routine_id
-    where r.active = 1
-    order by i.weekday nulls first, i.sort`;
-  const houseRules = await sql`select kind, text, detail from dash.house_rules
-    where active = 1 order by sort`;
   const integrations = await sql`select key, label, expected_interval_min, last_ok_at,
       last_error, last_error_at, consecutive_failures, muted_until
     from dash.integrations order by key`;
@@ -96,7 +87,6 @@ export const GET = guarded(async (req, ctx, user) => {
     ec: num(r.ec_us_cm),
     measured_at: r.ts,
   }));
-  const sensorMap = [];
   // The SEO agent's schema is optional at boot: if migration 008 is not
   // applied yet, Brief simply has no SEO block. Three cheap queries,
   // sequential like everything else here.
@@ -129,11 +119,8 @@ export const GET = guarded(async (req, ctx, user) => {
     inbox,
     inboxCounts: inboxCounts[0] || { total: 0, urgent: 0 },
     inboxLastSync,
-    routineItems,
-    houseRules,
     integrations: integrations.map((r) => ({ ...r, status: classify(r) })),
     sensorLatest,
-    sensorMap,
     seo,
     aiEnabled: !!process.env.ANTHROPIC_API_KEY,
     aiModel: process.env.ANTHROPIC_API_KEY ? activeModel() : null,
