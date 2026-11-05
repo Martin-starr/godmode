@@ -2491,14 +2491,19 @@ const sysOptions = (systems, blank) => (
 
 // Fields of a feeding or a batch, laid out the same way in the "new" form
 // and inside an opened card.
-function FeedFields({ f, setF, systems }) {
+const ALLE = "__alle__";
+
+function FeedFields({ f, setF, systems, allowAll }) {
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value });
   return (
     <>
       <div className="f2" style={{ marginBottom: 12 }}>
         <div className="field" style={{ marginBottom: 0 }}>
           <label>System</label>
-          <select className="select" value={f.system} onChange={set("system")}>{sysOptions(systems, true)}</select>
+          <select className="select" value={f.system} onChange={set("system")}>
+            {allowAll ? <option value={ALLE}>Alle i drift ({systems.length}) · samme mengde til hvert</option> : null}
+            {sysOptions(systems, true)}
+          </select>
         </div>
         <div className="field" style={{ marginBottom: 0 }}>
           <label>Dato</label>
@@ -2650,15 +2655,26 @@ function FeedingBatchesView({ data, canEdit, showToast, refreshAll }) {
     system: f.system, date: f.date, for_l: f.for_l, notat: f.notat,
     temp: base.temp ?? "", ph: base.ph ?? "", fukt: base.fukt ?? "", avvik: !!base.avvik,
   });
+  // "Alle i drift" is one entry per active system with the same amount,
+  // written one after another; the first failure stops and says so.
   const submitFeed = async () => {
     if (!feedForm.system || !feedForm.date || !(Number(feedForm.for_l) > 0) || busy) return;
     setBusy(true);
-    const res = await api("/api/readings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(feedPayload(feedForm)) });
+    const targets = feedForm.system === ALLE ? active : [feedForm.system];
+    let done = 0;
+    for (const system of targets) {
+      const res = await api("/api/readings", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(feedPayload({ ...feedForm, system })) });
+      if (!res.ok) {
+        setBusy(false);
+        if (done) loadFeed(feedDays);
+        return fail(res, "Kunne ikke lagre fôringen for " + system + (done ? " (" + done + " lagret)" : "") + ".");
+      }
+      done++;
+    }
     setBusy(false);
-    if (!res.ok) return fail(res, "Kunne ikke lagre fôringen.");
     setFeedForm(EMPTY_FEED);
     setAddingFeed(false);
-    if (showToast) showToast("Fôring loggført · " + feedForm.system + " · " + fmtDate(feedForm.date));
+    if (showToast) showToast("Fôring loggført · " + (targets.length > 1 ? targets.length + " systemer" : targets[0]) + " · " + fmtDate(feedForm.date));
     // A backdated feeding must not vanish behind the range buttons.
     const age = Math.round((Date.parse(isoDaysAgo(0)) - Date.parse(feedForm.date)) / 86400e3);
     const range = FEED_RANGES.find(([v]) => Number(v) >= age) || FEED_RANGES[FEED_RANGES.length - 1];
@@ -2747,7 +2763,7 @@ function FeedingBatchesView({ data, canEdit, showToast, refreshAll }) {
         <>
           {addingFeed ? (
             <div className="card" style={{ padding: 18, marginBottom: 20 }}>
-              <FeedFields f={feedForm} setF={setFeedForm} systems={active} />
+              <FeedFields f={feedForm} setF={setFeedForm} systems={active} allowAll />
               <button className="btn sm" disabled={!feedForm.system || !(Number(feedForm.for_l) > 0) || busy} onClick={submitFeed}>Lagre fôring</button>
             </div>
           ) : null}
