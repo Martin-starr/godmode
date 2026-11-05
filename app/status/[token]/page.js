@@ -33,7 +33,7 @@ const DASH = ["", "", "", "", "5 4", "5 4", "5 4", "5 4"];
 // line wherever v is null or two points are further apart than gapMs. The
 // drawing is an SVG stretched to the box; every label is HTML beside it,
 // so the text keeps its size on a phone.
-function LineChart({ series, from, to, band, line, base, gapMs, decimals = 0 }) {
+function LineChart({ series, from, to, band, line, base, gapMs, decimals = 0, labels }) {
   const h = 300;
   let lo = base ? base[0] : Infinity;
   let hi = base ? base[1] : -Infinity;
@@ -90,7 +90,7 @@ function LineChart({ series, from, to, band, line, base, gapMs, decimals = 0 }) 
         {line != null ? <line x1={0} x2={1000} y1={y(line)} y2={y(line)} stroke="#B8993A" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" /> : null}
         {lines}
       </svg>
-      <div className="st-xlab" aria-hidden="true"><span>{dmhm(from)}</span><span>{dmhm((from + to) / 2)}</span><span>{dmhm(to)}</span></div>
+      <div className="st-xlab" aria-hidden="true">{(labels || [dmhm(from), dmhm((from + to) / 2), dmhm(to)]).map((l, i) => <span key={i}>{l}</span>)}</div>
     </div>
   );
 }
@@ -155,10 +155,14 @@ export default async function StatusPage({ params, searchParams }) {
   );
   const sensor = choice.source === "sensor";
   const order = new Map(d.beds.map((b, i) => [b.name, i]));
+  // Manual logs are spaced evenly, one step per entry, as on the Brief: the
+  // log is a sequence of visits, not a clock. Sensor curves keep real time.
+  const spread = (points) => points.map((p, i) => [points.length === 1 ? 0.5 : i / (points.length - 1), p[1]]);
   const curveSeries = chart.series
     .slice()
     .sort((a, b) => (order.get(a.name) ?? 99) - (order.get(b.name) ?? 99))
-    .map((ser, i) => ({ name: ser.name, color: COLORS[i % 8], dash: DASH[i % 8], points: ser.points }));
+    .map((ser, i) => ({ name: ser.name, color: COLORS[i % 8], dash: DASH[i % 8], points: sensor ? ser.points : spread(ser.points) }));
+  const axis = sensor ? { from: chart.from, to: chart.to, labels: undefined } : { from: 0, to: 1, labels: [dmy(chart.from), dmy((chart.from + chart.to) / 2), dmy(chart.to)] };
   const vals = curveSeries.flatMap((ser) => ser.points.map((p) => p[1]));
   const unit = choice.metric === "temp" ? " °C" : choice.metric === "fukt" ? " %" : "";
   const fmtStat = (v) => (choice.metric === "ph" ? nb(v, 1) : nb(v, 0)) + unit;
@@ -238,7 +242,7 @@ export default async function StatusPage({ params, searchParams }) {
         </div>
         {curveSeries.some((ser) => ser.points.length) ? (
           <>
-            <LineChart series={curveSeries} from={chart.from} to={chart.to} band={bandFor ? [bandFor.min, bandFor.max] : null} base={base} gapMs={sensor ? Math.max(2 * 3600e3, 2 * chart.bucketMinutes * 60000) : 8 * 86400e3} decimals={choice.metric === "ph" ? 1 : 0} />
+            <LineChart series={curveSeries} from={axis.from} to={axis.to} labels={axis.labels} band={bandFor ? [bandFor.min, bandFor.max] : null} base={base} gapMs={sensor ? Math.max(2 * 3600e3, 2 * chart.bucketMinutes * 60000) : 2} decimals={choice.metric === "ph" ? 1 : 0} />
             <Legend items={curveSeries} right={stats ? `Min ${stats.min} · Snitt ${stats.avg} · Maks ${stats.max}` : ""} />
           </>
         ) : <p className="st-mut">{sensor ? "Ingen sensordata i perioden. Sensorene startet 15. september 2026." : "Ingen loggførte verdier i perioden."}</p>}
