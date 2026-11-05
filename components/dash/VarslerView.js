@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useApi, postJson } from "./api";
 import Login from "./Login";
 import ThemeToggle from "./ThemeToggle";
+import PushSwitch from "./PushSwitch";
 import { fmtWhen } from "@/lib/format";
 
 // Varsler: what the app has told you, newest first, and the switch that
@@ -35,7 +36,10 @@ export default function VarslerView() {
       <p className="lead">
         Du får beskjed når en sonde har vært stille i to timer, et bed har ligget utenfor 15–25 °C i over en time, en hygieniseringskjøring brøt før 72 timer, ingenting er logget kl 18, og fredag morgen når det er fôringsdag.
       </p>
-      <p className="notice">Varsling på telefonen kommer i neste oppdatering. Listen under er det samme som varslene vil si.</p>
+      <section className="stack">
+        <h2 className="h2">Varsler på denne telefonen</h2>
+        <PushSwitch />
+      </section>
 
       <section className="stack" aria-label="Siste varsler">
         <h2 className="h2">Siste 30 dager</h2>
