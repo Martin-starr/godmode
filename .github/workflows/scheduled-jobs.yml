@@ -33,6 +33,7 @@ on:
     - cron: "0 * * * *"    # health/check     — hourly
     - cron: "15 * * * *"   # inbox/enrich     — hourly, offset so the two don't collide
     - cron: "0 7 1 * *"    # compliance/gaps  — monthly, 1st at 07:00 UTC
+    - cron: "30 * * * *"   # v2/alerts/check  — hourly, the phone's notifications
   workflow_dispatch:
     inputs:
       job:
@@ -40,7 +41,7 @@ on:
         required: true
         default: health
         type: choice
-        options: [health, inbox, compliance]
+        options: [health, inbox, compliance, alerts]
 
 concurrency:
   group: scheduled-jobs
@@ -71,6 +72,9 @@ jobs:
             compliance|"0 7 1 * *")
               echo "endpoint=/api/compliance/gaps" >> "$GITHUB_OUTPUT"
               echo "method=POST"                   >> "$GITHUB_OUTPUT" ;;
+            alerts|"30 * * * *")
+              echo "endpoint=/api/v2/alerts/check" >> "$GITHUB_OUTPUT"
+              echo "method=GET"                    >> "$GITHUB_OUTPUT" ;;
             *)
               # An unmapped schedule would otherwise run this workflow and call
               # nothing — a green tick for work that never happened, which is the

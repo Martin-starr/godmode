@@ -65,3 +65,56 @@ export function useApi(path, { auto = true } = {}) {
   useEffect(() => { if (auto && path) reload(); }, [auto, path, reload]);
   return { ...state, reload };
 }
+
+// ---- the offline queue -------------------------------------------------
+// A POST that fails for lack of network is kept in the phone and sent the
+// next time the app is open with coverage. Only writes the Gjør screen
+// makes; a photo makes an entry large, so the queue is capped.
+const QUEUE_KEY = "vd-queue";
+const QUEUE_MAX = 20;
+const listeners = new Set();
+
+function readQueue() {
+  try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || "[]"); } catch { return []; }
+}
+function writeQueue(q) {
+  try { localStorage.setItem(QUEUE_KEY, JSON.stringify(q)); } catch { /* storage blocked: the entry is lost, the caller was told */ }
+  for (const l of listeners) l(q.length, 0);
+}
+export const queuedCount = () => readQueue().length;
+export function onQueue(fn) { listeners.add(fn); return () => listeners.delete(fn); }
+
+// Returns the response, or { queued: true } when the phone had no network.
+export async function postOrQueue(path, body) {
+  const res = await postJson(path, body);
+  if (res.status !== 0) return res;
+  const q = readQueue();
+  if (q.length >= QUEUE_MAX) return { ok: false, status: 0, json: async () => ({ error: "Ingen nett, og køen er full. Prøv igjen når du har dekning." }) };
+  q.push({ path, body, at: new Date().toISOString() });
+  writeQueue(q);
+  return { ok: true, status: 0, queued: true, json: async () => ({ queued: true }) };
+}
+
+let flushing = false;
+export async function flushQueue() {
+  if (flushing || typeof navigator !== "undefined" && navigator.onLine === false) return;
+  const q = readQueue();
+  if (!q.length) return;
+  flushing = true;
+  let sent = 0;
+  try {
+    while (q.length) {
+      const item = q[0];
+      const res = await postJson(item.path, item.body);
+      if (res.status === 0) break; // still no network: keep the rest
+      // Any real answer, accepted or rejected, ends the attempt: a rejected
+      // entry is not retried forever, it is dropped and the user told.
+      q.shift();
+      if (res.ok) sent++;
+      writeQueue(q);
+    }
+  } finally {
+    flushing = false;
+    if (sent) for (const l of listeners) l(q.length, sent);
+  }
+}
