@@ -33,7 +33,7 @@ const DASH = ["", "", "", "", "5 4", "5 4", "5 4", "5 4"];
 // line wherever v is null or two points are further apart than gapMs. The
 // drawing is an SVG stretched to the box; every label is HTML beside it,
 // so the text keeps its size on a phone.
-function LineChart({ series, from, to, band, line, base, gapMs }) {
+function LineChart({ series, from, to, band, line, base, gapMs, decimals = 0 }) {
   const h = 300;
   let lo = base ? base[0] : Infinity;
   let hi = base ? base[1] : -Infinity;
@@ -41,8 +41,10 @@ function LineChart({ series, from, to, band, line, base, gapMs }) {
   if (band) { lo = Math.min(lo, band[0]); hi = Math.max(hi, band[1]); }
   if (line != null) { lo = Math.min(lo, line); hi = Math.max(hi, line); }
   if (!Number.isFinite(lo)) { lo = 0; hi = 1; }
-  lo = Math.floor(lo) - 2;
-  hi = Math.ceil(hi) + 2;
+  // Whole degrees get a two-degree margin; pH keeps its tenths.
+  const pad = decimals ? 0.2 : 2;
+  lo = (decimals ? Math.floor(lo * 10) / 10 : Math.floor(lo)) - pad;
+  hi = (decimals ? Math.ceil(hi * 10) / 10 : Math.ceil(hi)) + pad;
   // A bucket that straddles `from` starts a little before it; keep it inside.
   const x = (t) => Math.min(1000, Math.max(0, ((t - from) / Math.max(1, to - from)) * 1000));
   const y = (v) => h - ((v - lo) / (hi - lo)) * h;
@@ -74,7 +76,7 @@ function LineChart({ series, from, to, band, line, base, gapMs }) {
   return (
     <div className="st-chart">
       <div className="st-ylab" aria-hidden="true">
-        {ticks.map((v) => <span key={v} style={{ top: (y(v) / h) * 100 + "%" }}>{Math.round(v)}</span>)}
+        {ticks.map((v) => <span key={v} style={{ top: (y(v) / h) * 100 + "%" }}>{v.toFixed(decimals).replace(".", ",")}</span>)}
       </div>
       <svg viewBox={"0 0 1000 " + h} preserveAspectRatio="none" role="img">
         {ticks.map((v) => <line key={v} x1={0} x2={1000} y1={y(v)} y2={y(v)} stroke="rgba(28,58,92,0.10)" vectorEffect="non-scaling-stroke" />)}
@@ -107,8 +109,10 @@ export default async function StatusPage({ params, searchParams }) {
   const link = await validToken(sql, params.token);
   if (!link) notFound();
   const tv = searchParams && searchParams.tv === "1";
-  // A wall screen reloading every five minutes is not a visit.
-  if (!tv) await noteVisit(sql, params.token);
+  // A visit is the first landing: not a wall screen reloading itself, not
+  // a click on the chart's buttons.
+  const landing = !(searchParams && (searchParams.range || searchParams.source || searchParams.metric));
+  if (!tv && landing) await noteVisit(sql, params.token);
   const d = await statusPayload(sql);
   const choice = chartChoice(searchParams);
   const chart = await chartData(sql, choice, d.beds.map((b) => b.name));
@@ -234,7 +238,7 @@ export default async function StatusPage({ params, searchParams }) {
         </div>
         {curveSeries.some((ser) => ser.points.length) ? (
           <>
-            <LineChart series={curveSeries} from={chart.from} to={chart.to} band={bandFor ? [bandFor.min, bandFor.max] : null} base={base} gapMs={sensor ? Math.max(2 * 3600e3, 2 * chart.bucketMinutes * 60000) : 8 * 86400e3} />
+            <LineChart series={curveSeries} from={chart.from} to={chart.to} band={bandFor ? [bandFor.min, bandFor.max] : null} base={base} gapMs={sensor ? Math.max(2 * 3600e3, 2 * chart.bucketMinutes * 60000) : 8 * 86400e3} decimals={choice.metric === "ph" ? 1 : 0} />
             <Legend items={curveSeries} right={stats ? `Min ${stats.min} · Snitt ${stats.avg} · Maks ${stats.max}` : ""} />
           </>
         ) : <p className="st-mut">{sensor ? "Ingen sensordata i perioden. Sensorene startet 15. september 2026." : "Ingen loggførte verdier i perioden."}</p>}
