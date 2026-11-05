@@ -454,7 +454,12 @@ function BriefView({ data, range, setRange, metric, setMetric, goToInbox, goToSe
   const inbox = data.inbox || [];
   const inboxCounts = data.inboxCounts || { total: 0, urgent: 0 };
   const active = data.systems.filter((s) => s.status === "I drift").map((s) => s.id);
-  const series = buildSeries(data.readings, active, metric, range);
+  // ALL is the whole history, retired beds included (Wedge 2 carried the
+  // first year); the shorter ranges show what is in service now.
+  const chartSystems = range === "ALL"
+    ? data.systems.map((s) => s.id).filter((id) => data.readings.some((r) => r.system === id))
+    : active;
+  const series = buildSeries(data.readings, chartSystems, metric, range);
 
   // "Sensor" mode: the Ecowitt probes' own curves for the same range,
   // averaged per hour / 6 h / day. pH has no probe, so pH is always manual.
