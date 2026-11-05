@@ -11,24 +11,29 @@ export const maxDuration = 25;
 
 // ---- formatting ---------------------------------------------------------
 const nb = (v, d = 1) => (v == null ? "–" : v.toFixed(d).replace(".", ","));
-// Dates arrive as "YYYY-MM-DD" text or as Date objects; both become dd.mm.yy.
+// Dates arrive as "YYYY-MM-DD" text or as Date objects / ISO instants; a
+// text date is taken as is, an instant becomes its Oslo day. dd.mm.yy.
 const dmy = (v) => {
   if (!v) return "–";
-  const s = v instanceof Date ? osloStamp(v) : String(v);
+  const s = typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : osloStamp(new Date(v));
   return s.slice(8, 10) + "." + s.slice(5, 7) + "." + s.slice(2, 4);
 };
 const hm = (ms) => osloStamp(new Date(ms)).slice(11, 16);
 const dm = (ms) => { const s = osloStamp(new Date(ms)); return s.slice(8, 10) + "." + s.slice(5, 7); };
 const dmhm = (ms) => dm(ms) + " " + hm(ms);
-const when = (iso) => { const s = osloStamp(new Date(iso)); return s.slice(8, 10) + "." + s.slice(5, 7) + " kl " + s.slice(11, 16); };
+const when = (v) => dm(new Date(v).getTime()) + " kl " + hm(new Date(v).getTime());
+const stamp = (v) => dmy(v) + " kl " + hm(new Date(v).getTime());
 
 const COLORS = ["#1C3A5C", "#B8993A", "#6B7544", "#A64B2A", "#5A6270", "#1C3A5C", "#B8993A", "#6B7544"];
 const DASH = ["", "", "", "", "5 4", "5 4", "5 4", "5 4"];
 
 // ---- one line chart for both uses --------------------------------------
 // series: [{ name, color, dash, points: [[t, v] | [t, null]] }], a gap in a
-// line wherever v is null or two points are further apart than gapMs.
-function LineChart({ series, from, to, band, line, base, gapMs, h = 300 }) {
+// line wherever v is null or two points are further apart than gapMs. The
+// drawing is an SVG stretched to the box; every label is HTML beside it,
+// so the text keeps its size on a phone.
+function LineChart({ series, from, to, band, line, base, gapMs }) {
+  const h = 300;
   let lo = base ? base[0] : Infinity;
   let hi = base ? base[1] : -Infinity;
   for (const s of series) for (const [, v] of s.points) if (v != null) { if (v < lo) lo = v; if (v > hi) hi = v; }
@@ -37,16 +42,9 @@ function LineChart({ series, from, to, band, line, base, gapMs, h = 300 }) {
   if (!Number.isFinite(lo)) { lo = 0; hi = 1; }
   lo = Math.floor(lo) - 2;
   hi = Math.ceil(hi) + 2;
-  const x = (t) => 42 + ((t - from) / Math.max(1, to - from)) * 946;
-  const y = (v) => h - 26 - ((v - lo) / (hi - lo)) * (h - 42);
-  const grid = [];
-  for (let i = 0; i <= 4; i++) {
-    const val = lo + ((hi - lo) * i) / 4;
-    grid.push(
-      <line key={"g" + i} x1={42} x2={988} y1={y(val)} y2={y(val)} stroke="rgba(28,58,92,0.10)" vectorEffect="non-scaling-stroke" />,
-      <text key={"t" + i} x={34} y={y(val) + 3} textAnchor="end" fontSize={11} fill="#5A6270">{Math.round(val)}</text>
-    );
-  }
+  const x = (t) => ((t - from) / Math.max(1, to - from)) * 1000;
+  const y = (v) => h - ((v - lo) / (hi - lo)) * h;
+  const ticks = [0, 1, 2, 3, 4].map((i) => lo + ((hi - lo) * i) / 4);
   const lines = [];
   series.forEach((s, i) => {
     const segs = [];
@@ -63,37 +61,33 @@ function LineChart({ series, from, to, band, line, base, gapMs, h = 300 }) {
     segs.forEach((seg, k) => {
       if (seg.length === 1) {
         const [cx, cy] = seg[0].split(",");
-        lines.push(<circle key={i + "-" + k} cx={cx} cy={cy} r={1.8} fill={s.color} />);
+        lines.push(<circle key={i + "-" + k} cx={cx} cy={cy} r={2} fill={s.color} />);
       } else {
         lines.push(<polyline key={i + "-" + k} points={seg.join(" ")} fill="none" stroke={s.color} strokeWidth={1.7} strokeDasharray={s.dash || undefined} vectorEffect="non-scaling-stroke" strokeLinejoin="round" strokeLinecap="round" />);
       }
     });
     const last = [...s.points].reverse().find((p) => p[1] != null);
-    if (last) lines.push(<circle key={"e" + i} cx={x(last[0])} cy={y(last[1])} r={2.6} fill={s.color} />);
+    if (last) lines.push(<circle key={"e" + i} cx={x(last[0])} cy={y(last[1])} r={2.8} fill={s.color} />);
   });
-  const mid = (from + to) / 2;
   return (
-    <svg viewBox={"0 0 1000 " + h} width="100%" style={{ display: "block", height: "auto", overflow: "visible" }} preserveAspectRatio="none" role="img">
-      {grid}
-      {band ? (
-        <>
-          <rect x={42} width={946} y={y(band[1])} height={Math.max(0, y(band[0]) - y(band[1]))} fill="rgba(184,153,58,0.08)" />
-          <line x1={42} x2={988} y1={y(band[0])} y2={y(band[0])} stroke="#B8993A" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
-          <line x1={42} x2={988} y1={y(band[1])} y2={y(band[1])} stroke="#B8993A" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
-          <text x={988} y={y(band[1]) - 5} textAnchor="end" fontSize={11} fill="#B8993A">mål {band[0]}–{band[1]}</text>
-        </>
-      ) : null}
-      {line != null ? (
-        <>
-          <line x1={42} x2={988} y1={y(line)} y2={y(line)} stroke="#B8993A" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
-          <text x={988} y={y(line) - 5} textAnchor="end" fontSize={11} fill="#B8993A">{line}°C krav</text>
-        </>
-      ) : null}
-      {lines}
-      <text x={42} y={h - 6} fontSize={11} fill="#5A6270">{dmhm(from)}</text>
-      <text x={500} y={h - 6} textAnchor="middle" fontSize={11} fill="#5A6270">{dmhm(mid)}</text>
-      <text x={988} y={h - 6} textAnchor="end" fontSize={11} fill="#5A6270">{dmhm(to)}</text>
-    </svg>
+    <div className="st-chart">
+      <div className="st-ylab" aria-hidden="true">
+        {ticks.map((v) => <span key={v} style={{ top: (y(v) / h) * 100 + "%" }}>{Math.round(v)}</span>)}
+      </div>
+      <svg viewBox={"0 0 1000 " + h} preserveAspectRatio="none" role="img">
+        {ticks.map((v) => <line key={v} x1={0} x2={1000} y1={y(v)} y2={y(v)} stroke="rgba(28,58,92,0.10)" vectorEffect="non-scaling-stroke" />)}
+        {band ? (
+          <>
+            <rect x={0} width={1000} y={y(band[1])} height={Math.max(0, y(band[0]) - y(band[1]))} fill="rgba(184,153,58,0.08)" />
+            <line x1={0} x2={1000} y1={y(band[0])} y2={y(band[0])} stroke="#B8993A" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+            <line x1={0} x2={1000} y1={y(band[1])} y2={y(band[1])} stroke="#B8993A" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" />
+          </>
+        ) : null}
+        {line != null ? <line x1={0} x2={1000} y1={y(line)} y2={y(line)} stroke="#B8993A" strokeDasharray="3 4" vectorEffect="non-scaling-stroke" /> : null}
+        {lines}
+      </svg>
+      <div className="st-xlab" aria-hidden="true"><span>{dmhm(from)}</span><span>{dmhm((from + to) / 2)}</span><span>{dmhm(to)}</span></div>
+    </div>
   );
 }
 
@@ -110,30 +104,35 @@ export default async function StatusPage({ params, searchParams }) {
   const sql = db();
   const link = await validToken(sql, params.token);
   if (!link) notFound();
-  await noteVisit(sql, params.token);
-  const d = await statusPayload(sql);
   const tv = searchParams && searchParams.tv === "1";
+  // A wall screen reloading every five minutes is not a visit.
+  if (!tv) await noteVisit(sql, params.token);
+  const d = await statusPayload(sql);
 
   const t = d.targets;
+  const rules = d.hygiene.rules;
+  const hyg = d.hygiene.record;
+  const bad = (v, tt) => v != null && tt && (v < tt.min || v > tt.max);
   // A bed with no sensor, no pH and no log in the window is not in use; it
   // is named once instead of filling both tables with dashes.
   const inUse = d.beds.filter((b) => b.channel != null || b.ph || b.logg.days > 0);
   const idle = d.beds.filter((b) => !inUse.includes(b));
-  const bad = (v, tt) => v != null && tt && (v < tt.min || v > tt.max);
-  const live = d.beds.filter((b) => !b.stale && b.temp != null);
+  const withSensor = d.beds.filter((b) => b.channel != null);
+  const live = withSensor.filter((b) => !b.stale && b.temp != null);
   const outside = live.filter((b) => bad(b.temp, t.temp)).length;
-  const headline = d.sensors_stale
-    ? "Sensorene har ikke rapportert på over to timer."
+  const range = t.temp ? `${t.temp.min}–${t.temp.max} °C` : "";
+  const headline = !withSensor.length
+    ? "Ingen bed har sensor ennå."
     : !live.length
-      ? "Ingen bed har sensor ennå."
+      ? "Ingen bed-sensor har rapportert på over to timer."
       : outside === 0
-        ? `Alle ${live.length} bed med sensor innenfor ${t.temp ? t.temp.min + "–" + t.temp.max : ""} °C.`
-        : `${outside} av ${live.length} bed utenfor ${t.temp ? t.temp.min + "–" + t.temp.max : ""} °C.`;
+        ? `Alle ${live.length} bed med sensor innenfor ${range}.`
+        : `${outside} av ${live.length} bed utenfor ${range}.`;
 
-  const curveSeries = d.beds.filter((b) => b.channel != null).map((b, i) => ({ name: b.name, color: COLORS[i % 8], dash: DASH[i % 8], points: b.curve }));
-  const hyg = d.hygiene.record;
-  const rules = d.hygiene.rules;
+  const curveSeries = withSensor.map((b, i) => ({ name: b.name, color: COLORS[i % 8], dash: DASH[i % 8], points: b.curve }));
   const hygSeries = hyg ? hyg.channels.map((c, i) => ({ name: "Sonde " + c.ch, color: COLORS[i % 8], dash: i >= 3 ? "5 4" : "", points: hyg.series.map((p) => [p.t, p.temps[i]]) })) : [];
+  const ruleText = `alle sonder som logger må holde ${rules.minTemp} °C i ${rules.minMinutes} min samtidig, og minst to`;
+  const val = (b, v, unit, dec) => (b.channel == null ? "–" : b.stale ? "–" : nb(v, dec) + unit);
 
   return (
     <div className={"st" + (tv ? " tv" : "")}>
@@ -144,41 +143,41 @@ export default async function StatusPage({ params, searchParams }) {
           <div className="st-eyebrow">Driftsstatus · innsyn for {link.label}</div>
         </div>
         <div className="st-headmeta">
-          <div>{dmy(d.generated_at.slice(0, 10)) + " kl " + osloStamp(new Date(d.generated_at)).slice(11, 16)}</div>
-          <div className="st-mut">{d.sensors_last_ts ? "Siste sensormåling " + when(d.sensors_last_ts) : "Ingen sensormåling ennå"}</div>
+          <div>{stamp(d.generated_at)}</div>
+          <div className="st-mut">{d.beds_last_ts ? "Siste måling fra bedene " + when(d.beds_last_ts) : "Ingen måling fra bedene ennå"}</div>
           <StatusTools tv={tv} />
         </div>
       </header>
 
       <h1 className="st-h1">{headline}</h1>
       <p className="st-sub">
-        Tallene under kommer rett fra sensorene i bedene og fra driftsloggen, uten omskriving. Temperatur, fukt og EC logges automatisk; pH måles for hånd.
+        Tallene under kommer rett fra sensorene i bedene og fra driftsloggen, uten omskriving. Temperatur, fukt og EC leses av automatisk; pH måles for hånd.
         {d.room && !d.room.stale ? ` Rom: ${nb(d.room.temp)} °C · ${nb(d.room.rh, 0)} % RH.` : ""}
       </p>
 
       <section>
-        <div className="st-sechead"><span className="st-eyebrow">Nå · per bed</span><span className="st-mut">{t.temp ? `mål ${t.temp.min}–${t.temp.max} °C · pH ${nb(t.ph && t.ph.min)}–${nb(t.ph && t.ph.max)}` : ""}</span></div>
-        <table className="st-tbl">
+        <div className="st-sechead"><span className="st-eyebrow">Nå · per bed</span><span className="st-mut">{t.temp ? `mål ${range} · pH ${nb(t.ph && t.ph.min)}–${nb(t.ph && t.ph.max)}` : ""}</span></div>
+        <table className="st-tbl st-now">
           <thead>
-            <tr><th>Bed</th><th className="num">Temp</th><th className="num">Fukt (sensor)</th><th className="num">EC</th><th className="num">pH (manuell)</th><th className="rt">Siste måling</th></tr>
+            <tr><th>Bed</th><th className="num">Temp</th><th className="num">Fukt (sensor)</th><th className="num ec">EC</th><th className="num">pH (manuell)</th><th className="rt">Siste måling</th></tr>
           </thead>
           <tbody>
             {inUse.map((b) => (
               <tr key={b.name} className={b.stale ? "stale" : ""}>
                 <td><b>{b.name}</b></td>
-                <td className={"num" + (!b.stale && bad(b.temp, t.temp) ? " warn" : "")}>{b.channel == null ? "ingen sensor" : nb(b.temp) + " °C"}</td>
-                <td className="num">{b.channel == null ? "–" : nb(b.moisture, 0) + " %"}</td>
-                <td className="num">{b.channel == null ? "–" : nb(b.ec, 0) + " µS/cm"}</td>
-                <td className={"num" + (b.ph && bad(b.ph.value, t.ph) ? " warn" : "")}>{b.ph ? nb(b.ph.value) + " · " + dmy(b.ph.date) : "ingen måling"}</td>
+                <td className={"num" + (!b.stale && bad(b.temp, t.temp) ? " warn" : "")}>{b.channel == null ? "ingen sensor" : val(b, b.temp, " °C", 1)}</td>
+                <td className="num">{val(b, b.moisture, " %", 0)}</td>
+                <td className="num ec">{val(b, b.ec, " µS/cm", 0)}</td>
+                <td className={"num" + (b.ph && bad(b.ph.value, t.ph) ? " warn" : "")}>{b.ph ? nb(b.ph.value) + " · " + dmy(b.ph.date) : "ingen måling i perioden"}</td>
                 <td className="rt">{b.channel == null ? "–" : b.stale ? (b.ts ? "stille siden " + when(b.ts) : "aldri") : when(b.ts)}</td>
               </tr>
             ))}
             {d.hygieneProbes.map((p) => (
               <tr key={"h" + p.channel} className={p.stale ? "stale" : ""}>
                 <td><b>{p.name}</b> <span className="st-mut">hygienisering</span></td>
-                <td className="num">{p.reading ? nb(p.reading.temp) + " °C" : "–"}</td>
-                <td className="num">{p.reading ? nb(p.reading.moisture, 0) + " %" : "–"}</td>
-                <td className="num">{p.reading ? nb(p.reading.ec, 0) + " µS/cm" : "–"}</td>
+                <td className="num">{p.reading && !p.stale ? nb(p.reading.temp) + " °C" : "–"}</td>
+                <td className="num">{p.reading && !p.stale ? nb(p.reading.moisture, 0) + " %" : "–"}</td>
+                <td className="num ec">{p.reading && !p.stale ? nb(p.reading.ec, 0) + " µS/cm" : "–"}</td>
                 <td className="num">–</td>
                 <td className="rt">{p.reading ? (p.stale ? "stille siden " + when(p.reading.ts) : when(p.reading.ts)) : "aldri"}</td>
               </tr>
@@ -188,7 +187,7 @@ export default async function StatusPage({ params, searchParams }) {
       </section>
 
       <section>
-        <div className="st-sechead"><span className="st-eyebrow">Temperatur · siste {d.curve.days} dager · snitt per time</span></div>
+        <div className="st-sechead"><span className="st-eyebrow">Temperatur · siste {d.curve.days} dager · snitt per time</span><span className="st-mut">{t.temp ? "stiplet: mål " + range : ""}</span></div>
         {curveSeries.some((s) => s.points.length) ? (
           <>
             <LineChart series={curveSeries} from={d.curve.from} to={d.curve.to} band={t.temp ? [t.temp.min, t.temp.max] : null} base={[15, 30]} gapMs={2 * 3600e3} />
@@ -200,25 +199,25 @@ export default async function StatusPage({ params, searchParams }) {
       <section>
         <div className="st-sechead">
           <span className="st-eyebrow">Hygienisering §19 · siste loggerkjøring</span>
-          <span className="st-mut">krav {rules.minTemp} °C i {rules.minMinutes} min på minst 2 sonder samtidig</span>
+          <span className="st-mut">krav: {ruleText}</span>
         </div>
         {hyg ? (
           <div className="st-card">
             <div className="st-cardhead">
               <div>
-                <div className="st-cardtitle">{dm(hyg.from)} – {dm(hyg.to)}.{String(new Date(hyg.to).getFullYear()).slice(2)}</div>
-                <div className="st-mut">{hyg.channels.length} sonder · alle samtidig ≥ {rules.minTemp} °C i {hyg.together.minutes} min{hyg.excluded ? ` · ${hyg.excluded} målinger satt til side som sondefeil` : ""}</div>
+                <div className="st-cardtitle">{dm(hyg.from)} – {dm(hyg.to)}.{String(osloStamp(new Date(hyg.to))).slice(2, 4)}</div>
+                <div className="st-mut">{hyg.channels.length} sonder · alle samtidig ≥ {rules.minTemp} °C i {hyg.together.minutes} min{hyg.excluded ? ` · ${hyg.excluded} målinger satt til side` : ""}</div>
               </div>
               <span className={"st-tag " + (hyg.pass ? "navy" : "gold")}>{hyg.pass ? "Godkjent §19" : "Ikke godkjent"}</span>
             </div>
             <LineChart series={hygSeries} from={hyg.from} to={hyg.to} line={rules.minTemp} base={[10, 80]} gapMs={Math.max(5, 2 * hyg.bucketMinutes) * 60000} />
-            <Legend items={hygSeries} right={"loggfil " + hyg.filename + " · importert " + dmy(hyg.imported_at)} />
+            <Legend items={hygSeries} right={`stiplet: krav ${rules.minTemp} °C · logg #${hyg.id} · ${hyg.row_count} punkter · importert ${dmy(hyg.imported_at)}`} />
           </div>
         ) : <p className="st-mut">Ingen loggerkjøring importert ennå.</p>}
       </section>
 
       <section>
-        <div className="st-sechead"><span className="st-eyebrow">Loggdisiplin · {dmy(d.logg.from)} – {dmy(d.logg.to)}</span><span className="st-mut">{d.logg.working_days} arbeidsdager (man–lør)</span></div>
+        <div className="st-sechead"><span className="st-eyebrow">Loggdisiplin · {dmy(d.logg.from)} – {dmy(d.logg.to)}</span><span className="st-mut">{d.logg.working_days} arbeidsdager (man–lør), til og med i går</span></div>
         <table className="st-tbl">
           <thead><tr><th>Bed</th><th className="num">Dager loggført</th><th className="num">Mangler</th><th className="num">Fôret</th><th className="num">Avvik</th><th className="rt">Siste logg</th></tr></thead>
           <tbody>
@@ -244,18 +243,18 @@ export default async function StatusPage({ params, searchParams }) {
       <section className="st-how">
         <div className="st-sechead"><span className="st-eyebrow">Slik leser du denne siden</span></div>
         <ul>
-          <li><b>Automatisk</b> er temperatur, fukt og EC fra Ecowitt-sonder i hvert bed, lagret hvert 30. minutt. Ingen av tallene kan redigeres i etterkant.</li>
-          <li><b>Manuell</b> er pH, fôring og notater, skrevet inn av den som gjør jobben. Datoen står ved tallet.</li>
+          <li><b>Automatisk</b> er temperatur, fukt og EC fra Ecowitt-sonder i hvert bed. Siden henter ferske verdier når den åpnes (høyst fem minutter gamle); historikken lagres hver halvtime. Ingen av tallene kan redigeres i etterkant.</li>
+          <li><b>Manuell</b> er pH, fôring og notater, skrevet inn av den som gjør jobben. Datoen står ved tallet. pH er fra håndholdt måler, ikke laboratorie-pH.</li>
           <li><b>Fukt fra sensor</b> er volumetrisk og ukalibrert for kompost: les trenden, ikke tallet. Målområdet {t.fukt ? `${t.fukt.min}–${t.fukt.max} %` : ""} gjelder håndmåler.</li>
-          <li><b>Hygienisering</b> vurderes av programmet, ikke av oss: minst to sonder må holde {rules.minTemp} °C i {rules.minMinutes} minutter samtidig. Målinger som ikke kan stemme (sondefeil, sprang, over 85 °C) settes til side og teller ikke. Én sonde alene gir aldri godkjent.</li>
-          <li><b>Stille</b> betyr at en sonde ikke har rapportert på over to timer. Da viser vi det, ikke et gammelt tall.</li>
-          <li><b>Mangler</b> er arbeidsdager uten loggføring. Hvis noe ikke er logget, har det ikke skjedd.</li>
+          <li><b>Hygienisering</b> vurderes av programmet, ikke av oss: {ruleText}. En sonde som er kald, feiler eller får en måling satt til side (sondefeil, sprang, over 85 °C) bryter perioden. Én sonde alene gir aldri godkjent.</li>
+          <li><b>Stille</b> betyr at siste lagrede måling fra sonden er over to timer gammel. Da viser vi en strek og tidspunktet, ikke et gammelt tall.</li>
+          <li><b>Mangler</b> er arbeidsdager (mandag–lørdag) uten loggføring, regnet til og med i går. Hvis noe ikke er logget, har det ikke skjedd.</li>
         </ul>
       </section>
 
       <footer className="st-foot">
-        <span>Verminord AS · Jæren · generert {dmy(d.generated_at.slice(0, 10))} kl {osloStamp(new Date(d.generated_at)).slice(11, 16)}</span>
-        <span><a href={`/status/${params.token}/csv`}>Sensordata siste 30 dager (CSV)</a> · <a href={`/status/${params.token}?tv=1`}>Skjermvisning</a></span>
+        <span>Verminord AS · Jæren · generert {stamp(d.generated_at)}</span>
+        <span className="st-footlinks"><a href={`/status/${params.token}/csv`}>Sensordata siste 30 dager (CSV)</a> · <a href={`/status/${params.token}?tv=1`}>Skjermvisning</a></span>
       </footer>
     </div>
   );

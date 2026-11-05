@@ -2226,6 +2226,8 @@ const fmtD = (ms) => {
   return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getFullYear()).slice(2);
 };
 const nbT = (v) => String(Math.round(v * 10) / 10).replace(".", ",");
+// A timestamp's calendar day where the reader sits, dd.mm.yy.
+const fmtLocalDay = (ts) => { const d = new Date(ts); return String(d.getDate()).padStart(2, "0") + "." + String(d.getMonth() + 1).padStart(2, "0") + "." + String(d.getFullYear()).slice(2); };
 
 function useHygiene(limit) {
   const [data, setData] = useState(null);
@@ -2325,7 +2327,7 @@ function HygieneCard({ imp, rules, open, onToggle, canEdit, onDelete }) {
           <div className="setrow" style={{ borderBottom: 0, paddingBottom: 0 }}>
             <div>
               <div className="sl">{imp.filename}</div>
-              <div className="ss">Importert {fmtDate(String(imp.imported_at).slice(0, 10))} · {imp.imported_by} · {imp.row_count} punkter</div>
+              <div className="ss">Importert {fmtLocalDay(imp.imported_at)} · {imp.imported_by} · {imp.row_count} punkter</div>
             </div>
             {canEdit ? (
               <button className="lnk g" onClick={() => { if (window.confirm("Slette importen «" + imp.filename + "»?")) onDelete(imp.id); }}>Slett</button>
@@ -2453,7 +2455,7 @@ function HygieneView({ canEdit }) {
                     <tr key={imp.id}>
                       <td>
                         <span className="sy">{imp.filename}</span>
-                        <div className="dt">{fmtDate(String(imp.imported_at).slice(0, 10))} · {imp.imported_by}</div>
+                        <div className="dt">{fmtLocalDay(imp.imported_at)} · {imp.imported_by}</div>
                       </td>
                       <td className="num">{imp.row_count} punkter</td>
                       <td className="num rt">
@@ -3000,7 +3002,7 @@ function StatusLinksPanel({ canEdit }) {
                 <div className="sl">{l.label}</div>
                 <div className="ss">
                   {l.views} {l.views === 1 ? "visning" : "visninger"}
-                  {l.last_seen_at ? " · sist " + fmtReceived(l.last_seen_at) : " · ikke åpnet ennå"} · laget {fmtDate(String(l.created_at).slice(0, 10))}
+                  {l.last_seen_at ? " · sist " + fmtReceived(l.last_seen_at) : " · ikke åpnet ennå"} · laget {fmtLocalDay(l.created_at)}
                 </div>
               </div>
               <span className="trange">
@@ -3014,7 +3016,7 @@ function StatusLinksPanel({ canEdit }) {
             <div className="setrow" key={l.token} style={{ opacity: 0.55 }}>
               <div>
                 <div className="sl">{l.label}</div>
-                <div className="ss">trukket tilbake {fmtDate(String(l.revoked_at).slice(0, 10))} · {l.views} {l.views === 1 ? "visning" : "visninger"}</div>
+                <div className="ss">trukket tilbake {fmtLocalDay(l.revoked_at)} · {l.views} {l.views === 1 ? "visning" : "visninger"}</div>
               </div>
             </div>
           ))}
@@ -3177,7 +3179,7 @@ function SettingsView({ data, targets, setTargets, saveTargets, canEdit, addSyst
             );
           })}
           <KanalerPanel canEdit={canEdit} />
-          <StatusLinksPanel canEdit={canEdit} />
+          {canEdit ? <StatusLinksPanel canEdit={canEdit} /> : null}
           <EksportPanel />
           <div className="sechead" style={{ marginTop: 36 }}>
             <span className="eyebrow">Team</span>

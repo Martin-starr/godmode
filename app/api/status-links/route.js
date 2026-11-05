@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 const list = (sql) => sql`select token, label, created_by, created_at, revoked_at, views, last_seen_at
   from dash.status_links order by created_at desc`;
 
-export const GET = guarded(async () => json({ links: await list(db()) }));
+export const GET = guarded(async () => json({ links: await list(db()) }), { edit: true });
 
 export const POST = guarded(async (req, ctx, user) => {
   const body = await req.json().catch(() => null);

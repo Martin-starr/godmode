@@ -39,14 +39,22 @@ section { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 22px
 .st-sechead { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin-bottom: 16px; }
 
 .st-tbl { width: 100%; border-collapse: collapse; font-size: 13.5px; }
-.st-tbl th { font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); font-weight: 600; text-align: left; padding: 0 0 12px; }
-.st-tbl td { padding: 12px 0; border-top: 1px solid var(--line2); vertical-align: top; }
+.st-tbl th { font-size: 9.5px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); font-weight: 600; text-align: left; padding: 0 6px 12px; line-height: 1.3; }
+.st-tbl td { padding: 12px 6px; border-top: 1px solid var(--line2); vertical-align: top; }
+.st-tbl th:first-child, .st-tbl td:first-child { padding-left: 0; }
+.st-tbl th:last-child, .st-tbl td:last-child { padding-right: 0; }
 .st-tbl .num { text-align: right; font-variant-numeric: tabular-nums; }
 .st-tbl .rt { text-align: right; color: var(--muted); font-size: 12px; }
 .st-tbl .warn { color: var(--gold); font-weight: 600; }
 .st-tbl tr.stale td { color: var(--muted); }
 .st-tbl tr.stale td.rt { color: var(--gold); }
 
+/* The chart: an SVG stretched to the box, labels in HTML beside it. */
+.st-chart { position: relative; padding: 0 0 20px 36px; }
+.st-chart svg { display: block; width: 100%; height: 260px; overflow: visible; }
+.st-ylab { position: absolute; left: 0; top: 0; bottom: 20px; width: 30px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.st-ylab span { position: absolute; right: 0; transform: translateY(-50%); }
+.st-xlab { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
 .st-legend { display: flex; flex-wrap: wrap; gap: 18px; margin-top: 14px; font-size: 11px; color: var(--muted); }
 .st-lg { display: flex; align-items: center; gap: 7px; }
 .st-sw { display: inline-block; width: 18px; height: 2px; }
@@ -66,9 +74,14 @@ section { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 22px
 .st-foot a { color: var(--navy); }
 
 /* Wall screen: bigger type, the explanation and the footer out of the way. */
-.st.tv { max-width: 1600px; font-size: 18px; }
+.st.tv { max-width: 1600px; }
 .st.tv .st-h1 { font-size: 56px; }
-.st.tv .st-tbl { font-size: 18px; }
+.st.tv .st-sub { font-size: 20px; }
+.st.tv .st-tbl { font-size: 19px; }
+.st.tv .st-tbl th, .st.tv .st-eyebrow, .st.tv .st-tag, .st.tv .st-headmeta div:first-child { font-size: 13px; }
+.st.tv .st-tbl .rt, .st.tv .st-mut, .st.tv .st-legend, .st.tv .st-xlab, .st.tv .st-ylab { font-size: 16px; }
+.st.tv .st-cardtitle { font-size: 22px; }
+.st.tv .st-chart svg { height: 360px; }
 .st.tv .st-how, .st.tv .st-foot, .st.tv .st-btn { display: none; }
 
 @media (max-width: 700px) {
@@ -77,11 +90,13 @@ section { border-top: 1px solid var(--line); margin-top: 30px; padding-top: 22px
   .st-head { flex-direction: column; }
   .st-headmeta { text-align: left; }
   .st-tbl { font-size: 12px; }
-  .st-tbl th:nth-child(4), .st-tbl td:nth-child(4) { display: none; }
+  .st-tbl .ec { display: none; }
+  .st-chart svg { height: 200px; }
 }
 @media print {
   body { background: #fff; }
   .st { max-width: none; padding: 0; }
-  .st-btn, .st-foot a { display: none; }
+  .st-btn, .st-footlinks { display: none; }
+  .st-tbl tr.stale td { font-style: italic; }
   section { break-inside: avoid; }
 }
